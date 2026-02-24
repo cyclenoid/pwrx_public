@@ -1,0 +1,189 @@
+# Universeller Data Hub für Unraid
+# PostgreSQL mit Schema-Trennung für verschiedene Datenquellen
+# CSV-Export für einfachen Excel-Zugriff
+
+services:
+  # Universelle PostgreSQL Datenbank
+  database:
+    image: postgres:16-alpine
+    container_name: universal-data-hub
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGDATA: /var/lib/postgresql/data/pgdata
+    volumes:
+      # Docker Volume statt Host-Mount (löst Permission-Probleme)
+      - postgres_data:/var/lib/postgresql/data
+      - ${DATA_HUB_DATA_DIR:-./data}/exports:/exports  # CSV Export Ordner
+    ports:
+      - "5432:5432"
+    networks:
+      - data-hub-network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Strava Activity Tracker (Backend + API)
+  strava-tracker:
+    image: node:20-alpine
+    container_name: strava-tracker
+    restart: unless-stopped
+    working_dir: /app
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      # Strava API
+      STRAVA_CLIENT_ID: ${STRAVA_CLIENT_ID}
+      STRAVA_CLIENT_SECRET: ${STRAVA_CLIENT_SECRET}
+      STRAVA_REFRESH_TOKEN: ${STRAVA_REFRESH_TOKEN}
+
+      # Database (universeller Hub)
+      DB_HOST: database
+      DB_PORT: 5432
+      DB_NAME: ${POSTGRES_DB}
+      DB_USER: ${POSTGRES_USER}
+      DB_PASSWORD: ${POSTGRES_PASSWORD}
+      DB_SCHEMA: strava  # Schema für Strava-Daten
+
+      # CSV Export aktivieren
+      CSV_EXPORT_ENABLED: "true"
+      CSV_EXPORT_PATH: /exports/strava
+
+      # Photo Storage
+      PHOTO_STORAGE_PATH: /app/photos
+      IMPORT_STORAGE_PATH: /imports/strava
+      WATCH_FOLDER_ENABLED: ${WATCH_FOLDER_ENABLED:-false}
+      WATCH_FOLDER_PATH: /imports/watch
+      WATCH_FOLDER_SMB_PATH: ${WATCH_FOLDER_SMB_PATH:-./data/imports/watch} # UI hint for Finder/Explorer (override with SMB path, e.g. \\unraid\pwrx-import)
+      WATCH_FOLDER_RECURSIVE: ${WATCH_FOLDER_RECURSIVE:-true}
+      WATCH_FOLDER_POLL_SECONDS: ${WATCH_FOLDER_POLL_SECONDS:-15}
+      WATCH_FOLDER_STABLE_CHECKS: ${WATCH_FOLDER_STABLE_CHECKS:-2}
+      IMPORT_ZIP_MAX_ENTRIES: ${IMPORT_ZIP_MAX_ENTRIES:-500}
+      IMPORT_STRAVA_EXPORT_ZIP_MAX_ENTRIES: ${IMPORT_STRAVA_EXPORT_ZIP_MAX_ENTRIES:-20000}
+      IMPORT_ZIP_MAX_TOTAL_BYTES: ${IMPORT_ZIP_MAX_TOTAL_BYTES:-314572800}
+      IMPORT_QUEUE_API_ENABLED: ${IMPORT_QUEUE_API_ENABLED:-true}
+      IMPORT_QUEUE_ENABLED: ${IMPORT_QUEUE_ENABLED:-true}
+      IMPORT_QUEUE_POLL_MS: ${IMPORT_QUEUE_POLL_MS:-2000}
+      IMPORT_QUEUE_CONCURRENCY: ${IMPORT_QUEUE_CONCURRENCY:-2}
+      IMPORT_QUEUE_MAX_ATTEMPTS: ${IMPORT_QUEUE_MAX_ATTEMPTS:-3}
+      IMPORT_QUEUE_RETRY_BASE_MS: ${IMPORT_QUEUE_RETRY_BASE_MS:-5000}
+      IMPORT_QUEUE_RETRY_MAX_MS: ${IMPORT_QUEUE_RETRY_MAX_MS:-300000}
+      IMPORT_QUEUE_HEALTH_STALE_MS: ${IMPORT_QUEUE_HEALTH_STALE_MS:-12000}
+      IMPORT_QUEUE_ALERT_FAILED_24H: ${IMPORT_QUEUE_ALERT_FAILED_24H:-5}
+      IMPORT_QUEUE_ALERT_READY: ${IMPORT_QUEUE_ALERT_READY:-20}
+      IMPORT_QUEUE_ALERT_MONITOR_ENABLED: ${IMPORT_QUEUE_ALERT_MONITOR_ENABLED:-true}
+      IMPORT_QUEUE_ALERT_WEBHOOK_URL: ${IMPORT_QUEUE_ALERT_WEBHOOK_URL:-}
+      IMPORT_QUEUE_ALERT_POLL_MS: ${IMPORT_QUEUE_ALERT_POLL_MS:-30000}
+      IMPORT_QUEUE_ALERT_COOLDOWN_MS: ${IMPORT_QUEUE_ALERT_COOLDOWN_MS:-300000}
+
+      # API Server
+      API_PORT: 3001
+
+      # Schedule (täglich um 3:00 Uhr)
+      CRON_SCHEDULE: ${STRAVA_CRON_SCHEDULE}
+
+      # Node Environment
+      NODE_ENV: production
+      ADAPTER_FILE_ENABLED: ${ADAPTER_FILE_ENABLED:-true}
+      ADAPTER_STRAVA_ENABLED: ${ADAPTER_STRAVA_ENABLED:-true}
+      ADAPTER_STRAVA_MODULE: ${ADAPTER_STRAVA_MODULE:-@cyclenoid/pwrx-adapter-strava}
+    volumes:
+      - ./apps/strava:/app
+      - ${PWRX_SSH_DIR:-/root/.ssh}:/root/.ssh:ro
+      - ${DATA_HUB_DATA_DIR:-./data}/logs/strava:/app/logs
+      - ${DATA_HUB_DATA_DIR:-./data}/exports:/exports  # Zugriff auf Export-Ordner
+      - ${DATA_HUB_DATA_DIR:-./data}/photos/strava:/app/photos  # Photo-Speicher
+      - ${DATA_HUB_DATA_DIR:-./data}/imports/strava:/imports/strava  # Import-Dateien
+      - ${DATA_HUB_DATA_DIR:-./data}/imports/watch:/imports/watch  # Watch-Folder Inbox
+    ports:
+      - "3001:3001"  # REST API für Dashboard
+    networks:
+      - data-hub-network
+    command: >-
+      sh -c '
+      apk add --no-cache git openssh-client &&
+      rm -rf /tmp/pwrx-app &&
+      cp -a /app /tmp/pwrx-app &&
+      rm -f /tmp/pwrx-app/.env &&
+      cd /tmp/pwrx-app &&
+      if [ "${ADAPTER_STRAVA_ENABLED:-true}" = "false" ] || [ "${ADAPTER_STRAVA_ENABLED:-true}" = "0" ] || [ "${ADAPTER_STRAVA_ENABLED:-true}" = "no" ]; then
+        echo "Strava adapter disabled: skip private adapter dependency";
+        npm pkg delete dependencies.@cyclenoid/pwrx-adapter-strava >/dev/null;
+        npm install --package-lock-only --ignore-scripts --no-audit --no-fund;
+      else
+        if [ ! -f /root/.ssh/pwrx_adapter_deploy ]; then
+          echo "Missing /root/.ssh/pwrx_adapter_deploy for private adapter install" >&2;
+          exit 1;
+        fi;
+        cp /root/.ssh/pwrx_adapter_deploy /tmp/pwrx_adapter_deploy &&
+        chmod 600 /tmp/pwrx_adapter_deploy &&
+        export GIT_SSH_COMMAND="ssh -i /tmp/pwrx_adapter_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes" &&
+        git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/";
+      fi &&
+      npm ci --production=false &&
+      npm run build &&
+      npm run db:init &&
+      npm run db:migrate &&
+      npm start
+      '
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 120s
+
+  # pgAdmin für Datenbank-Management
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    container_name: data-hub-admin
+    restart: unless-stopped
+    depends_on:
+      database:
+        condition: service_healthy
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD}
+      PGADMIN_CONFIG_SERVER_MODE: 'False'
+    ports:
+      - "5050:80"
+    volumes:
+      - pgadmin_data:/var/lib/pgadmin
+    networks:
+      - data-hub-network
+
+  # Strava Dashboard (React Frontend)
+  strava-dashboard:
+    build:
+      context: ./dashboards/strava
+      dockerfile: Dockerfile
+    container_name: strava-dashboard
+    restart: unless-stopped
+    depends_on:
+      - strava-tracker
+    ports:
+      - "8088:80"
+    networks:
+      - data-hub-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  data-hub-network:
+    name: data-hub-network
+    driver: bridge
+
+# Docker Volumes (löst Permission-Probleme mit Host-Mounts)
+volumes:
+  postgres_data:
+    driver: local
+  pgadmin_data:
+    driver: local

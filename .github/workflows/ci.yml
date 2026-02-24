@@ -1,0 +1,104 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend:
+    name: Backend Build and Import Tests
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/strava
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: apps/strava/package-lock.json
+
+      - name: Validate private adapter deploy key
+        env:
+          PWRX_ADAPTER_DEPLOY_KEY: ${{ secrets.PWRX_ADAPTER_DEPLOY_KEY }}
+        run: |
+          if [ -z "$PWRX_ADAPTER_DEPLOY_KEY" ]; then
+            echo "::error::Missing secret PWRX_ADAPTER_DEPLOY_KEY for private dependency @cyclenoid/pwrx-adapter-strava."
+            exit 1
+          fi
+
+      - name: Start SSH agent for private dependencies
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.PWRX_ADAPTER_DEPLOY_KEY }}
+
+      - name: Configure SSH for GitHub over 443
+        run: |
+          mkdir -p ~/.ssh
+          ssh-keyscan github.com >> ~/.ssh/known_hosts
+          ssh-keyscan -p 443 ssh.github.com >> ~/.ssh/known_hosts
+          git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/"
+          git config --global url."ssh://git@ssh.github.com:443/".insteadOf "git@github.com:"
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint backend
+        run: npm run lint
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run parser smoke tests
+        run: npm run test:import:parsers
+
+      - name: Run import tests
+        run: npm run test:import
+
+  frontend:
+    name: Frontend Lint and Build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: dashboards/strava
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+          cache-dependency-path: dashboards/strava/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint frontend
+        run: npm run lint
+
+      - name: Build frontend
+        run: npm run build
+
+  docker-smoke:
+    name: Docker Build Smoke
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Build dashboard Docker image
+        run: docker build -t pwrx-strava-dashboard-smoke ./dashboards/strava

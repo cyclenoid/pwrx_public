@@ -1,0 +1,1888 @@
+{
+  "app": {
+    "title": "PWRX"
+  },
+  "nav": {
+    "dashboard": "Dashboard",
+    "records": "Records",
+    "heatmap": "Heatmap",
+    "training": "Training",
+    "power": "Power",
+    "segments": "Segments",
+    "climbs": "Segments",
+    "import": "Import",
+    "gear": "Gear",
+    "settings": "Settings"
+  },
+  "dashboard": {
+    "firstRun": {
+      "title": "First steps after installation",
+      "subtitle": "PWRX is ready. Start with profile basics and your first import.",
+      "dismiss": "Hide this",
+      "dismissSaving": "Saving...",
+      "statusDone": "Done",
+      "statusOpen": "Open",
+      "statusOptional": "Optional",
+      "step1Label": "Step 1",
+      "step1Title": "Check profile basics",
+      "step1Body": "Set at least body weight and optionally FTP in Settings. This improves W/kg, power and training analysis.",
+      "step1HintOptionalFtp": "Tip: FTP is optional, but improves power zones and training load calculations.",
+      "step2Label": "Step 2",
+      "step2Title": "Import activities",
+      "step2Body": "Import FIT/GPX/TCX files or a complete Strava export ZIP. For Strava exports, activities.csv and ZIP import help with names and gear mapping.",
+      "step3Label": "Step 3",
+      "step3Title": "Check gear (optional)",
+      "step3Body": "Create bikes/shoes manually or use automatic import from a Strava export. Afterwards you can assign gear to activities.",
+      "step4Label": "Step 4",
+      "step4Title": "Review your analytics",
+      "step4Body": "Once data is imported, start on the dashboard and drill into Power, Training and Segments.",
+      "ctaImport": "Open Import",
+      "ctaSettings": "Open Settings"
+    },
+    "sync": {
+      "title": "Sync activities from Strava",
+      "button": "Sync",
+      "inProgress": "Syncing...",
+      "runningTitle": "Sync in progress",
+      "runningBody": "Data is being imported in the background and will appear gradually.",
+      "runningSettingsHint": "Please enter your personal data in Settings.",
+      "successTitle": "Sync started",
+      "successBody": "Activities are syncing in the background",
+      "errorTitle": "Sync failed",
+      "errorBody": "Failed to start synchronization"
+    },
+    "view": {
+      "cards": "Card view",
+      "table": "Table view"
+    },
+    "loadMore": "Load more ({{count}} more)",
+    "table": {
+      "activity": "Activity",
+      "date": "Date",
+      "type": "Type",
+      "distance": "Distance",
+      "time": "Time",
+      "elevation": "Elevation",
+      "pace": "Pace/Speed"
+    },
+    "streak": {
+      "title": "Your streak",
+      "weeks": "weeks",
+      "subtitle": "Active week streak 🔥"
+    },
+    "calendar": {
+      "prevMonth": "Previous month",
+      "nextMonth": "Next month",
+      "currentMonth": "Go to current month",
+      "weekdays": ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"],
+      "dayTitle_one": "{{count}} activity: {{types}}",
+      "dayTitle_other": "{{count}} activities: {{types}}"
+    },
+    "goals": {
+      "title": "My goals",
+      "primary": "Primary goal",
+      "yearlyTitle": "Yearly distance goal",
+      "allRide": "All ride",
+      "allRun": "All run",
+      "current": "Current",
+      "toGo": "To go",
+      "behindPlan": "Behind plan",
+      "ride": "Cycling",
+      "rideShort": "Ride",
+      "run": "Running",
+      "runShort": "Run",
+      "week": "Week",
+      "month": "Month",
+      "year": "Year",
+      "set": "Set goal",
+      "editShort": "Edit",
+      "none": "No goal set",
+      "saveShort": "OK",
+      "cancelShort": "X",
+      "onTrack": "On track",
+      "ahead": "{{value}} {{unit}} ahead",
+      "behind": "{{value}} {{unit}} behind",
+      "expected": "(Target: {{value}} {{unit}})"
+    },
+    "weeklyHours": {
+      "ride": "Cycling",
+      "run": "Running",
+      "swim": "Swimming",
+      "other": "Other",
+      "weekLabel": "WK{{week}}/{{year}}",
+      "timeLabel": "{{hours}}h {{minutes}}m",
+      "timeLabelHours": "{{hours}}h",
+      "segmentTitle": "{{label}}: {{value}}{{unit}}"
+    },
+    "yearToDate": "Year to date {{year}}",
+    "stats": {
+      "activities": "Activities",
+      "distance": "Distance",
+      "time": "Time",
+      "elevation": "Elevation"
+    },
+    "weeklyCharts": {
+      "distance": "Distance",
+      "elevation": "Elevation",
+      "time": "Time",
+      "last12Weeks": "Last 12 weeks",
+      "weekLabel": "WK{{week}}"
+    },
+    "quickLinks": {
+      "analytics": "Analytics"
+    },
+    "external": {
+      "title": "External tools",
+      "strava": "Strava profile",
+      "zwiftpower": "ZwiftPower",
+      "komoot": "Komoot profile",
+      "kreuzotter": "Kreuzotter",
+      "mywindsock": "myWindsock",
+      "ftp": "What is my FTP?"
+    },
+    "units": {
+      "hoursShort": "h"
+    }
+  },
+  "common": {
+    "loading": "Loading...",
+    "error": "Error",
+    "notAvailable": "—",
+    "unknown": "Unknown",
+    "reset": "Reset",
+    "back": "Back",
+    "details": "Details",
+    "seeAll": "See all",
+    "select": "Select",
+    "cancel": "Cancel",
+    "save": "Save",
+    "sorting": "Sort",
+    "previous": "Previous",
+    "next": "Next",
+    "pageOf": "Page {{current}} / {{total}}",
+    "edit": "Edit"
+  },
+  "error": {
+    "title": "Failed to load",
+    "message": "The data could not be loaded. Please try again.",
+    "retry": "Try again"
+  },
+  "empty": {
+    "activities": {
+      "title": "No activities found",
+      "description": "There are no activities for the selected filters. Try a different range or remove some filters.",
+      "reset": "Reset filters"
+    },
+    "data": {
+      "title": "No data available",
+      "description": "There is no data for this period."
+    }
+  },
+  "language": {
+    "label": "Language",
+    "en": "EN",
+    "de": "DE"
+  },
+  "footer": {
+    "poweredBy": "PWRX — Power Explorer for Training Data",
+    "poweredByLine": "powered by"
+  },
+  "segment": {
+    "list": {
+      "title": "Segments",
+      "subtitle": "Overview and leaderboards of your segments.",
+      "searchPlaceholder": "Search segments...",
+      "sourceFilter": {
+        "all": "All",
+        "sync": "Sync",
+        "own": "Own"
+      },
+      "quickFilters": "Source",
+      "sourceBadges": {
+        "sync": "Sync",
+        "auto": "Auto",
+        "manual": "Manual",
+        "unknown": "Unknown"
+      },
+      "view": {
+        "cards": "Card view",
+        "table": "Table view"
+      },
+      "summary": {
+        "totalSegments": "Total segments",
+        "withAttempts": "{{count}} with ≥3 efforts",
+        "totalEfforts": "Segment efforts",
+        "prs": "{{count}} PRs",
+        "prRate": "PR rate",
+        "prRateHint": "PRs / efforts",
+        "avgSegment": "Avg segment",
+        "avgGrade": "Avg grade {{value}}"
+      },
+      "rankings": "Rankings",
+      "empty": "No segments found.",
+      "sort": {
+        "name": "Name",
+        "attempts": "Efforts",
+        "bestTime": "Best time",
+        "distance": "Distance",
+        "difficulty": "Difficulty",
+        "bestWatts": "Watt PR",
+        "bestHr": "HR PR",
+        "improvement": "Improvement",
+        "lastAttempt": "Last effort"
+      },
+      "columns": {
+        "segment": "Segment",
+        "attempts": "Efforts",
+        "bestTime": "Best time",
+        "distance": "Distance",
+        "difficulty": "CAT",
+        "bestWatts": "Watt PR",
+        "bestHr": "HR PR",
+        "improvement": "Improvement",
+        "improvementShort": "Δ",
+        "lastAttempt": "Last effort"
+      }
+    },
+    "filters": {
+      "6m": "6M",
+      "12m": "12M",
+      "24m": "24M",
+      "20": "Last 20",
+      "50": "Last 50",
+      "all": "All"
+    },
+    "detail": {
+      "loading": "Loading segment data...",
+      "notFound": "Segment not found.",
+      "backToActivities": "← Activities",
+      "unknownLocation": "Unknown location",
+      "activity": "Activity",
+      "facts": "Segment facts",
+      "category": "Category {{value}}",
+      "categoryNone": "No category",
+      "previewTitle": "Segment on map & elevation profile",
+      "previewSubtitle": "Snapshot from a reference activity on this segment.",
+      "previewUnavailable": "No sufficient stream data is currently available for this segment.",
+      "timelineTitle": "Your segment times over time",
+      "fastTimesTop": "Faster times on top",
+      "timeLabel": "Time",
+      "timelineFallback": "Range too narrow - showing all efforts.",
+      "timelineEmpty": "You need multiple efforts on this segment to see a trend.",
+      "bestTitle": "Best efforts",
+      "bestTime": "Best time",
+      "pr": "PR",
+      "avgPrefix": "Avg",
+      "avgWatts": "Avg watts",
+      "avgHr": "Avg HR",
+      "vam": "VAM",
+      "elevationGain": "Elevation gain",
+      "distance": "Distance",
+      "avgGrade": "Avg grade",
+      "attempts": "Attempts",
+      "lastAttempt": "Last attempt",
+      "toPrActivity": "Open PR activity →",
+      "trendTitle": "Trend & progress",
+      "trend": {
+        "last5": "Avg last 5",
+        "prev5": "Avg previous 5",
+        "delta": "Change",
+        "slope": "Trend (sec/effort)",
+        "slower": "Slower by {{value}}% vs previous.",
+        "faster": "Faster by {{value}}% vs previous."
+      },
+      "attemptsTitle": "All segment efforts",
+      "noAttempts": "No efforts found.",
+      "attemptsCount": "{{count}} efforts · All efforts",
+      "sortAllAttempts": "Sorting applies to all efforts",
+      "table": {
+        "date": "Date",
+        "activity": "Activity",
+        "time": "Time",
+        "avgWatts": "Avg watts",
+        "avgHr": "Avg HR"
+      },
+      "segmentNumber": "Segment #{{id}}",
+      "activityFallback": "Activity {{id}}",
+      "stats": {
+        "distance": "Distance",
+        "avgGrade": "Avg grade",
+        "maxGrade": "Max grade",
+        "elevationDiff": "Elevation diff"
+      }
+    }
+  }
+  ,
+  "activities": {
+    "title": "Activities",
+    "count": "{{shown}} of {{filtered}} activities",
+    "countTotal": "({{total}} total)",
+    "view": {
+      "cards": "Card view",
+      "table": "Table view"
+    },
+    "loadMore": "Load more ({{count}} more)",
+    "table": {
+      "activity": "Activity",
+      "date": "Date",
+      "type": "Type",
+      "distance": "Distance",
+      "time": "Time",
+      "elevation": "Elevation",
+      "pace": "Pace"
+    },
+    "units": {
+      "distanceKm": "{{value}} km",
+      "elevationM": "{{value}} m",
+      "kmShort": "km",
+      "mShort": "m"
+    },
+    "filters": {
+      "searchPlaceholder": "Search activities...",
+      "advanced": "Advanced filters",
+      "clear": "Clear filters",
+      "gear": {
+        "label": "Gear:",
+        "all": "All gear"
+      },
+      "minDistance": "Min distance:",
+      "minElevation": "Min elevation:",
+      "from": "From:",
+      "to": "To:",
+      "types": {
+        "Ride": "Ride",
+        "VirtualRide": "Virtual ride",
+        "Run": "Run",
+        "Walk": "Walk",
+        "Hike": "Hike",
+        "EBikeRide": "E-bike",
+        "Swim": "Swim",
+        "Workout": "Workout"
+      },
+      "sort": {
+        "date": "Date",
+        "distance": "Distance",
+        "elevation": "Elevation",
+        "time": "Time",
+        "power": "Power",
+        "asc": "Ascending",
+        "desc": "Descending"
+      }
+    }
+  },
+  "activity": {
+    "card": {
+      "gpsData": "GPS data",
+      "powerData": "Power data",
+      "heartRateData": "Heart rate data",
+      "cadenceData": "Cadence data",
+      "segmentPr": "Segment PR",
+      "kudos": "Kudos",
+      "comments": "Comments",
+      "achievements": "Achievements"
+    },
+    "stats": {
+      "distance": "Distance",
+      "time": "Time",
+      "elevation": "Elevation"
+    },
+    "units": {
+      "watt": "{{value}} W",
+      "wattCompact": "{{value}}W",
+      "bpm": "{{value}} bpm"
+    }
+  },
+  "activityDetail": {
+    "loading": "Loading activity...",
+    "notFound": "Activity not found",
+    "backToActivities": "← Activities",
+    "viewOnStrava": "View on Strava →",
+    "delete": {
+      "button": "Delete imported activity",
+      "deleting": "Deleting...",
+      "confirm": "Do you really want to delete imported activity \"{{name}}\"? This action cannot be undone.",
+      "error": "Failed to delete activity."
+    },
+    "localClimbs": {
+      "button": "Rebuild segments",
+      "running": "Rebuilding...",
+      "result": "{{persisted}} saved ({{detected}} detected)",
+      "error": "Failed to rebuild segments."
+    },
+    "recordedWith": "Recorded with {{device}}",
+    "header": {
+      "kudos": "Kudos",
+      "comments": "Comments",
+      "achievements": "Achievements"
+    },
+    "units": {
+      "km": "km",
+      "m": "m",
+      "kmh": "km/h",
+      "minPerKm": "min/km",
+      "bpm": "bpm",
+      "watt": "W",
+      "wattPerKg": "W/kg",
+      "rpm": "rpm",
+      "kj": "kJ",
+      "vam": "m/h"
+    },
+    "stats": {
+      "distance": "Distance",
+      "movingTime": "Moving time",
+      "elevation": "Elevation",
+      "avgPace": "Avg pace",
+      "avgSpeed": "Avg speed",
+      "avgHr": "Avg HR",
+      "avgPower": "Avg power",
+      "avgCadence": "Avg cadence",
+      "bestPace": "Best: {{value}} {{unit}}",
+      "maxSpeed": "Max: {{value}} {{unit}}",
+      "maxHr": "Max: {{value}} {{unit}}",
+      "energy": "{{value}} {{unit}}",
+      "vam": "VAM: {{value}} {{unit}}",
+      "elevationGain": "Elevation gain",
+      "time": "Time",
+      "pace": "Pace",
+      "speed": "Speed",
+      "average": "Average",
+      "max": "Max"
+    },
+    "photos": {
+      "title": "Photos ({{count}})",
+      "photoAlt": "Activity photo",
+      "primary": "Primary"
+    },
+    "segments": {
+      "title": "Segments",
+      "count": "({{count}})",
+      "show": "Expand",
+      "hide": "Collapse",
+      "loading": "Loading segment data...",
+      "empty": "No segment data yet. Backfill is running or hasn't started.",
+      "segmentFallback": "Segment",
+      "highlighted": "Segment highlighted",
+      "prHighlighted": "PR segment highlighted",
+      "details": "Details →",
+      "manual": {
+        "button": "Save as segment",
+        "creating": "Creating segment...",
+        "prompt": "Segment name (leave blank for auto):",
+        "defaultName": "Segment {{distance}} km",
+        "success": "\"{{name}}\" created: {{efforts}} efforts across {{activities}} activities.",
+        "error": "Failed to create manual segment.",
+        "hint": "Tip: drag in the elevation chart, then fine-tune start/end with the +/- controls.",
+        "adjustStartBack": "Start -1",
+        "adjustStartForward": "Start +1",
+        "adjustEndBack": "End -1",
+        "adjustEndForward": "End +1",
+        "mapTitle": "Route map with live segment focus",
+        "mapHint": "When a range is selected, the map highlights and zooms into start/end points."
+      },
+      "preview": {
+        "title": "Segment preview: {{name}}",
+        "subtitle": "Map excerpt and elevation profile for the selected segment.",
+        "elevationEmpty": "No elevation data available for this segment."
+      },
+      "more_one": "+{{count}} more segment",
+      "more_other": "+{{count}} more segments"
+    },
+    "charts": {
+      "elevationProfile": "Elevation profile (relative)",
+      "analysisRange": "Analysis: Km {{start}} - {{end}}",
+      "selectRange": "Drag in the chart to mark a range.",
+      "speed": "Speed",
+      "heartRate": "Heart rate",
+      "power": "Power",
+      "cadence": "Cadence",
+      "distanceAxis": "Distance (km)",
+      "tooltip": {
+        "elevation": "Elevation",
+        "speed": "Speed",
+        "hr": "HR",
+        "power": "Power",
+        "cadence": "Cadence",
+        "pace": "Pace",
+        "avgHr": "Avg HR"
+      }
+    },
+    "splits": {
+      "title": "Kilometer splits",
+      "paceDevelopment": "Pace development",
+      "columns": {
+        "km": "Km",
+        "pace": "Pace",
+        "time": "Time",
+        "avgHr": "Avg HR"
+      },
+      "kilometerAxis": "Kilometer",
+      "paceAxis": "Pace (min/km)",
+      "kmLabel": "Km {{value}}"
+    },
+    "trainingStimulus": {
+      "title": "Training stimulus",
+      "noPower": "No power data available.",
+      "noFtp": "FTP missing - training stimulus cannot be calculated.",
+      "duration": "Duration",
+      "dailyImpact": "Day impact: {{value}}",
+      "basedOn": "Based on FTP, normalized power, and duration.",
+      "metrics": {
+        "if": "IF",
+        "tss": "TSS",
+        "np": "NP"
+      },
+      "levels": {
+        "veryEasy": "Very easy",
+        "easy": "Easy",
+        "moderate": "Moderate",
+        "high": "High",
+        "veryHigh": "Very high",
+        "extreme": "Extreme"
+      },
+      "intensity": {
+        "easy": "Easy",
+        "recovery": "Recovery",
+        "endurance": "Endurance",
+        "tempo": "Tempo",
+        "threshold": "Threshold",
+        "vo2max": "VO2max",
+        "anaerobic": "Anaerobic"
+      }
+    },
+    "bestStats": {
+      "options": {
+        "bestPower": "Best power",
+        "bestWkg": "Best W/kg",
+        "bestNp": "Best NP",
+        "bestXpower": "Best xPower",
+        "bestTempo": "Best tempo",
+        "maxHr": "Max HR",
+        "bestVam": "Best VAM"
+      },
+      "labels": {
+        "np": "NP",
+        "if": "IF",
+        "vi": "VI",
+        "tss": "TSS",
+        "bestKm": "Best km",
+        "maxSpeed": "Max speed",
+        "maxHr": "Max HR",
+        "vam": "VAM"
+      },
+      "durations": {
+        "s5": "5 sec",
+        "s10": "10 sec",
+        "s30": "30 sec",
+        "m1": "1 min",
+        "m2": "2 min",
+        "m5": "5 min",
+        "m10": "10 min",
+        "m20": "20 min",
+        "m30": "30 min",
+        "m45": "45 min",
+        "h1": "1 hr",
+        "h90": "1:30 hr",
+        "h2": "2 hr"
+      },
+      "empty": {
+        "power": "No power data available.",
+        "weightMissing": "Weight missing for W/kg.",
+        "np": "No NP data available.",
+        "xpower": "xPower is not available yet.",
+        "tempo": "No tempo data available.",
+        "hr": "No HR data available.",
+        "vam": "No VAM data available."
+      }
+    },
+    "powerZones": {
+      "title": "Power Zones",
+      "total": "Total",
+      "subtitle": "Power zones",
+      "noFtp": "FTP not set - zones are calculated after you add FTP.",
+      "names": {
+        "z1": "Active recovery",
+        "z2": "Endurance",
+        "z3": "Tempo",
+        "z4": "Lactate threshold",
+        "z5": "VO2 max",
+        "z6": "Anaerobic",
+        "z7": "Neuromuscular"
+      }
+    },
+    "heartRateRanges": {
+      "title": "HR ranges"
+    },
+    "gear": {
+      "title": "Gear",
+      "details": "Open gear page →",
+      "assign": "Assign gear",
+      "saving": "Saving...",
+      "unassigned": "No gear",
+      "noGear": "No gear available yet. Create bike/shoes first on the gear page.",
+      "assignError": "Failed to assign gear to activity."
+    },
+    "power": {
+      "noData": "No power data"
+    }
+  },
+  "localClimbs": {
+    "title": "Local Segments",
+    "subtitle": "Manage auto-detected segments from configured activity sources.",
+    "unavailable": {
+      "title": "Segments disabled",
+      "subtitle": "Local segments require segment capability."
+    },
+    "summary": {
+      "activitiesInScope": "Activities (visible)",
+      "localClimbs": "Local segments",
+      "localEfforts": "Local efforts"
+    },
+    "categoryGuide": {
+      "title": "Segment categories",
+      "subtitle": "How local segment difficulty is graded.",
+      "scale": "Scale: HC (hardest), Cat 1, Cat 2, Cat 3, Cat 4 (classic race style), plus Cat 5 and Cat 6 for shorter/easier segments."
+    },
+    "backfill": {
+      "title": "Backfill local segments",
+      "subtitle": "Runs segment detection in bulk for sources and sport types enabled in settings.",
+      "limit": "Limit",
+      "button": "Start backfill",
+      "buttonAll": "Backfill all",
+      "running": "Running...",
+      "runningAll": "Running (all)...",
+      "error": "Backfill request failed.",
+      "toast": {
+        "successTitle": "Backfill finished",
+        "successBody": "{{processed}} activities checked, {{persisted}} segments saved.",
+        "errorTitle": "Backfill failed"
+      },
+      "result": {
+        "modeFull": "Full run in {{batches}} batches (batch size {{batchSize}})",
+        "matched": "Matched activities (scope): {{value}}",
+        "processed": "Processed activities: {{value}}",
+        "withClimbs": "Activities with segments: {{value}}",
+        "detected": "Detected segments: {{value}}",
+        "persisted": "Persisted segments: {{value}}",
+        "errors": "Errors: {{value}}"
+      }
+    },
+    "activities": {
+      "title": "Activities",
+      "subtitle": "Showing {{count}} of {{total}} activities",
+      "searchPlaceholder": "Search activities...",
+      "sort": {
+        "dateDesc": "Newest first",
+        "dateAsc": "Oldest first",
+        "distanceDesc": "Longest distance",
+        "elevationDesc": "Most elevation",
+        "nameAsc": "Name A-Z"
+      },
+      "empty": "No activities found.",
+      "rebuild": "Rebuild",
+      "rebuilding": "Rebuilding...",
+      "toast": {
+        "successTitle": "Rebuild complete",
+        "successBody": "{{detected}} segments detected, {{persisted}} saved.",
+        "errorTitle": "Rebuild failed",
+        "errorBody": "Failed to rebuild local segments."
+      },
+      "result": {
+        "detected": "Detected: {{value}}",
+        "persisted": "Saved: {{value}}",
+        "localEfforts": "Local efforts: {{value}}"
+      },
+      "moreEfforts": "+{{value}} more"
+    },
+    "list": {
+      "title": "Detected local segments",
+      "subtitle": "Showing {{count}} of {{total}} local segments",
+      "searchPlaceholder": "Search local segments...",
+      "sort": {
+        "attemptsDesc": "Most efforts",
+        "bestAsc": "Fastest best time",
+        "distanceDesc": "Longest distance",
+        "gradeDesc": "Steepest grade",
+        "nameAsc": "Name A-Z"
+      },
+      "empty": "No local segments available yet.",
+      "attempts": "{{value}} efforts",
+      "best": "Best {{value}}"
+    }
+  },
+  "training": {
+    "title": "Training",
+    "subtitle": "Training insights and performance trends",
+    "activityTypes": {
+      "ride": "Cycling",
+      "run": "Running"
+    },
+    "loading": {
+      "analytics": "Loading analytics...",
+      "trainingLoad": "Loading training load data...",
+      "weekday": "Loading weekday data...",
+      "timeOfDay": "Loading time of day data...",
+      "monthly": "Loading monthly data..."
+    },
+    "noData": {
+      "hrZones": "No heart rate data available",
+      "weekday": "No weekday data available",
+      "timeOfDay": "No time of day data available",
+      "monthly": "No monthly data available"
+    },
+    "units": {
+      "hoursMinutes": "{{hours}}h {{minutes}}m",
+      "minutesOnly": "{{minutes}}m",
+      "hoursMinutesCompact": "{{hours}}:{{minutes}}h",
+      "minutesShort": "{{minutes}}min",
+      "pace": "min/km"
+    },
+    "hrZones": {
+      "title": "Heart Rate Zones",
+      "subtitle": "Time distribution across HR zones (last {{months}} months)",
+      "activities": "{{count}} activities"
+    },
+    "pace": {
+      "title": "Pace by run",
+      "subtitle": "All runs over time • {{count}} runs",
+      "filters": {
+        "all": "All",
+        "twoYears": "2y",
+        "oneYear": "1y",
+        "sixMonths": "6m",
+        "threeMonths": "3m"
+      },
+      "axis": "Pace (min/km)",
+      "tooltip": {
+        "pace": "Pace",
+        "distance": "Distance",
+        "avgHr": "Avg HR"
+      }
+    },
+    "trainingLoad": {
+      "requiredTitle": "FTP Required for TSS Analysis",
+      "requiredBody": "Set your FTP on the Power page to see Training Stress Score (TSS) analysis with CTL, ATL, and TSB.",
+      "title": "Training Load (Last {{days}} Days)",
+      "subtitle": "Normalized Power, Intensity Factor, and Training Stress Score",
+      "summary": {
+        "activities": "Total Activities",
+        "tss": "Total TSS",
+        "avgIf": "Avg IF",
+        "ftp": "FTP"
+      },
+      "table": {
+        "date": "Date",
+        "activity": "Activity",
+        "duration": "Duration",
+        "avgPower": "Avg Power",
+        "np": "NP",
+        "if": "IF",
+        "tss": "TSS"
+      }
+    },
+    "weekday": {
+      "title": "Weekdays",
+      "subtitle": "Which weekdays do you train the most?",
+      "axisActivities": "Activities",
+      "axisDistance": "km",
+      "legendActivities": "Activities",
+      "legendDistance": "Distance (km)"
+    },
+    "timeOfDay": {
+      "title": "Time of day",
+      "subtitle": "When do you prefer to train?",
+      "axisActivities": "Activities",
+      "axisDistance": "km",
+      "legendActivities": "Activities",
+      "legendDistance": "Total distance (km)"
+    },
+    "monthly": {
+      "title": "Monthly overview",
+      "subtitle": "Distance and hours per month",
+      "axisDistance": "km",
+      "axisHours": "Hours",
+      "legendDistance": "Distance (km)",
+      "legendHours": "Hours"
+    },
+    "zones": {
+      "z1": "Z1 Recovery",
+      "z2": "Z2 Endurance",
+      "z3": "Z3 Tempo",
+      "z4": "Z4 Threshold",
+      "z5": "Z5 VO2max",
+      "z6": "Z6 Anaerobic",
+      "z1Short": "Z1",
+      "z2Short": "Z2",
+      "z3Short": "Z3",
+      "z4Short": "Z4",
+      "z5Short": "Z5",
+      "z6Short": "Z6"
+    },
+    "impact": {
+      "recovery": "Recovery",
+      "light": "Light",
+      "moderate": "Base",
+      "build": "Build",
+      "high": "High",
+      "veryHigh": "Very high",
+      "extreme": "Epic",
+      "recoveryShort": "Recovery",
+      "lightShort": "Light",
+      "moderateShort": "Base",
+      "buildShort": "Build",
+      "highShort": "High",
+      "veryHighShort": "Very high",
+      "extremeShort": "Epic"
+    },
+    "relative": {
+      "low": "Below CTL ({{value}}%)",
+      "normal": "Within range ({{value}}% CTL)",
+      "strong": "Strong stimulus ({{value}}% CTL)",
+      "veryStrong": "Very strong ({{value}}% CTL)",
+      "massive": "Massive ({{value}}% CTL)",
+      "lowShort": "below CTL",
+      "normalShort": "within range",
+      "strongShort": "strong vs CTL",
+      "veryStrongShort": "very strong",
+      "massiveShort": "massive"
+    },
+    "pmc": {
+      "ctl": "CTL {{value}}",
+      "atl": "ATL {{value}}",
+      "tsb": "TSB {{value}}"
+    }
+  },
+  "settings": {
+    "title": "Settings",
+    "subtitle": "Manage your profile and training settings",
+    "profileNotFound": "Profile not found",
+    "profilePhotoAlt": "Profile photo",
+    "notSet": "Not set",
+    "lastSync": "Last sync: {{value}}",
+    "defaults": {
+      "athlete": "Athlete",
+      "username": "default",
+      "unknown": "Unknown"
+    },
+    "status": {
+      "active": "● Active",
+      "inactive": "○ Inactive",
+      "activeShort": "Active"
+    },
+    "tabs": {
+      "personal": "Personal",
+      "segments": "Segments",
+      "import": "Import",
+      "sync": "Sync",
+      "logs": "Logs",
+      "system": "System"
+    },
+    "sections": {
+      "profile": "Personal information",
+      "body": "Body data & performance",
+      "goals": "Training goals",
+      "summary": "Activity overview",
+      "connection": "Strava connection",
+      "system": "System"
+    },
+    "fields": {
+      "firstname": "First name",
+      "lastname": "Last name",
+      "username": "Username",
+      "city": "City",
+      "country": "Country",
+      "weight": "Body weight",
+      "ftp": "FTP",
+      "maxHr": "Max heart rate",
+      "restingHr": "Resting heart rate"
+    },
+    "placeholders": {
+      "firstname": "Your first name",
+      "lastname": "Your last name",
+      "username": "Your username",
+      "city": "Your city",
+      "country": "Your country"
+    },
+    "units": {
+      "kg": "kg",
+      "watt": "W",
+      "bpm": "bpm"
+    },
+    "goals": {
+      "cycling": "Cycling",
+      "running": "Running",
+      "weekly": "Weekly goal",
+      "yearly": "Yearly goal"
+    },
+    "summary": {
+      "total": "Total"
+    },
+    "connection": {
+      "sourceHint": "These connection details come from the active Strava sync/adapter.",
+      "hiddenHint": "Strava sync is disabled. Strava connection details are hidden.",
+      "athleteId": "Athlete ID",
+      "athleteIdSet": "Set",
+      "athleteIdMissing": "Not set",
+      "status": "Status",
+      "connected": "🟢 Connected",
+      "disconnected": "⚪ Not connected",
+      "scope": "Permissions",
+      "tokenExpires": "Token valid until",
+      "createdAt": "Account created",
+      "updatedAt": "Last updated"
+    },
+    "localClimbs": {
+      "title": "Local segment detection",
+      "hint": "Controls which activities are included when backfilling local segments.",
+      "includeImported": "Include imported activities",
+      "includeStrava": "Include Strava activities",
+      "includeRide": "Analyze ride activities",
+      "includeRun": "Analyze run activities",
+      "namingHint": "Optional naming logic for local segments. When enabled, reverse geocoding adds a street/place hint.",
+      "reverseGeocodeEnabled": "Reverse geocoding for segment names",
+      "virtualNamePreferred": "Prefer activity name for virtual activities",
+      "reverseGeocodeUrl": "Reverse geocoding URL",
+      "reverseGeocodeLanguage": "Languages (Accept-Language)",
+      "reverseGeocodeUserAgent": "User-Agent",
+      "reverseGeocodeTimeoutMs": "Timeout",
+      "advanced": {
+        "title": "Advanced",
+        "hint": "Technical reverse-geocoding options. Defaults are sufficient for normal usage.",
+        "show": "Show",
+        "hide": "Hide"
+      },
+      "descriptions": {
+        "includeImported": "Include activities from file imports (.fit/.fit.gz/.gpx/.gpx.gz/.tcx/.tcx.gz/.zip) in local segment detection.",
+        "includeStrava": "Include activities loaded via Strava sync.",
+        "includeRide": "Detect local segments in ride activities.",
+        "includeRun": "Detect local segments in run activities.",
+        "reverseGeocodeEnabled": "Adds location or street context to segment names using coordinates.",
+        "virtualNamePreferred": "For virtual rides/runs, prefer the activity name over geographic naming.",
+        "reverseGeocodeUrl": "API endpoint used for reverse geocoding (default: Nominatim).",
+        "reverseGeocodeLanguage": "Preferred language(s) for place names, e.g. de,en.",
+        "reverseGeocodeUserAgent": "App identifier sent with geocoding requests; required by some providers.",
+        "reverseGeocodeTimeoutMs": "Maximum wait time per reverse geocoding request in milliseconds."
+      },
+      "rename": {
+        "title": "Rename existing local segments",
+        "hint": "Applies the current naming logic to existing local segments.",
+        "batchSize": "Batch size",
+        "includeManualOn": "Including manual",
+        "includeManualOff": "Auto segments only",
+        "renameManualNamesOn": "Overwrite manual names",
+        "renameManualNamesOff": "Keep manual names",
+        "button": "Start renaming",
+        "running": "Renaming...",
+        "toast": {
+          "successTitle": "Renaming finished",
+          "successBody": "{{renamed}} of {{matched}} segments were renamed.",
+          "errorTitle": "Renaming failed",
+          "errorBody": "Failed to rename local segments."
+        }
+      },
+      "jobs": {
+        "title": "Segment jobs (tech)",
+        "subtitle": "Operational segment jobs for backfill and targeted rebuilds.",
+        "backfill": {
+          "title": "Backfill",
+          "limit": "Limit",
+          "button": "Start backfill",
+          "buttonAll": "Run full backfill",
+          "running": "Backfill running...",
+          "runningAll": "Full backfill running...",
+          "result": {
+            "matched": "Matched activities: {{value}}",
+            "processed": "Processed: {{value}}",
+            "persisted": "Persisted segments: {{value}}"
+          },
+          "toast": {
+            "successTitle": "Backfill finished",
+            "successBody": "{{processed}} activities processed, {{persisted}} segments persisted.",
+            "errorTitle": "Backfill failed",
+            "errorBody": "Failed to start backfill."
+          }
+        },
+        "rebuild": {
+          "title": "Rebuild single activity",
+          "activityId": "Activity ID",
+          "button": "Rebuild",
+          "running": "Rebuild running...",
+          "invalidActivityId": "Please enter a valid activity ID.",
+          "result": {
+            "activityId": "Activity: {{value}}",
+            "detected": "Detected: {{value}}",
+            "persisted": "Persisted: {{value}}"
+          },
+          "toast": {
+            "successTitle": "Rebuild finished",
+            "successBody": "{{detected}} detected, {{persisted}} persisted.",
+            "errorTitle": "Rebuild failed",
+            "errorBody": "Failed to start rebuild."
+          }
+        },
+        "repairSportTypes": {
+          "title": "Repair malformed activity sport types",
+          "hint": "Fixes older file imports with malformed sport types (for example text/html) after parser fixes. Intended for self-hosted maintenance.",
+          "button": "Repair sport types",
+          "running": "Repair running...",
+          "result": {
+            "scanned": "Candidates scanned: {{value}}",
+            "updated": "Updated: {{value}}",
+            "sample": "Sample output contains {{value}} entries.",
+            "truncated": "Output truncated (max 20 entries)."
+          },
+          "toast": {
+            "successTitle": "Sport type repair finished",
+            "successBody": "Updated {{updated}} of {{scanned}} candidates.",
+            "errorTitle": "Sport type repair failed",
+            "errorBody": "Failed to repair malformed sport types."
+          }
+        }
+      }
+    },
+    "system": {
+      "apiVersion": "API version",
+      "rateLimits": "Rate limits",
+      "sync": "Sync",
+      "syncDaily": "Daily at 3:00 AM"
+    },
+    "sync": {
+      "title": "Sync",
+      "enabled": "Enabled",
+      "disabled": "Disabled",
+      "scheduleHint": "Auto sync runs daily at the selected time. Catch-up runs after startup if a sync was missed.",
+      "manual": {
+        "title": "Manual sync",
+        "subtitle": "Run a full sync immediately (activities, segments, photos).",
+        "activityTitle": "Sync now",
+        "activityDesc": "Runs the same sync as the schedule.",
+        "activityButton": "Start sync",
+        "activityRunning": "Sync running...",
+        "running": "Sync running...",
+        "alreadyRunning": "A sync is already running. Please wait until it finishes.",
+        "backfillTitle": "Backfill sync",
+        "backfillDesc": "Fills missing streams, segments, and photos for older activities (limited per run).",
+        "backfillButton": "Run backfill sync",
+        "backfillRunning": "Backfill running...",
+        "explainActivity": "Activity sync uses the recent-days window and is best for new activities.",
+        "explainBackfill": "Backfill sync is for older data gaps and respects the backfill limits."
+      },
+      "toast": {
+        "activityStartedTitle": "Sync started",
+        "backfillStartedTitle": "Backfill started",
+        "initialStartedTitle": "Initial sync started",
+        "successBody": "The job is running in the background. Check Logs for progress.",
+        "alreadyRunningTitle": "Sync already running",
+        "alreadyRunningBody": "Please wait for the current sync to finish.",
+        "errorTitle": "Sync failed to start",
+        "errorBody": "Please try again or check your connection."
+      },
+      "initial": {
+        "title": "Initial sync",
+        "subtitle": "One-time onboarding sync for a new user (activities, athlete profile, and gear). You can run it anytime.",
+        "statusLabel": "Status",
+        "status": {
+          "pending": "Not started",
+          "running": "Running",
+          "completed": "Completed",
+          "failed": "Failed"
+        },
+        "startedAt": "Started: {{value}}",
+        "doneAt": "Completed: {{value}}",
+        "days": "Initial sync window",
+        "button": "Run initial sync",
+        "buttonRunning": "Initial sync running...",
+        "hint": "Streams and segments follow your activity sync settings and may take time due to Strava rate limits."
+      },
+      "mode": {
+        "simple": "Daily time",
+        "advanced": "Advanced (cron)"
+      },
+      "simpleHint": "Runs once per day at the selected time.",
+      "cronHintShort": "Advanced schedule with cron. * means every.",
+      "cronHint": "Cron format: minute hour day month weekday. * means every. Example: 30 3 * * * = 03:30 daily.",
+      "display": {
+        "dailyAt": "Daily at {{time}}",
+        "cron": "Cron: {{value}}"
+      },
+      "startupTitle": "Startup catch-up",
+      "onStartup": "Catch-up after startup",
+      "onStartupHint": "If the device was off, run a catch-up after startup.",
+      "startupStaleHours": "Stale threshold",
+      "timezone": "Scheduler timezone",
+      "activityTitle": "Activity sync",
+      "activityEnabled": "Auto sync",
+      "activityCron": "Daily time",
+      "activityDays": "Recent days per run",
+      "activityStreams": "Fetch streams in activity sync",
+      "activitySegments": "Fetch segments in activity sync",
+      "backfillTitle": "Backfill sync",
+      "backfillEnabled": "Backfill sync enabled",
+      "backfillCron": "Backfill schedule",
+      "backfillStreamsLimit": "Streams backfill limit",
+      "backfillSegmentsLimit": "Segments backfill limit",
+      "backfillPhotosLimit": "Photo sync limit",
+      "backfillDownloadsLimit": "Photo download limit",
+      "units": {
+        "hours": "hours",
+        "days": "days",
+        "activities": "activities",
+        "photos": "photos"
+      }
+    },
+    "syncStatus": {
+      "title": "Sync status",
+      "subtitle": "Overview of what is synced and what is pending.",
+      "lastRun": "Last run:",
+      "never": "No sync has run yet.",
+      "total": "Total: {{value}}",
+      "empty": "No sync logs available",
+      "tableHint": "Counts are per run. Photos = metadata sync from Strava, downloads = local file downloads.",
+      "bars": {
+        "activities": "Activities",
+        "streams": "Streams",
+        "segments": "Segments",
+        "photos": "Photo sync",
+        "downloads": "Photo downloads"
+      },
+      "legend": {
+        "synced": "Synced",
+        "pending": "Pending",
+        "notEligible": "Not eligible",
+        "unknown": "Unknown"
+      },
+      "status": {
+        "running": "running",
+        "completed": "completed",
+        "failed": "failed"
+      },
+      "syncTypes": {
+        "scheduledActivity": "Scheduled sync",
+        "scheduledBackfill": "Scheduled backfill",
+        "manualFull": "Manual full sync",
+        "manualActivity": "Manual sync",
+        "manualBackfill": "Manual backfill",
+        "startupActivity": "Startup sync",
+        "startupBackfill": "Startup backfill",
+        "initial": "Initial sync"
+      },
+      "metrics": {
+        "streams": "Streams ({{count}} activities)",
+        "segmentsCombined": "Segments: {{activities}} activities / {{efforts}} efforts",
+        "segmentsActivities": "Segments ({{count}} activities)",
+        "segmentsEfforts": "Segment efforts {{count}}",
+        "photos": "Photos synced {{count}}",
+        "downloads": "Downloads (local) {{count}}",
+        "powerCurve": "Power curve updated"
+      },
+      "warnings": {
+        "rateLimit": "Strava rate limit reached — sync will continue on the next run.",
+        "segmentErrors": "{{count}} segment errors (will retry on next run)."
+      },
+      "errors": {
+        "API_LIMIT_REACHED": "Strava rate limit reached. Please try again later.",
+        "AUTH_ERROR": "Strava authorization failed. Please reconnect your account.",
+        "FORBIDDEN": "Strava access denied. Check your app permissions.",
+        "STRAVA_ERROR": "Strava API unavailable. Please try again later.",
+        "NETWORK_ERROR": "Network error while contacting Strava."
+      },
+      "table": {
+        "started": "Started",
+        "status": "Status",
+        "items": "Items",
+        "details": "Details"
+      }
+    },
+    "users": {
+      "title": "User management",
+      "subtitle": "Manage all Strava accounts in the system",
+      "activeUser": "Active user",
+      "otherUsers": "Other users",
+      "newUser": "+ New user",
+      "addUserTitle": "Add new user",
+      "athleteIdLabel": "Strava athlete ID",
+      "athleteIdPlaceholder": "e.g. 12345678",
+      "athleteIdHelp": "You can find the athlete ID in your Strava profile URL",
+      "refreshTokenLabel": "Strava refresh token",
+      "refreshTokenPlaceholder": "Refresh token from OAuth flow",
+      "refreshTokenHelp": "Obtained via Strava OAuth authorization",
+      "firstnamePlaceholder": "Max",
+      "lastnamePlaceholder": "Mustermann",
+      "usernamePlaceholder": "maxmustermann",
+      "creating": "Creating...",
+      "create": "Create user",
+      "count": "{{count}} users in the system",
+      "idLabel": "ID: {{id}}",
+      "delete": "Delete",
+      "you": "(You)",
+      "emptyTitle": "No users found",
+      "emptySubtitle": "Add the first user",
+      "userLabel": "User"
+    },
+    "user": {
+      "alertRequired": "Strava athlete ID and refresh token are required",
+      "confirmDelete": "Do you really want to delete user \"{{name}}\"? This action cannot be undone."
+    }
+  },
+  "records": {
+    "title": "Personal Records",
+    "subtitle": "Your best performances and achievements",
+    "sport": {
+      "ride": "Cycling",
+      "run": "Running"
+    },
+    "bestEfforts": {
+      "runningTitle": "Best Running Efforts",
+      "powerTitle": "Best Power Efforts",
+      "runningDesc": "Personal records for standard distances",
+      "runningDescWithCount": "Personal records for standard distances • Analyzed {{count}} runs",
+      "powerDesc": "All-time best power efforts",
+      "powerDescWithCount": "All-time best power efforts • Analyzed {{count}} activities",
+      "emptyRunning": "No best efforts found",
+      "emptyPower": "No power data found. Go to the Power page and click \"Generate Power Cache\"."
+    },
+    "streaks": {
+      "current": {
+        "title": "Current Streak",
+        "description": "Consecutive active days"
+      },
+      "longest": {
+        "title": "Longest Streak",
+        "allTime": "All time best"
+      },
+      "total": {
+        "title": "Total Active Days",
+        "description": "Days with at least one activity"
+      },
+      "frequency": {
+        "title": "Activity Frequency",
+        "description": "Activities per active day"
+      }
+    },
+    "yearOverYear": {
+      "title": "Year over Year",
+      "description": "Compare your performance across years",
+      "table": {
+        "year": "Year",
+        "activities": "Activities",
+        "distance": "Distance",
+        "time": "Time",
+        "elevation": "Elevation",
+        "avgDistance": "Avg distance"
+      }
+    },
+    "top": {
+      "title": "Top 10 Records",
+      "description": "Your best performances",
+      "empty": "No records found"
+    },
+    "categories": {
+      "longestDistance": {
+        "title": "Longest Distance",
+        "description": "Your longest activities by distance"
+      },
+      "longestDuration": {
+        "title": "Longest Duration",
+        "description": "Your longest activities by time"
+      },
+      "mostElevation": {
+        "title": "Most Elevation",
+        "description": "Activities with the most elevation gain"
+      },
+      "fastestSpeed": {
+        "title": "Fastest Speed",
+        "description": "Your fastest activities by average speed"
+      },
+      "highestHeartrate": {
+        "title": "Highest Heart Rate",
+        "description": "Activities with highest average heart rate"
+      },
+      "mostCalories": {
+        "title": "Most Calories",
+        "description": "Activities that burned the most calories"
+      },
+      "mostKudos": {
+        "title": "Most Kudos",
+        "description": "Activities with the most kudos"
+      },
+      "mostComments": {
+        "title": "Most Comments",
+        "description": "Activities with the most comments"
+      },
+      "bestVam": {
+        "title": "Best VAM",
+        "description": "Highest climbing rate (meters per hour)"
+      }
+    },
+    "units": {
+      "km": "km",
+      "m": "m",
+      "kmh": "km/h",
+      "bpm": "bpm",
+      "kcal": "kcal",
+      "vam": "m/h",
+      "days": "days",
+      "distance": "Distance",
+      "activities": "Activities"
+    }
+  },
+  "gear": {
+    "title": "Gear",
+    "subtitle": "Manage and track your bikes and shoes",
+    "error": "Failed to load gear",
+    "empty": "No gear found",
+    "recentActivities": "Recent activities",
+    "filters": {
+      "all": "All",
+      "bikes": "Bikes",
+      "shoes": "Shoes"
+    },
+    "stats": {
+      "bikes": "Bikes",
+      "shoes": "Shoes",
+      "totalDistance": "Total distance",
+      "activities": "Activities",
+      "hours": "Hours",
+      "status": "Status"
+    },
+    "manualCreate": {
+      "title": "Add gear manually",
+      "subtitle": "Create bikes or shoes manually.",
+      "submit": "Create gear",
+      "creating": "Creating...",
+      "error": "Failed to create gear.",
+      "types": {
+        "bike": "Bike",
+        "shoes": "Shoes"
+      },
+      "fields": {
+        "name": "Name",
+        "brand": "Brand (optional)",
+        "model": "Model (optional)",
+        "startDistanceKm": "Current distance (km)",
+        "description": "Description (optional)",
+        "retired": "Mark as retired"
+      },
+      "validation": {
+        "nameRequired": "Please provide a gear name.",
+        "distanceNonNegative": "Distance must be zero or positive."
+      }
+    },
+    "status": {
+      "active": "Active",
+      "retired": "Retired"
+    },
+    "source": {
+      "manual": "Manual",
+      "synced": "Synced"
+    },
+    "maintenance": {
+      "title": "Wear tracker",
+      "subtitle": "Set distance limits to get replacement reminders.",
+      "empty": "No wear tracking set yet.",
+      "shoeSetup": "Set a distance limit for your shoes.",
+      "shoeLabel": "Shoe mileage",
+      "limitPlaceholder": "Limit (km)",
+      "enable": "Enable",
+      "save": "Save",
+      "reset": "Reset",
+      "delete": "Remove",
+      "addTitle": "Add component",
+      "add": "Add",
+      "componentPlaceholder": "Component name (e.g. chain)",
+      "bikeEmpty": "No components yet. Add chain, cassette, brakes, etc.",
+      "status": {
+        "unset": "No limit set",
+        "left": "{{km}} km left",
+        "over": "{{km}} km over"
+      }
+    },
+    "active": "Active gear ({{count}})",
+    "retired": "Retired ({{count}})"
+  },
+  "heatmap": {
+    "title": "Heatmap",
+    "loading": "Loading GPS data...",
+    "filters": {
+      "title": "Filters",
+      "type": "Activity type",
+      "allTypes": "All types",
+      "year": "Year",
+      "allYears": "All years",
+      "clear": "Clear filters"
+    },
+    "selected": {
+      "title": "Selected activity",
+      "viewDetails": "View details",
+      "deselect": "Deselect",
+      "empty": "Click on a route to see details"
+    },
+    "cache": {
+      "cached": "Cached ({{hours}}h ago)",
+      "fresh": "Fresh data ({{ms}}ms)",
+      "refresh": "Refresh data",
+      "refreshing": "Refreshing..."
+    },
+    "footer": {
+      "years": "Years: {{value}}",
+      "types": "{{count}} types"
+    }
+  },
+  "tech": {
+    "loading": "loading system diagnostics...",
+    "errorPrefix": "ERROR",
+    "error": "Failed to fetch system diagnostics",
+    "lastUpdated": "Last updated: {{value}}",
+    "sections": {
+      "system": "SYSTEM",
+      "database": "DATABASE",
+      "activities": "ACTIVITIES",
+      "segments": "SEGMENTS",
+      "syncConfig": "SYNC PLAN",
+      "sync": "SYNC LOG",
+      "gps": "GPS STREAMS",
+      "photos": "PHOTOS",
+      "activityTypes": "ACTIVITY TYPES",
+      "yearly": "YEARLY BREAKDOWN",
+      "stack": "TECH STACK",
+      "gaps": "DATA GAPS"
+    },
+    "labels": {
+      "node": "Node.js",
+      "platform": "Platform",
+      "uptime": "Uptime",
+      "pid": "Process ID",
+      "heap": "Memory (Heap)",
+      "rss": "Memory (RSS)",
+      "appVersion": "App Version",
+      "gitCommit": "Git Commit",
+      "gitRef": "Git Ref",
+      "gitRepo": "Repository",
+      "syncTimezone": "Timezone",
+      "syncStartup": "Startup Catch-up",
+      "syncStartupThreshold": "Startup Threshold",
+      "syncActivity": "Activity Schedule",
+      "syncActivityDays": "Recent Days",
+      "syncActivityStreams": "Activity Streams",
+      "syncActivitySegments": "Activity Segments",
+      "syncBackfill": "Backfill Schedule",
+      "syncBackfillStreamsLimit": "Backfill Streams Limit",
+      "syncBackfillSegmentsLimit": "Backfill Segments Limit",
+      "syncBackfillPhotosLimit": "Backfill Photo Sync Limit",
+      "syncBackfillDownloadsLimit": "Backfill Download Limit",
+      "dbEngine": "Engine",
+      "dbSize": "Total Size",
+      "migrations": "Migrations",
+      "tables": "Tables",
+      "rows": "rows",
+      "total": "Total",
+      "withGps": "With GPS Data",
+      "withoutGps": "Without GPS",
+      "withPhotos": "With Photos",
+      "firstActivity": "First Activity",
+      "lastActivity": "Last Activity",
+      "lastSync": "Last Sync",
+      "totalSegments": "Total Segments",
+      "totalEfforts": "Total Efforts",
+      "activitiesWithSegments": "Activities w/ Segments",
+      "totalRecords": "Total Records",
+      "dataPoints": "Data Points",
+      "activitiesWithPhotos": "Activities w/ Photos",
+      "photosSynced": "Photos Synced",
+      "photosTotal": "Total Photos in DB",
+      "photosDownloaded": "Downloaded Locally",
+      "photosPending": "Pending Download",
+      "photosLocal": "Local Files"
+    },
+    "sync": {
+      "lastRun": "Last run:",
+      "pending": "Backfill pending → streams: {{streams}} · segments: {{segments}} · photos: {{photos}}",
+      "empty": "No sync logs available",
+      "columns": {
+        "started": "Started",
+        "status": "Status",
+        "items": "Items",
+        "duration": "Duration",
+        "message": "Message",
+        "details": "Details"
+      },
+      "enabled": "enabled",
+      "disabled": "disabled",
+      "thresholdHours": "{{value}} h",
+      "status": {
+        "running": "running",
+        "completed": "completed",
+        "failed": "failed"
+      }
+    },
+    "photos": {
+      "activitiesWithPhotos": "{{count}} activities have photo_count > 0",
+      "photosSynced": "{{count}} activities with photos in DB"
+    },
+    "migrations": {
+      "ok": "Up to date",
+      "pending": "{{count}} pending",
+      "runHint": "Run: npm run db:migrate"
+    },
+    "yearly": {
+      "year": "Year",
+      "acts": "Acts",
+      "distance": "Distance",
+      "streams": "Streams",
+      "power": "Power",
+      "coverage": "Coverage",
+      "streamCoverage": "{{value}}% with streams",
+      "legend": "Streams = GPS/HR data | Power = Watt streams for power curve"
+    },
+    "stack": {
+      "backend": "Backend",
+      "frontend": "Frontend",
+      "database": "Database",
+      "charts": "Charts",
+      "maps": "Maps",
+      "api": "API Client",
+      "container": "Container"
+    },
+    "gaps": {
+      "photosSync": "{{count}} activities need photo sync",
+      "photosSyncHint": "have photos on Strava but not in our DB",
+      "photosSyncOk": "All activity photos synced",
+      "photosDownload": "{{count}} photos need local download",
+      "photosDownloadHint": "run: npm run collect download-photos",
+      "photosDownloadOk": "All photos downloaded locally",
+      "streamsSync": "{{count}} activities need GPS stream sync",
+      "streamsSyncHint": "outdoor activities without stream data",
+      "streamsSyncOk": "All GPS streams synced",
+      "segmentsSync": "{{count}} activities need segment backfill",
+      "segmentsSyncHint": "run: npm run collect backfill-segments",
+      "segmentsSyncOk": "All segment efforts synced",
+      "estimatedPower": "{{count}} activities have estimated power only",
+      "estimatedPowerHint": "no detailed watt stream available from Strava",
+      "noGps": "{{count}} activities have no GPS (indoor/manual)"
+    },
+    "units": {
+      "seconds": "{{value}}s",
+      "minutes": "{{minutes}}m {{seconds}}s",
+      "hours": "{{hours}}h {{minutes}}m"
+    }
+  },
+  "powerProfile": {
+    "title": "Power Profile",
+    "subtitle": "Your best power efforts across different durations",
+    "loading": "Loading power data...",
+    "filters": {
+      "activityType": "Activity type:",
+      "allTypes": "All types",
+      "weight": "Weight:",
+      "weightManageInSettings": "Manage in Settings"
+    },
+    "cache": {
+      "calculating": "Calculating...",
+      "generate": "Generate Power Cache",
+      "cachedAt": "Cached: {{value}}",
+      "notGeneratedTitle": "Power Cache Not Generated",
+      "notGeneratedHint": "Click \"Generate Power Cache\" above to calculate your power curve data. This may take a few minutes."
+    },
+    "riderType": {
+      "title": "Rider type analysis",
+      "subtitle": "Based on {{count}} activities with power data",
+      "loading": "Loading rider type analysis...",
+      "keyPowers": {
+        "s5": "5s: {{watts}}",
+        "m1": "1 min: {{watts}}",
+        "m20": "20 min: {{watts}}"
+      }
+    },
+    "riderTypes": {
+      "Sprinter": "Sprinter",
+      "Puncheur": "Puncheur",
+      "Kletterer": "Climber",
+      "Zeitfahrer": "Time trialist",
+      "Allrounder": "All-rounder",
+      "Ausdauerspezialist": "Endurance specialist"
+    },
+    "strengths": {
+      "label": "Strengths",
+      "tooltip": "Strength",
+      "sprint": "Sprint",
+      "punch": "Punch",
+      "climbing": "Climbing",
+      "timeTrial": "Time trial",
+      "endurance": "Endurance"
+    },
+    "strengthLabels": {
+      "sprint": "Sprint (5s):",
+      "punch": "Punch (1 min):",
+      "climbing": "Climbing (5 min):",
+      "timeTrial": "Time trial (20 min):",
+      "endurance": "Endurance (60 min):"
+    },
+    "units": {
+      "watt": "W",
+      "wattCompact": "{{value}}W",
+      "wattPerKg": "W/kg",
+      "wattPerKgCompact": "{{value}} W/kg",
+      "infinity": "∞"
+    },
+    "details": {
+      "title": "Details & benchmarks",
+      "whatMakes": "What makes a {{type}}?",
+      "strengthsTitle": "Your strengths in detail",
+      "yours": "Yours: {{watts}}W ({{wkg}} W/kg)",
+      "target": "Target: {{watts}}W ({{wkg}} W/kg)",
+      "strengthNote": "Values ≥70% are outstanding. Values between 50–70% are well developed.",
+      "benchmarksTitle": "Performance benchmarks (W/kg)",
+      "benchmarks": {
+        "category": "Category",
+        "worldClass": "World class",
+        "excellent": "Excellent",
+        "veryGood": "Very good",
+        "good": "Good",
+        "average": "Average"
+      },
+      "benchmarksNote": "Benchmarks for trained amateurs to pros. 100% strength = world class level.",
+      "types": {
+        "sprinter": {
+          "desc": "Sprinters excel at explosive power over very short durations (5–30s). Ideal for bunch sprints and short steep climbs.",
+          "strength": "• Your strength: {{watts}}W over 5s ({{wkg}} W/kg)"
+        },
+        "puncheur": {
+          "desc": "Puncheurs specialize in short, explosive attacks (1–3 min). Perfect for short steep climbs and attacks from the group.",
+          "strength": "• Your strength: {{watts}}W over 1 min ({{wkg}} W/kg)"
+        },
+        "climber": {
+          "desc": "Climbers shine on longer climbs (5–20 min). High power per kilogram over medium to longer durations.",
+          "strength": "• Your strength: {{watts}}W over 20 min ({{wkg}} W/kg)"
+        },
+        "tt": {
+          "desc": "Time trialists can hold high power steadily for long periods (20–60 min). Ideal for TTs and steady pace on flat stages.",
+          "strength": "• Your strength: {{watts}}W over 20 min ({{wkg}} W/kg)"
+        },
+        "allrounder": {
+          "desc": "All-rounders have balanced abilities across all durations. Versatile in different race situations.",
+          "strength": "• Balanced: 5s: {{s5}}W, 1 min: {{m1}}W, 20 min: {{m20}}W"
+        },
+        "endurance": {
+          "desc": "Endurance specialists can sustain strong power for long periods (60+ min). Ideal for long steady efforts and breakaways.",
+          "strength": "• Your strength: {{watts}}W over 60 min ({{wkg}} W/kg)"
+        },
+        "default": "Your profile shows specific strengths. Analyze your values to find your optimal use cases."
+      }
+    },
+    "ftp": {
+      "title": "FTP & Power Zones",
+      "label": "Functional Threshold Power",
+      "source": {
+        "manual": "Manually set",
+        "estimated60": "Estimated from 60‑min best power",
+        "estimated20": "Estimated from 20‑min best power (×0.95)"
+      },
+      "estimates": {
+        "min20": "20‑min estimate",
+        "min60": "60‑min best"
+      },
+      "zonesTitle": "Coggan power zones",
+      "zoneLabel": "Z{{zone}}",
+      "zoneRange": "{{min}}—{{max}} {{unit}}"
+    },
+    "allTime": {
+      "title": "All‑time best power",
+      "subtitle": "({{count}} activities at {{weight}} kg)",
+      "key": "All-Time Best"
+    },
+    "yearlyComparison": {
+      "title": "Yearly power curve comparison",
+      "subtitle": "Compare your power profiles across years. Select up to {{count}} years to compare.",
+      "selectPrompt": "Select at least one year to display the power curve",
+      "note": "The X-axis uses a logarithmic scale with higher resolution for short durations (1–30s) and lower resolution for long durations (up to 3 hours)."
+    },
+    "chart": {
+      "duration": "Duration",
+      "power": "Power (W)",
+      "durationLabel": "Duration: {{value}}",
+      "tooltipValue": "{{watts}} ({{wkg}})"
+    },
+    "yearlyTable": {
+      "title": "Yearly best efforts",
+      "subtitle": "Peak power values for each duration by year"
+    },
+    "keyDurations": {
+      "title": "Key duration comparison",
+      "subtitle": "Compare peak power at key durations across years",
+      "labels": {
+        "s5": "5s peak",
+        "m1": "1 min",
+        "m5": "5 min",
+        "m20": "20 min (FTP)"
+      }
+    },
+    "empty": {
+      "title": "No power data",
+      "subtitle": "No activities with power data found. Power data is typically available from activities recorded with a power meter."
+    }
+  },
+  "import": {
+    "title": "File Import",
+    "subtitle": "Import FIT, GPX, TCX, or Strava CSV files manually.",
+    "dropzone": {
+      "title": "Drop files here",
+      "hint": "Supported formats: .fit/.fit.gz, .gpx/.gpx.gz, .tcx/.tcx.gz, .csv/.csv.gz, .zip",
+      "select": "Select files"
+    },
+    "stravaExportHint": {
+      "title": "Strava export tip",
+      "body": "For a Strava account export, import activities.csv / activities.csv.gz first (or together with the activity files). This lets PWRX apply activity names and create/assign gear (bike/shoes) from the export. For larger exports you can also upload the full Strava export ZIP below. PWRX will only process activities.csv and activity files from it (optionally images too).",
+      "uploadAction": "Upload full Strava export ZIP",
+      "uploadRunning": "Uploading Strava export...",
+      "uploadSubhint": "Large Strava ZIPs are uploaded in chunks and can resume on a new attempt. Server/reverse-proxy limits may still apply. The watch folder remains an optional self-hosted/NAS alternative.",
+      "includeMedia": "Enable media import (images). Images from the Strava export will be linked to imported/existing activities; videos and other media are currently ignored.",
+      "errors": {
+        "completeTimeout": "Timeout while finalizing the Strava ZIP import (HTTP 504). The import may still continue in the background. Please check the current import / recent imports list."
+      },
+      "progress": {
+        "uploadingKnown": "Uploading: {{percent}}% ({{sent}} / {{total}})",
+        "uploadingUnknown": "Uploading: {{sent}} sent",
+        "resumed": "Resume detected: {{sent}} were already uploaded.",
+        "processing": "Upload complete. Server is filtering the ZIP (relevant Strava files only) and creating the import run..."
+      }
+    },
+    "selected": "{{count}} file(s) selected · {{size}}",
+    "actions": {
+      "upload": "Start import",
+      "uploading": "Importing...",
+      "clear": "Clear"
+    },
+    "errors": {
+      "uploadFailed": "Import request failed."
+    },
+    "status": {
+      "done": "Done",
+      "duplicate": "Duplicate",
+      "queued": "Queued",
+      "failed": "Failed",
+      "processing": "Processing"
+    },
+    "lastResult": "Current import",
+    "importId": "Import #{{id}}",
+    "progressSummary": {
+      "title": "Import progress",
+      "completedOfTotal": "{{done}} / {{total}} completed",
+      "imported": "Imported",
+      "open": "Remaining",
+      "processing": "Processing",
+      "queued": "Queued",
+      "duplicates": "Duplicates",
+      "failed": "Failed",
+      "total": "Total",
+      "percent": "Progress"
+    },
+    "viewActivity": "Open activity",
+    "logs": {
+      "title": "Recent imports",
+      "detailTitle": "Import details",
+      "empty": "No imports yet.",
+      "simpleHint": "Latest processed imports at a glance.",
+      "selectHint": "Select an import on the left.",
+      "noFiles": "No files recorded for this import."
+    },
+    "retry": {
+      "button_one": "Retry {{count}} failed file",
+      "button_other": "Retry {{count}} failed files",
+      "running": "Retrying...",
+      "hint_one": "{{count}} failed file can be retried.",
+      "hint_other": "{{count}} failed files can be retried."
+    },
+    "watch": {
+      "title": "Watch folder",
+      "subtitle": "Automatic import from a configured folder.",
+      "config": {
+        "title": "Network share (self-hosted)",
+        "hint": "The watch folder is configured on the server side (Docker/host). Drop import files into the shared folder using Finder/Explorer.",
+        "networkPath": "SMB/network path (or local host path)",
+        "networkPathMissing": "Not set (admin must configure WATCH_FOLDER_SMB_PATH)",
+        "copyHint": "Note: The folder path is not selected in the browser. PWRX watches the container path; the network path shown here is only the pointer to your file share.",
+        "path": "Folder path (inside container)",
+        "pollSeconds": "Scan interval (sec)",
+        "stableChecks": "Stable checks",
+        "enabledOn": "Watch folder enabled",
+        "enabledOff": "Watch folder disabled",
+        "recursiveOn": "Recursive enabled",
+        "recursiveOff": "Recursive disabled",
+        "save": "Save configuration",
+        "saveRunning": "Saving...",
+        "saveError": "Failed to save watch-folder configuration.",
+        "validation": {
+          "pollSeconds": "Scan interval must be between 1 and 3600 seconds.",
+          "stableChecks": "Stable checks must be between 1 and 20.",
+          "pathRequired": "A path is required when watch folder is enabled."
+        }
+      },
+      "running": "Watch folder is active",
+      "enabledNotRunning": "Watch folder enabled but not running",
+      "disabled": "Watch folder is disabled",
+      "path": "Path",
+      "rescan": "Rescan now",
+      "rescanRunning": "Rescanning...",
+      "stats": {
+        "imported": "Imported",
+        "duplicates": "Duplicates",
+        "failed": "Failed",
+        "scans": "Scans"
+      }
+    },
+    "metrics": {
+      "title": "Import metrics",
+      "subtitle": "Rolling {{days}}-day summary.",
+      "runs": "Runs",
+      "files": "Files",
+      "successRate": "Success rate",
+      "failureRate": "Failure rate",
+      "runsDone": "Done runs",
+      "runsPartial": "Partial runs",
+      "runsError": "Error runs",
+      "avgFilesPerRun": "Avg files/run"
+    },
+    "queue": {
+      "title": "Queue status",
+      "subtitle": "Live state of background import jobs.",
+      "queued": "Queued",
+      "ready": "Ready now",
+      "processing": "Processing",
+      "doneLastHour": "Done (1h)",
+      "failed": "Failed (total)",
+      "failedLast24h": "Failed (24h)",
+      "nextAvailableAt": "Next due",
+      "worker": "Worker",
+      "workerRunning": "running",
+      "workerStopped": "stopped",
+      "monitor": "Alert monitor",
+      "monitorRunning": "running",
+      "monitorStopped": "stopped",
+      "webhook": "Webhook",
+      "configured": "configured",
+      "notConfigured": "not configured",
+      "alertsSent": "Alerts sent",
+      "alertsFailed": "Alert send failures"
+    },
+    "queueFailed": {
+      "title": "Failed queue jobs",
+      "subtitle": "Jobs that reached final failed state.",
+      "delete": "Delete",
+      "deleteVisible_one": "Delete {{count}} visible job",
+      "deleteVisible_other": "Delete {{count}} visible jobs",
+      "deleteVisibleRunning": "Deleting...",
+      "requeue": "Requeue",
+      "requeueVisible_one": "Requeue {{count}} visible job",
+      "requeueVisible_other": "Requeue {{count}} visible jobs",
+      "requeueVisibleRunning": "Requeueing...",
+      "attempts": "Attempts: {{current}} / {{max}}",
+      "empty": "No failed queue jobs."
+    },
+    "advanced": {
+      "title": "Advanced import tools",
+      "subtitle": "Show queue, watch folder, and diagnostics only when needed.",
+      "show": "Show advanced",
+      "hide": "Hide advanced",
+      "openSettings": "Open in settings"
+    }
+  }
+}
