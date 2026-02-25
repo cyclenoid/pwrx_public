@@ -105,6 +105,7 @@ export default function Settings() {
 
   const [editing, setEditing] = useState<Record<string, boolean>>({})
   const [values, setValues] = useState<Record<string, string>>({})
+  const [recentlySavedFields, setRecentlySavedFields] = useState<Record<string, boolean>>({})
   const [renameIncludeManual, setRenameIncludeManual] = useState(false)
   const [renameManualNames, setRenameManualNames] = useState(false)
   const [renameBatchSize, setRenameBatchSize] = useState('200')
@@ -131,14 +132,29 @@ export default function Settings() {
     await updateUserSetting('onboarding_profile_basics_confirmed', 'true')
   }
 
+  const markFieldSaved = (field?: string) => {
+    if (!field) return
+    setEditing((prev) => ({ ...prev, [field]: false }))
+    setRecentlySavedFields((prev) => ({ ...prev, [field]: true }))
+    window.setTimeout(() => {
+      setRecentlySavedFields((prev) => {
+        if (!prev[field]) return prev
+        const next = { ...prev }
+        delete next[field]
+        return next
+      })
+    }, 1400)
+  }
+
   const profileMutation = useMutation({
     mutationFn: (updates: Partial<UserProfile>) => updateUserProfile(updates),
-    onSuccess: async () => {
+    onSuccess: async (_data, variables) => {
+      const savedField = Object.keys(variables || {})[0]
       await markProfileBasicsConfirmed()
       await queryClient.invalidateQueries({ queryKey: ['user-profile'] })
       await queryClient.refetchQueries({ queryKey: ['user-profile'] })
       await queryClient.invalidateQueries({ queryKey: ['settings'] })
-      setEditing({})
+      markFieldSaved(savedField)
     },
   })
 
@@ -152,7 +168,7 @@ export default function Settings() {
       await queryClient.refetchQueries({ queryKey: ['user-profile'] })
       await queryClient.invalidateQueries({ queryKey: ['settings'] })
       await queryClient.invalidateQueries({ queryKey: ['ftp'] })
-      setEditing({})
+      markFieldSaved(variables.key)
     },
   })
 
@@ -578,13 +594,25 @@ export default function Settings() {
       </div>
       <div className="flex gap-2 ml-4">
         {!editing[field] ? (
-          <Button
-            size="sm"
-            variant="outline"
-            onClick={() => startEdit(field, currentValue)}
-          >
-            {t('common.edit')}
-          </Button>
+          recentlySavedFields[field] ? (
+            <Button
+              size="sm"
+              variant="outline"
+              disabled
+              className="border-emerald-500/50 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 transition-colors duration-500"
+            >
+              <Check className="h-3.5 w-3.5 mr-1" />
+              {t('common.saved')}
+            </Button>
+          ) : (
+            <Button
+              size="sm"
+              variant="outline"
+              onClick={() => startEdit(field, currentValue)}
+            >
+              {t('common.edit')}
+            </Button>
+          )
         ) : (
           <>
             <Button
