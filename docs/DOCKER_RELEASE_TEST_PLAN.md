@@ -1,25 +1,22 @@
-# Docker Release Test Plan (Pre-Public)
+# Docker Release Test Plan (Public Beta)
 
-This runbook defines a repeatable test flow before publishing the repository.
+This runbook defines a repeatable Docker test flow for validating PWRX before beta updates and stable releases.
 
 Goals:
 - verify core import and analytics behavior in a clean Docker environment
-- validate provider file imports (Apple + Zwift now, Strava export when available)
-- ensure release readiness with explicit pass/fail gates
+- validate file-import workflows (including large export ZIPs)
+- keep release decisions explicit with pass/fail gates
 
-## Current status snapshot (2026-02-21)
+## Current status snapshot (2026-02-25)
 
-- CI status: green (`backend`, `frontend`, `docker-smoke` configured; frontend lint now blocking in workflow)
-- Deploy status: Unraid healthy (`/api/health`, `/api/capabilities`, `/segments`)
-- Local Docker status: healthy in both profiles (public-core without key, private-adapter with key)
-- Provider test data:
-  - Zwift: executed (batch import run #6, 39 files -> 24 ok, 15 skipped metadata-only FIT, 0 failed)
-  - Apple bridge export: pending execution
-  - Strava account export: requested, not received yet
-- Validation notes:
-  - smoke script passed locally (`scripts/docker-release-smoke.ps1 -SkipStart`) and created run #7 (`done`, files_ok=1)
-  - queue status clean after import retry/fix cycle (`failed=0`)
-  - frontend lint command is green (warnings only; no errors)
+- Public repo: `cyclenoid/pwrx_public` published
+- Public release: `v0.9.0-beta.1` (pre-release)
+- CI status: green (`Backend Build and Import Tests`, `Frontend Lint and Build`, `Docker Build Smoke`)
+- Core product mode: file-import-first (no direct API integration required in standard setup)
+- Validation status:
+  - Zwift file import: executed successfully (metadata-only FIT files correctly skipped)
+  - Apple bridge export: pending dataset execution
+  - Strava account export ZIP: available and manually validated in local Docker
 
 ## 1) Test Scope
 
@@ -27,30 +24,30 @@ In scope:
 - Backend API health and capabilities
 - Frontend build/runtime and core pages
 - File import pipeline (`fit/gpx/tcx/csv/zip`, including `.gz` variants)
+- Strava account export ZIP import (chunked/resumable upload)
 - Dedupe behavior (sha256 + fingerprint)
-- Watch-folder behavior
+- Queue visibility / retry / delete failed jobs
+- Watch-folder behavior (self-hosted optional path)
 - Segment generation and segment list/detail UX
 
 Out of scope (for this runbook):
-- direct provider OAuth flows beyond current private adapter setup
+- direct provider OAuth/API integrations (not part of the public default distribution)
 - Apple Health raw XML parsing (not part of current MVP)
 
 ## 2) Provider Matrix (Current)
 
-Use this matrix as planning baseline for release validation:
+Use this matrix as the planning baseline for release validation:
 
 | Provider | Data Source | Format(s) | Status | Notes |
 |---|---|---|---|---|
-| Zwift | Exported activity files | FIT (preferred), TCX | Planned | Good candidate for first smoke run |
-| Apple (via bridge app) | HealthFit / RunGap exports | FIT/TCX/GPX | Planned | Prefer FIT/TCX when possible |
-| Strava | Account export (requested) | Typically ZIP with activity files | Pending | Execute once export arrives |
-| Garmin | Account export | FIT/TCX/GPX | Not available | Skip for now |
+| Zwift | Exported activity files | FIT (preferred), TCX/GPX | Validated | Metadata-only FIT files may be skipped |
+| Apple (via bridge app) | HealthFit / RunGap exports | FIT/TCX/GPX | Planned | Prefer FIT/TCX where possible |
+| Strava | Account export | ZIP (activities + CSV, optional media) | Validated (manual) | Test both with/without media import |
+| Garmin | Account export | FIT/TCX/GPX | Not available | Skip until fixtures are available |
 
-## 3) Environment Profiles
+## 3) Environment Profile (Public Default)
 
-### A) Public-core style test (recommended baseline)
-
-Use file import only, disable Strava adapter:
+Use file import only (recommended release baseline):
 
 ```env
 ADAPTER_FILE_ENABLED=true
@@ -59,35 +56,22 @@ ADAPTER_STRAVA_ENABLED=false
 
 Notes:
 - no Strava API credentials required
-- no deploy key / `PWRX_SSH_DIR` required
-
-### B) Private adapter integration test
-
-Use private adapter package:
-
-```env
-ADAPTER_FILE_ENABLED=true
-ADAPTER_STRAVA_ENABLED=true
-ADAPTER_STRAVA_MODULE=@cyclenoid/pwrx-adapter-strava
-```
+- no deploy key / private adapter package required
 
 ## 4) Setup (Clean Docker Test Environment)
 
 1. Create test `.env` from `.env.example`.
-2. Set DB credentials and paths.
-3. Choose profile A or B above.
-   - For profile B on local Docker, set `PWRX_SSH_DIR` in `.env` (example: `C:/Users/<you>/.ssh`).
-   - Validate key before startup:
-   ```bash
-   ssh-keygen -y -f ~/.ssh/pwrx_adapter_deploy
-   ```
+2. Set database and pgAdmin credentials.
+3. Confirm public-default profile:
+   - `ADAPTER_FILE_ENABLED=true`
+   - `ADAPTER_STRAVA_ENABLED=false`
 4. Start stack:
 
 ```bash
-docker compose up -d
+docker compose up -d --build
 ```
 
-5. Initialize/check DB:
+5. Initialize/check DB (if not already auto-run by container startup):
 
 ```bash
 docker compose exec -T strava-tracker npm run db:migrate
@@ -134,25 +118,32 @@ npm run lint
 npm run build
 ```
 
+Notes:
+- Frontend lint warnings may appear as GitHub annotations while the CI job still passes.
+- Treat warnings as cleanup backlog unless they indicate a real regression.
+
 ## 6) Manual Import Test Flow (Per Provider)
 
-For each provider dataset (Zwift, Apple, later Strava export):
+For each provider dataset (Zwift, Apple, Strava export):
 
 1. Open dashboard: `http://localhost:8088`.
-2. Go to Import page (`/settings?tab=import` or `/import` redirect).
-3. Upload a small batch first (3-10 files).
+2. Open Import page (`/import`).
+3. Upload a small batch first (3-10 files) or a smaller ZIP slice.
 4. Verify statuses:
-   - `done` for valid files
+   - `done` / `ok` for valid files
    - `duplicate` for reruns
    - `failed` only for intentionally invalid samples
-   - for Strava exports: import `activities.csv` once so activity names from export are applied
-5. Verify imported activities appear in Activities and Detail pages.
-6. Verify segment pages:
+5. For Strava exports:
+   - preferred: upload the full Strava account export ZIP
+   - alternative: upload `activities.csv` together with activity files so names/gear mapping are applied
+   - test media import checkbox on/off
+6. Verify imported activities appear in Activities and Detail pages.
+7. Verify segment pages:
    - `/segments` list loads
    - sorting works (`difficulty`, `distance`, `bestTime`, etc.)
    - segment detail opens and shows efforts/trend where available
 
-## 7) Watch-Folder Validation
+## 7) Watch-Folder Validation (Optional / Self-hosted)
 
 1. Enable:
 
@@ -167,7 +158,7 @@ WATCH_FOLDER_SMB_PATH=\\\\unraid\\pwrx-import   # optional UI hint for Finder/Ex
 docker compose restart strava-tracker
 ```
 
-3. Drop files in watch folder host path (or via SMB share that points to the same path):
+3. Drop files in the watch-folder host path (or via SMB share that points to the same path):
 - `${DATA_HUB_DATA_DIR}/imports/watch`
 
 4. Verify:
@@ -180,29 +171,28 @@ docker compose restart strava-tracker
 Run these explicit checks:
 - re-upload same file set -> must produce duplicates, not duplicate activities
 - upload mixed ZIP (supported + unsupported files) -> unsupported files should fail safely
-- run backfill/rebuild segment operations from Settings/System and verify no API errors
+- requeue and delete failed queue jobs from Import UI -> no API errors, queue state updates correctly
+- run segment rebuild / local segment rename tools from Settings -> no API errors
 
 ## 9) Release Gate (Pass Criteria)
 
-All must pass:
+All must pass for a beta update release:
 - CI green (`backend`, `frontend`, `docker-smoke`)
-- Docker stack healthy (`api/health`, dashboard reachable)
-- Import tests passed for:
+- Docker stack healthy (`/api/health`, dashboard reachable)
+- Import tests passed for available datasets:
   - Zwift sample set
-  - Apple bridge-export sample set
-  - Strava export sample set (once received)
+  - Apple bridge-export sample set (when available)
+  - Strava export sample set
 - No blocking UI regressions on:
   - Dashboard
   - Activities + Activity Detail
   - Segments list + Segment Detail
-  - Settings/Import
+  - Settings / Import
 
-Current gate assessment (2026-02-21):
-- PASS: Docker health + smoke + queue stability
-- PASS: Zwift import dataset (with metadata-only FIT files treated as skipped)
-- PASS: frontend lint command + CI workflow gate updated (lint no longer advisory)
-- BLOCKED: Apple dataset execution pending
-- BLOCKED: Strava export dataset pending (export not delivered yet)
+Additional gate for stable `v1.0`:
+- Apple + Strava datasets both validated and documented
+- storage/backup guidance reviewed
+- no critical open bugs in import/queue/segments
 
 ## 10) Execution Log Template
 
@@ -210,7 +200,7 @@ For each release candidate, keep a short log:
 
 - Date:
 - Commit/Tag:
-- Profile (`public-core` or `private-adapter`):
+- Profile: `public-default` (`ADAPTER_STRAVA_ENABLED=false`)
 - Datasets used:
   - Zwift:
   - Apple:
@@ -219,30 +209,30 @@ For each release candidate, keep a short log:
 - Open issues:
 - Go/No-Go decision:
 
-### Latest execution log
+### Latest execution log (Public Beta baseline)
 
-- Date: 2026-02-21
-- Commit/Tag: local working tree (pre-tag)
-- Profile (`public-core` or `private-adapter`): `public-core` (`ADAPTER_STRAVA_ENABLED=false`)
+- Date: 2026-02-25
+- Commit/Tag: `v0.9.0-beta.1`
+- Profile: `public-default` (`ADAPTER_STRAVA_ENABLED=false`)
 - Datasets used:
-  - Zwift: FIT batch in import run #6 (historical file set)
-  - Apple: not available in local fixtures
-  - Strava export: pending from provider
+  - Zwift: validated previously (metadata-only FIT files skipped)
+  - Apple: pending local fixture execution
+  - Strava export: validated (ZIP upload, names/gear/media import flow)
 - Result summary:
-  - Smoke script passed (`health`, `capabilities`, dashboard, import smoke)
-  - Run #6 final: `files_total=39`, `files_ok=24`, `files_skipped=15`, `files_failed=0`
-  - Queue final: `failed=0`, `alerts=[]`
+  - Public CI green on `main`
+  - Public repo + pre-release published
+  - Core Docker/file-import workflow validated
 - Open issues:
-  - frontend lint debt still present as warnings (`any` + hook dependency hints), but no blocking errors
-  - Apple and Strava export validation pending
-  - public-core cleanup (remove remaining private/Strava coupling traces) still open
+  - Apple dataset validation still pending
+  - frontend lint warnings remain (non-blocking)
 - Go/No-Go decision:
-  - No-Go for public stable v1.0 yet
+  - Go for Public Beta
+  - No-Go for stable `v1.0` yet
 
-## 11) Current planned execution order
+## 11) Planned execution order (next validation cycle)
 
-1. Run baseline smoke in profile A (`ADAPTER_STRAVA_ENABLED=false`).
+1. Run baseline smoke in public-default profile (`ADAPTER_STRAVA_ENABLED=false`).
 2. Execute Zwift dataset import run and record result.
 3. Execute Apple bridge-export dataset import run and record result.
-4. Execute private adapter profile B sanity check.
-5. Execute Strava account-export import run when export arrives.
+4. Execute Strava account-export ZIP regression run (with/without media import).
+5. Reassess stable `v1.0` gate.
