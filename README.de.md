@@ -30,6 +30,12 @@ Hinweis: Das Postgres-Passwort wird nur beim ersten Initialisieren des DB-Volume
 docker compose up -d
 ```
 
+Optional (Self-hosted Add-on): direkte Strava-Sync-Funktionen auf derselben Public-Basis aktivieren:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.strava-addon.yml up -d
+```
+Der eingebaute Add-on-Modus nutzt deine eigenen Strava-Zugangsdaten aus der `.env`. Externe/private Adapter-Module bleiben optional und in Eigenregie.
+
 4. Dienste aufrufen
 ```text
 Dashboard: http://localhost:8088
@@ -85,6 +91,12 @@ Exports, Logs und Fotos liegen unter `DATA_HUB_DATA_DIR` (Default: `./data`).
 - PWRX ueberwacht im Container den Pfad `/imports/watch`.
 - Die Standard-Docker-Installation bindet dazu den Host-Pfad `./data/imports/watch` ein und zeigt ihn in der UI als Zielpfad an.
 - Optional: `WATCH_FOLDER_SMB_PATH` in `.env` setzen, um einen Netzwerkpfad in der UI anzuzeigen (z. B. `\\\\unraid\\pwrx-import`).
+
+## Public-Basis + optionales Add-on (Unraid / Self-hosted)
+- Empfehlung fuer Tests und den Alltag: dieselbe Public-Basis wie alle Nutzer verwenden (`docker-compose.yml`).
+- Direkten Strava-Sync nur auf der eigenen Instanz optional ueber `docker-compose.strava-addon.yml` zuschalten.
+- Repo-Strategie und Workflow: `docs/REPO_STRATEGY.md`
+- Unraid-Beispielablauf: `docs/UNRAID_PUBLIC_BASE_PRIVATE_ADDON.md`
 
 ## Optionale Integrationen (Advanced / in Eigenregie)
 Das oeffentliche Standard-Setup ist file-import-first und benoetigt keine direkte API-Integration.

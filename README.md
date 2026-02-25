@@ -32,6 +32,12 @@ Note: The Postgres password is set only on first initialization of the DB volume
 docker compose up -d
 ```
 
+Optional (self-hosted addon): enable direct Strava sync features on top of the same public base:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.strava-addon.yml up -d
+```
+The built-in addon mode uses your own Strava credentials from `.env`. External/private adapter modules remain optional and self-managed.
+
 4. Open services
 ```text
 Dashboard: http://localhost:8088
@@ -87,6 +93,12 @@ Exports, logs, and photos are stored in `DATA_HUB_DATA_DIR` (default: `./data`).
 - PWRX watches the container path `/imports/watch`.
 - Standard Docker install exposes the corresponding host path `./data/imports/watch` and shows it in the UI as copy target.
 - Optional: set `WATCH_FOLDER_SMB_PATH` in `.env` to show a network share path in the UI (for example `\\\\unraid\\pwrx-import`).
+
+## Public Base + Optional Add-on (Unraid / Self-hosted)
+- Recommended for testing and daily use: run the same public base as all users (`docker-compose.yml`).
+- Add optional direct Strava sync only on your own instance with `docker-compose.strava-addon.yml`.
+- Repo strategy and workflow: `docs/REPO_STRATEGY.md`
+- Unraid example flow: `docs/UNRAID_PUBLIC_BASE_PRIVATE_ADDON.md`
 
 ## Optional Integrations (Advanced / Self-managed)
 The public default setup is file-import-first and does not require direct API integrations.

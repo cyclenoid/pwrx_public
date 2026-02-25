@@ -1,0 +1,15 @@
+services:
+  strava-tracker:
+    environment:
+      # Optional self-hosted addon: enable direct Strava sync features on top of the public base.
+      ADAPTER_STRAVA_ENABLED: "true"
+      # Leave empty to use the built-in adapter implementation.
+      # Set to a custom module path/package only if you operate your own integration module.
+      ADAPTER_STRAVA_MODULE: ${ADAPTER_STRAVA_MODULE:-}
+      STRAVA_CLIENT_ID: ${STRAVA_CLIENT_ID}
+      STRAVA_CLIENT_SECRET: ${STRAVA_CLIENT_SECRET}
+      STRAVA_REFRESH_TOKEN: ${STRAVA_REFRESH_TOKEN}
+    # Optional for advanced/private external adapter packages (not needed for built-in addon mode):
+    # volumes:
+    #   - ${PWRX_SSH_DIR}:/root/.ssh:ro
+
