@@ -27,9 +27,9 @@ You can expect:
 - Rotate compromised credentials immediately.
 
 For this project in particular:
-- Protect `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`.
 - Protect database credentials (`POSTGRES_USER`, `POSTGRES_PASSWORD`).
-- Protect CI secret `PWRX_ADAPTER_DEPLOY_KEY` (private SSH key for private adapter dependency access).
+- Protect admin credentials (for example `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD`).
+- If you run self-managed integrations, protect any related API tokens/keys outside version control.
 - Use distinct credentials for development and production.
 
 ## Recommended Hardening

@@ -27,7 +27,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@cyclenoid/pwrx-adapter-strava": "github:cyclenoid/pwrx-adapter-strava#v0.2.0",
     "@types/compression": "^1.8.1",
     "adm-zip": "^0.5.16",
     "axios": "^1.6.2",

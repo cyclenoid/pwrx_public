@@ -1,10 +1,11 @@
 # PWRX - Power Explorer for Training Data
 
-Selbst gehosteter Strava-Hub mit PostgreSQL (Schema-Trennung) und React-Dashboard.
+Selbst gehostetes Trainingsdaten-Dashboard mit PostgreSQL (Schema-Trennung) und React-UI.
 
 ## Voraussetzungen
 - Docker + Docker Compose
-- Strava API App + Refresh Token
+- Git (zum Klonen des Repositories)
+- Genug freier Speicherplatz fuer Datenbank/Importe/Fotos (je nach Nutzung)
 
 ## Quick Start (Docker)
 1. `.env.example` nach `.env` kopieren
@@ -13,9 +14,10 @@ cp .env.example .env
 ```
 
 2. Pflichtwerte in `.env` setzen
-- `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
+- `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD`
 - Optional: `DATA_HUB_DATA_DIR` (Default: `./data`)
+Hinweis: PWRX funktioniert standardmaessig mit Datei-Import. Direkte Drittanbieter-API-Integrationen sind nicht Teil des Standard-Setups und muessen vom Nutzer in Eigenregie konfiguriert werden.
 Hinweis: Das Postgres-Passwort wird nur beim ersten Initialisieren des DB-Volumes gesetzt. Wenn du es spaeter aenderst, musst du das Passwort in Postgres aktualisieren oder das Volume zuruecksetzen.
 
 3. Dienste starten
@@ -30,39 +32,11 @@ API Health: http://localhost:3001/api/health
 pgAdmin: http://localhost:5050
 ```
 
-## Public-Core Testmodus (ohne Strava API)
-Diesen Modus nutzen, um die App wie ein oeffentlicher User nur mit Datei-Import zu testen.
-
-In `.env` setzen:
-```env
-ADAPTER_FILE_ENABLED=true
-ADAPTER_STRAVA_ENABLED=false
-STRAVA_CLIENT_ID=
-STRAVA_CLIENT_SECRET=
-STRAVA_REFRESH_TOKEN=
-```
-
-Dann Backend + Dashboard neu starten:
-```bash
-docker compose up -d --force-recreate strava-tracker strava-dashboard
-```
-
-In diesem Modus sind keine privaten Adapter-Deploy-Keys noetig (`PWRX_ADAPTER_DEPLOY_KEY` / `PWRX_SSH_DIR`).
-
-## Erster Sync
-Beim ersten Start laeuft automatisch ein Initial-Sync (Default: letzte 180 Tage). Das kann je nach Datenmenge und Strava-Rate-Limits dauern.
-
-## Sync (Auto + Manuell)
-- Auto-Sync laeuft taeglich zur gewaehlten Uhrzeit.
-- Optional: Catch-up nach dem Start, wenn der Rechner aus war.
-- Manueller Sync ist in der UI (Settings/Dashboard) verfuegbar.
-
-API-Endpunkte:
-- Full Sync (Activity + Backfill): `POST /api/sync` (Alias: `POST /api/sync/full`)
-- Backfill only (Luecken): `POST /api/sync/backfill`
-
-## Kein 24/7 Rechner
-Wenn der Rechner zur geplanten Zeit aus ist, aktiviere "Catch-up nach dem Start" in den Settings. Beim naechsten Start wird der Sync nachgeholt.
+## Erster Start (empfohlener Ablauf)
+1. `http://localhost:8088` im Browser oeffnen
+2. Ueber den Import-Button FIT/GPX/TCX-Dateien oder eine komplette Export-ZIP hochladen
+3. In den Einstellungen mindestens Koerpergewicht setzen (FTP optional, aber empfohlen)
+4. Bei Bedarf Ausruestung und Segment-Einstellungen pruefen
 
 ## Update
 ```bash
@@ -99,44 +73,34 @@ Exports, Logs und Fotos liegen unter `DATA_HUB_DATA_DIR` (Default: `./data`).
 - Docker-Release-Testablauf: `docs/DOCKER_RELEASE_TEST_PLAN.md`
 - PowerShell-Smoketest-Script: `scripts/docker-release-smoke.ps1`
 
-## Privater Strava-Adapter in CI
-Wenn das Backend das private Paket `@cyclenoid/pwrx-adapter-strava` nutzt, braucht der Backend-CI-Job ein Repository-Secret:
-- `PWRX_ADAPTER_DEPLOY_KEY`
+### Watch Folder (Self-hosted / SMB)
+- PWRX ueberwacht im Container den Pfad `/imports/watch`.
+- Die Standard-Docker-Installation bindet dazu den Host-Pfad `./data/imports/watch` ein und zeigt ihn in der UI als Zielpfad an.
+- Optional: `WATCH_FOLDER_SMB_PATH` in `.env` setzen, um einen Netzwerkpfad in der UI anzuzeigen (z. B. `\\\\unraid\\pwrx-import`).
 
-Wert des Secrets:
-- kompletter privater SSH-Key (OpenSSH-Format), passend zu einem Read-only Deploy Key im Repo `cyclenoid/pwrx-adapter-strava`.
-- OpenSSH-Format beibehalten (mehrzeilig):
-  - `-----BEGIN OPENSSH PRIVATE KEY-----`
-  - Base64-Zeilen
-  - `-----END OPENSSH PRIVATE KEY-----`
+## Optionale Integrationen (Advanced / in Eigenregie)
+Das oeffentliche Standard-Setup ist file-import-first und benoetigt keine direkte API-Integration.
 
-Ohne dieses Secret scheitert `npm ci` in `apps/strava` in GitHub Actions.
-
-Fuer lokale Docker-Tests mit privatem Adapter unter Windows/Linux:
-- `PWRX_SSH_DIR` in `.env` setzen (z. B. `C:/Users/<du>/.ssh` unter Windows)
-- sicherstellen, dass dort `pwrx_adapter_deploy` liegt und gueltig ist:
-```bash
-ssh-keygen -y -f ~/.ssh/pwrx_adapter_deploy
-```
+Wenn Nutzer eigene Integrationen bauen (z. B. ueber externe Adapter-Module), ist das nicht Teil der Standard-Distribution und muss eigenstaendig konfiguriert und betrieben werden.
 
 ## Sicherheit
 - Security-Policy und Meldung von Schwachstellen: `SECURITY.md`
 
 ## FAQ
 **Was bedeuten Foto-Sync und Downloads?**  
-Foto-Sync = Metadaten von Strava (URLs/Caption). Downloads = lokal gespeicherte Dateien. Die Zahlen sind pro Lauf.
+Bei optionalen Sync-Integrationen bedeutet Foto-Sync = importierte Foto-Metadaten (URLs/Caption). Downloads = lokal gespeicherte Dateien. Die Zahlen sind pro Lauf.
 
-**Warum dauert der erste Sync so lange?**  
-Große Historien und Strava-Rate-Limits verlangsamen den Import. Er laeuft im Hintergrund weiter.
+**Warum dauert der erste Import so lange?**  
+Große Export-ZIPs, Medienimport und viele Aktivitaeten koennen den ersten Import verlangsamen. Die Queue-Verarbeitung laeuft im Hintergrund weiter.
 
 **Warum bleiben Segmente offen?**  
 Segmente werden in Paketen nachgeladen. Bei Rate-Limits einfach spaeter erneut syncen.
 
 **Kann ich ohne Auto-Sync laufen?**  
-Ja. Auto-Sync in den Settings deaktivieren und manuell syncen.
+Ja. Das oeffentliche Standard-Setup arbeitet mit Datei-Import. Wenn du eine optionale Sync-Integration nutzt, kannst du Auto-Sync in den Settings deaktivieren und manuell syncen.
 
 **Laptop nicht immer an?**  
-Catch-up nach dem Start aktivieren. Dann wird der Sync beim naechsten Start ausgefuehrt.
+Manuellen Import nutzen oder (self-hosted) den Watch-Folder verwenden. Importe laufen weiter, sobald der Rechner wieder an ist.
 
 **Brauche ich Migrationen nach Updates?**  
 Nur wenn ein Release das DB-Schema aendert. Dann `npm run db:migrate` ausfuehren.

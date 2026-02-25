@@ -30,28 +30,6 @@ jobs:
           cache: npm
           cache-dependency-path: apps/strava/package-lock.json
 
-      - name: Validate private adapter deploy key
-        env:
-          PWRX_ADAPTER_DEPLOY_KEY: ${{ secrets.PWRX_ADAPTER_DEPLOY_KEY }}
-        run: |
-          if [ -z "$PWRX_ADAPTER_DEPLOY_KEY" ]; then
-            echo "::error::Missing secret PWRX_ADAPTER_DEPLOY_KEY for private dependency @cyclenoid/pwrx-adapter-strava."
-            exit 1
-          fi
-
-      - name: Start SSH agent for private dependencies
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.PWRX_ADAPTER_DEPLOY_KEY }}
-
-      - name: Configure SSH for GitHub over 443
-        run: |
-          mkdir -p ~/.ssh
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          ssh-keyscan -p 443 ssh.github.com >> ~/.ssh/known_hosts
-          git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/"
-          git config --global url."ssh://git@ssh.github.com:443/".insteadOf "git@github.com:"
-
       - name: Install dependencies
         run: npm ci
 
