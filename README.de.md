@@ -2,10 +2,15 @@
 
 Selbst gehostetes Trainingsdaten-Dashboard mit PostgreSQL (Schema-Trennung) und React-UI.
 
+> Public Beta (`v0.9.0-beta.1`)
+> Das Standard-Setup ist file-import-first (FIT/GPX/TCX/ZIP). Optionale Integrationen sind nicht Teil der Standard-Distribution und muessen vom Nutzer in Eigenregie konfiguriert werden.
+
 ## Voraussetzungen
 - Docker + Docker Compose
 - Git (zum Klonen des Repositories)
 - Genug freier Speicherplatz fuer Datenbank/Importe/Fotos (je nach Nutzung)
+
+Release Notes: `docs/RELEASE_NOTES_v0.9.0-beta.1.de.md` / `docs/RELEASE_NOTES_v0.9.0-beta.1.en.md`
 
 ## Quick Start (Docker)
 1. `.env.example` nach `.env` kopieren

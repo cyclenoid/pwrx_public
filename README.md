@@ -2,12 +2,16 @@
 
 Self-hosted training data dashboard with PostgreSQL (schema separation) and a React UI.
 
+> Public Beta (`v0.9.0-beta.1`)
+> The default setup is file-import-first (FIT/GPX/TCX/ZIP). Optional integrations are not part of the standard distribution and must be configured independently by the user.
+
 ## Requirements
 - Docker + Docker Compose
 - Git (to clone the repository)
 - Free disk space for database/imports/photos (depending on usage)
 
 German version: `README.de.md`
+Release notes: `docs/RELEASE_NOTES_v0.9.0-beta.1.en.md` / `docs/RELEASE_NOTES_v0.9.0-beta.1.de.md`
 
 ## Quick Start (Docker)
 1. Copy `.env.example` to `.env`
