@@ -3,7 +3,7 @@
 Self-hosted training data dashboard with PostgreSQL (schema separation) and a React UI.
 
 > Public Beta (`v0.9.0-beta.1`)
-> The default setup is file-import-first (FIT/GPX/TCX/ZIP). Optional integrations are not part of the standard distribution and must be configured independently by the user.
+> The default setup is file-import-first (FIT/GPX/TCX + Strava export ZIP). Optional integrations are not part of the standard distribution and must be configured independently by the user.
 
 ## Requirements
 - Docker + Docker Compose
@@ -39,9 +39,11 @@ API health: http://localhost:3001/api/health
 pgAdmin: http://localhost:5050
 ```
 
+Note: `strava-tracker` in Docker commands below is a legacy internal service name. The public default setup remains file import only.
+
 ## First Start (Recommended Flow)
 1. Open `http://localhost:8088`
-2. Use the import button to upload FIT/GPX/TCX files or a complete export ZIP
+2. Use the import button to upload FIT/GPX/TCX files or a Strava account export ZIP
 3. Open Settings and set at least body weight (FTP optional but recommended)
 4. Review gear and segment settings if needed
 
@@ -75,6 +77,7 @@ docker compose exec strava-tracker npm run db:check
 Exports, logs, and photos are stored in `DATA_HUB_DATA_DIR` (default: `./data`).
 
 ## Activity File Import
+- Core path for Public Beta: manual import of FIT/GPX/TCX files and Strava account export ZIPs (including names/gear mapping and optional media import from the export).
 - Quickstart: `docs/IMPORT_QUICKSTART.md`
 - Provider guide (Zwift/Wahoo/Garmin/Apple Health): `docs/IMPORT_PROVIDER_GUIDE.md`
 - Docker release test runbook: `docs/DOCKER_RELEASE_TEST_PLAN.md`
