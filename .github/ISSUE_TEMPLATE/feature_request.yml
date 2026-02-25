@@ -1,0 +1,43 @@
+name: Feature request
+description: Suggest an improvement for PWRX
+title: "[Feature]: "
+labels:
+  - enhancement
+  - beta-feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Please describe the problem first, then the proposed solution.
+  - type: textarea
+    id: problem
+    attributes:
+      label: Problem / use case
+      description: What are you trying to do, and what is currently difficult?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed solution
+      description: What should PWRX do instead?
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Import / Queue
+        - Activities / Charts
+        - Segments
+        - Gear
+        - Settings
+        - Docker / Self-hosted
+        - Docs / Onboarding
+        - Other
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considered (optional)
+

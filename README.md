@@ -117,3 +117,8 @@ Apache-2.0 (see `LICENSE`).
 
 ## Support
 Buy me a coffee: `https://buymeacoffee.com/cyclenoid`
+
+## Public Beta Feedback
+- Use GitHub Issues for bug reports and feature requests (templates included).
+- If you enable GitHub Discussions for the repo, use it for setup questions and UX feedback to keep issues actionable.
+- Please include version (`v0.9.0-beta.1`), environment (OS/Docker/browser/proxy), and reproduction steps for import/queue issues.

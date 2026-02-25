@@ -1,0 +1,62 @@
+name: Bug report
+description: Report a bug in the Public Beta
+title: "[Bug]: "
+labels:
+  - bug
+  - beta-feedback
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing PWRX Public Beta. Please provide enough detail to reproduce the issue.
+  - type: textarea
+    id: summary
+    attributes:
+      label: What happened?
+      description: Short summary of the issue and what you expected instead.
+      placeholder: Import ZIP upload fails with 504 after finishing chunk upload...
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open Import page
+        2. Upload Strava export ZIP (~1.2 GB)
+        3. Enable media import
+        4. ...
+    validations:
+      required: true
+  - type: dropdown
+    id: area
+    attributes:
+      label: Area
+      options:
+        - Import / Queue
+        - Activities / Charts
+        - Segments
+        - Gear
+        - Settings
+        - Docker / Self-hosted
+        - UI / UX
+        - Other
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Version
+      placeholder: v0.9.0-beta.1
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: OS, Docker, browser, reverse proxy (if any)
+      placeholder: Unraid 7.x + Docker + Chrome + Nginx Proxy Manager
+  - type: textarea
+    id: logs
+    attributes:
+      label: Error message / logs (optional)
+      render: shell
+
