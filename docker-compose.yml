@@ -90,11 +90,10 @@ services:
       # Node Environment
       NODE_ENV: production
       ADAPTER_FILE_ENABLED: ${ADAPTER_FILE_ENABLED:-true}
-      ADAPTER_STRAVA_ENABLED: ${ADAPTER_STRAVA_ENABLED:-true}
-      ADAPTER_STRAVA_MODULE: ${ADAPTER_STRAVA_MODULE:-@cyclenoid/pwrx-adapter-strava}
+      ADAPTER_STRAVA_ENABLED: ${ADAPTER_STRAVA_ENABLED:-false}
+      ADAPTER_STRAVA_MODULE: ${ADAPTER_STRAVA_MODULE:-}
     volumes:
       - ./apps/strava:/app
-      - ${PWRX_SSH_DIR:-/root/.ssh}:/root/.ssh:ro
       - ${DATA_HUB_DATA_DIR:-./data}/logs/strava:/app/logs
       - ${DATA_HUB_DATA_DIR:-./data}/exports:/exports  # Zugriff auf Export-Ordner
       - ${DATA_HUB_DATA_DIR:-./data}/photos/strava:/app/photos  # Photo-Speicher
@@ -111,20 +110,6 @@ services:
       cp -a /app /tmp/pwrx-app &&
       rm -f /tmp/pwrx-app/.env &&
       cd /tmp/pwrx-app &&
-      if [ "${ADAPTER_STRAVA_ENABLED:-true}" = "false" ] || [ "${ADAPTER_STRAVA_ENABLED:-true}" = "0" ] || [ "${ADAPTER_STRAVA_ENABLED:-true}" = "no" ]; then
-        echo "Strava adapter disabled: skip private adapter dependency";
-        npm pkg delete dependencies.@cyclenoid/pwrx-adapter-strava >/dev/null;
-        npm install --package-lock-only --ignore-scripts --no-audit --no-fund;
-      else
-        if [ ! -f /root/.ssh/pwrx_adapter_deploy ]; then
-          echo "Missing /root/.ssh/pwrx_adapter_deploy for private adapter install" >&2;
-          exit 1;
-        fi;
-        cp /root/.ssh/pwrx_adapter_deploy /tmp/pwrx_adapter_deploy &&
-        chmod 600 /tmp/pwrx_adapter_deploy &&
-        export GIT_SSH_COMMAND="ssh -i /tmp/pwrx_adapter_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes" &&
-        git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/";
-      fi &&
       npm ci --production=false &&
       npm run build &&
       npm run db:init &&
