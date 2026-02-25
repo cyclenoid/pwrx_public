@@ -441,7 +441,11 @@ export default function Settings() {
     const updates: Array<{ key: string; value: string }> = []
     updates.push({ key: 'sync_activity_cron', value: activityCron || scheduleDefaults.sync_activity_cron })
     updates.push({ key: 'sync_backfill_cron', value: backfillCron || scheduleDefaults.sync_backfill_cron })
-    bulkSettingMutation.mutate(updates)
+    bulkSettingMutation.mutate(updates, {
+      onSuccess: () => {
+        markFieldSaved('sync_daily_time')
+      },
+    })
   }
 
   const startEdit = (field: string, currentValue: string | null | undefined) => {
@@ -664,13 +668,25 @@ export default function Settings() {
         </div>
         <div className="flex gap-2">
           {!editing[field] ? (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => startEdit(field, displayValue)}
-            >
-              {t('common.edit')}
-            </Button>
+            recentlySavedFields[field] ? (
+              <Button
+                size="sm"
+                variant="outline"
+                disabled
+                className="border-emerald-500/50 bg-emerald-500/10 text-emerald-500 dark:text-emerald-400 transition-colors duration-500"
+              >
+                <Check className="h-3.5 w-3.5 mr-1" />
+                {t('common.saved')}
+              </Button>
+            ) : (
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => startEdit(field, displayValue)}
+              >
+                {t('common.edit')}
+              </Button>
+            )
           ) : (
             <>
               <Button
