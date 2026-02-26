@@ -111,10 +111,160 @@ const readBackendPackageVersion = (): string => {
 };
 
 const backendPackageVersion = readBackendPackageVersion();
-const backendVersionCommit = String(process.env.PWRX_GIT_SHA || process.env.GIT_COMMIT || '').trim() || null;
+type GitVersionMeta = {
+  commit: string | null;
+  commitShort: string | null;
+  tag: string | null;
+};
+
+const readFileTrimmed = (filePath: string): string | null => {
+  try {
+    const raw = fs.readFileSync(filePath, 'utf8').trim();
+    return raw || null;
+  } catch {
+    return null;
+  }
+};
+
+const resolveGitDir = (repoRoot: string): string | null => {
+  const dotGitPath = path.join(repoRoot, '.git');
+  try {
+    const stats = fs.statSync(dotGitPath);
+    if (stats.isDirectory()) return dotGitPath;
+    if (stats.isFile()) {
+      const content = fs.readFileSync(dotGitPath, 'utf8');
+      const match = content.match(/gitdir:\s*(.+)/i);
+      if (!match) return null;
+      const resolved = path.resolve(repoRoot, match[1].trim());
+      return fs.existsSync(resolved) ? resolved : null;
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
+const readPackedRef = (gitDir: string, refName: string): string | null => {
+  const packedRefsPath = path.join(gitDir, 'packed-refs');
+  try {
+    const lines = fs.readFileSync(packedRefsPath, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('^')) continue;
+      const parts = trimmed.split(' ');
+      if (parts.length >= 2 && parts[1] === refName) {
+        return parts[0];
+      }
+    }
+  } catch {
+    return null;
+  }
+  return null;
+};
+
+const collectTagRefs = (gitDir: string): Array<{ ref: string; commit: string }> => {
+  const tags: Array<{ ref: string; commit: string }> = [];
+  const tagsRoot = path.join(gitDir, 'refs', 'tags');
+
+  const walk = (currentDir: string, prefix: string) => {
+    let entries: fs.Dirent[] = [];
+    try {
+      entries = fs.readdirSync(currentDir, { withFileTypes: true });
+    } catch {
+      return;
+    }
+    for (const entry of entries) {
+      const abs = path.join(currentDir, entry.name);
+      const ref = prefix ? `${prefix}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        walk(abs, ref);
+        continue;
+      }
+      const commit = readFileTrimmed(abs);
+      if (commit) {
+        tags.push({ ref: `refs/tags/${ref}`, commit });
+      }
+    }
+  };
+
+  if (fs.existsSync(tagsRoot)) {
+    walk(tagsRoot, '');
+  }
+
+  try {
+    const packedRefsPath = path.join(gitDir, 'packed-refs');
+    const lines = fs.readFileSync(packedRefsPath, 'utf8').split(/\r?\n/);
+    for (const line of lines) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#') || trimmed.startsWith('^')) continue;
+      const parts = trimmed.split(' ');
+      if (parts.length < 2) continue;
+      const [commit, ref] = parts;
+      if (ref.startsWith('refs/tags/')) {
+        tags.push({ ref, commit });
+      }
+    }
+  } catch {
+    // ignore packed refs
+  }
+
+  return tags;
+};
+
+const selectBestTag = (tags: string[]): string | null => {
+  if (tags.length === 0) return null;
+  const sorted = [...new Set(tags)].sort((a, b) => {
+    const aStable = /^[vV]?\d+\.\d+\.\d+$/.test(a);
+    const bStable = /^[vV]?\d+\.\d+\.\d+$/.test(b);
+    if (aStable !== bStable) return aStable ? -1 : 1;
+    return a.localeCompare(b);
+  });
+  return sorted[0] || null;
+};
+
+const readGitVersionMeta = (): GitVersionMeta => {
+  try {
+    const repoRoot = process.cwd();
+    const gitDir = resolveGitDir(repoRoot);
+    if (!gitDir) return { commit: null, commitShort: null, tag: null };
+
+    const headRaw = readFileTrimmed(path.join(gitDir, 'HEAD'));
+    if (!headRaw) return { commit: null, commitShort: null, tag: null };
+
+    let commit: string | null = null;
+    if (headRaw.startsWith('ref:')) {
+      const refName = headRaw.replace(/^ref:\s*/, '').trim();
+      commit = readFileTrimmed(path.join(gitDir, refName.split('/').join(path.sep))) || readPackedRef(gitDir, refName);
+    } else {
+      commit = headRaw;
+    }
+
+    if (!commit) return { commit: null, commitShort: null, tag: null };
+    const normalizedCommit = commit.trim();
+    const commitShort = normalizedCommit.slice(0, 7);
+    const matchingTags = collectTagRefs(gitDir)
+      .filter((entry) => entry.commit === normalizedCommit)
+      .map((entry) => entry.ref.replace(/^refs\/tags\//, ''));
+
+    return {
+      commit: normalizedCommit,
+      commitShort,
+      tag: selectBestTag(matchingTags),
+    };
+  } catch {
+    return { commit: null, commitShort: null, tag: null };
+  }
+};
+
+const backendGitVersionMeta = readGitVersionMeta();
+const backendVersionCommit = String(process.env.PWRX_GIT_SHA || process.env.GIT_COMMIT || '').trim()
+  || backendGitVersionMeta.commit
+  || null;
 const backendVersionLabel = (() => {
   const explicit = String(process.env.PWRX_VERSION_LABEL || '').trim();
   if (explicit) return explicit;
+  if (backendGitVersionMeta.tag) return backendGitVersionMeta.tag;
+  if (backendGitVersionMeta.commitShort) return backendGitVersionMeta.commitShort;
   if (!backendPackageVersion || backendPackageVersion === 'unknown') return 'unknown';
   return backendPackageVersion.startsWith('v') ? backendPackageVersion : `v${backendPackageVersion}`;
 })();
