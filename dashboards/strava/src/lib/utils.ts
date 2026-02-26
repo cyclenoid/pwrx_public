@@ -35,10 +35,18 @@ export function formatSpeed(metersPerSecond: number): string {
   return kmh.toFixed(1) + ' km/h'
 }
 
-export function formatClimbCategory(value: number | null | undefined): string | null {
+export function formatClimbCategory(
+  value: number | null | undefined,
+  options?: { source?: string | null; isAutoClimb?: boolean | null }
+): string | null {
   if (value === null || value === undefined) return null
   const numeric = Number(value)
   if (!Number.isFinite(numeric)) return null
-  if (numeric <= 0) return 'HC'
+  if (numeric < 0) return 'HC'
+  if (numeric === 0) {
+    const source = String(options?.source || '').toLowerCase()
+    if (source === 'local' || options?.isAutoClimb) return 'HC'
+    return null
+  }
   return `Cat ${Math.max(1, Math.round(numeric))}`
 }

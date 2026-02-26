@@ -1106,6 +1106,8 @@ router.get('/activities/:id/segments', async (req: Request, res: Response) => {
         s.start_latlng,
         s.end_latlng,
         s.climb_category,
+        s.source as segment_source,
+        s.is_auto_climb as segment_is_auto_climb,
         s.city,
         s.state,
         s.country,
@@ -1595,6 +1597,8 @@ router.get('/segments/:id/efforts', async (req: Request, res: Response) => {
         s.start_latlng,
         s.end_latlng,
         s.climb_category,
+        s.source as segment_source,
+        s.is_auto_climb as segment_is_auto_climb,
         s.city,
         s.state,
         s.country
@@ -1617,6 +1621,66 @@ router.get('/segments/:id/efforts', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error fetching segment efforts:', error);
     res.status(500).json({ error: 'Failed to fetch segment efforts' });
+  }
+});
+
+/**
+ * PATCH /api/segments/:id
+ * Rename a local segment for the active user.
+ */
+router.patch('/segments/:id', async (req: Request, res: Response) => {
+  try {
+    const segmentId = Number(req.params.id);
+    if (!Number.isInteger(segmentId)) {
+      return res.status(400).json({ error: 'Invalid segment id' });
+    }
+
+    const rawName = typeof req.body?.name === 'string' ? req.body.name : '';
+    const name = rawName.trim().replace(/\s+/g, ' ');
+    if (name.length < 2) {
+      return res.status(400).json({ error: 'Segment name must be at least 2 characters' });
+    }
+    if (name.length > 160) {
+      return res.status(400).json({ error: 'Segment name must be 160 characters or less' });
+    }
+
+    const result = await db.query(
+      `
+      WITH active_user AS (
+        SELECT id FROM strava.user_profile WHERE is_active = true ORDER BY id LIMIT 1
+      )
+      UPDATE strava.segments s
+      SET
+        name = $2,
+        is_auto_climb = false
+      WHERE s.id = $1
+        AND s.source = 'local'
+        AND EXISTS (
+          SELECT 1
+          FROM strava.segment_efforts se
+          WHERE se.segment_id = s.id
+            AND COALESCE(se.user_id, (SELECT id FROM active_user)) = (SELECT id FROM active_user)
+        )
+      RETURNING s.id, s.name, s.source, s.is_auto_climb
+      `,
+      [segmentId, name]
+    );
+
+    const row = result.rows?.[0];
+    if (!row) {
+      return res.status(404).json({ error: 'Local segment not found' });
+    }
+
+    return res.json({
+      segment_id: Number(row.id),
+      name: String(row.name),
+      source: String(row.source),
+      is_auto_climb: Boolean(row.is_auto_climb),
+      renamed: true,
+    });
+  } catch (error: any) {
+    console.error('Error renaming segment:', error);
+    return res.status(500).json({ error: 'Failed to rename segment' });
   }
 });
 
