@@ -1431,8 +1431,15 @@
     "cache": {
       "cached": "Im Cache (vor {{hours}}h)",
       "fresh": "Frische Daten ({{ms}}ms)",
+      "sampling": "Heatmap-Detail: max. {{value}} Punkte pro Aktivität",
       "refresh": "Daten aktualisieren",
       "refreshing": "Aktualisiere..."
+    },
+    "hotspots": {
+      "title": "Hotspots",
+      "showAll": "Alles zeigen",
+      "item": "Hotspot {{index}}",
+      "activities": "{{count}} Aktivitäten"
     },
     "footer": {
       "years": "Jahre: {{value}}",

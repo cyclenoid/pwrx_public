@@ -550,6 +550,7 @@ export interface HeatmapResponse {
   cached?: boolean
   cache_age_hours?: number
   generation_time_ms?: number
+  sampling_max_points?: number
 }
 
 export const getHeatmapData = async (params?: {
