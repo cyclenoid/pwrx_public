@@ -98,6 +98,27 @@ const importStravaExportZipUpload = multer({
 const importQueueApiEnabled = ['1', 'true', 'yes', 'on']
   .includes(String(process.env.IMPORT_QUEUE_API_ENABLED || 'true').trim().toLowerCase());
 
+const readBackendPackageVersion = (): string => {
+  try {
+    const pkgPath = path.resolve(__dirname, '../../package.json');
+    const raw = fs.readFileSync(pkgPath, 'utf8');
+    const parsed = JSON.parse(raw) as { version?: string };
+    const version = String(parsed?.version || '').trim();
+    return version || 'unknown';
+  } catch {
+    return 'unknown';
+  }
+};
+
+const backendPackageVersion = readBackendPackageVersion();
+const backendVersionCommit = String(process.env.PWRX_GIT_SHA || process.env.GIT_COMMIT || '').trim() || null;
+const backendVersionLabel = (() => {
+  const explicit = String(process.env.PWRX_VERSION_LABEL || '').trim();
+  if (explicit) return explicit;
+  if (!backendPackageVersion || backendPackageVersion === 'unknown') return 'unknown';
+  return backendPackageVersion.startsWith('v') ? backendPackageVersion : `v${backendPackageVersion}`;
+})();
+
 type StravaExportChunkSessionMeta = {
   uploadId: string;
   clientKeyHash: string;
@@ -586,7 +607,15 @@ const getLocalClimbNamingDefaults = async (): Promise<LocalSegmentNamingOptions>
  */
 router.get('/capabilities', async (req: Request, res: Response) => {
   try {
-    return res.json(adapterRegistry.getCapabilities());
+    const capabilities = adapterRegistry.getCapabilities();
+    return res.json({
+      ...capabilities,
+      version: {
+        backend: backendPackageVersion,
+        label: backendVersionLabel,
+        commit: backendVersionCommit,
+      },
+    });
   } catch (error: any) {
     console.error('Error fetching capabilities:', error);
     return res.status(500).json({ error: 'Failed to fetch capabilities' });
