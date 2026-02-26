@@ -56,6 +56,11 @@ export interface CapabilitiesResponse {
   adapters: ActivitySourceAdapter[]
   active_adapters: string[]
   capabilities: AdapterCapabilities
+  version?: {
+    backend?: string | null
+    label?: string | null
+    commit?: string | null
+  }
 }
 
 export const getCapabilities = async (): Promise<CapabilitiesResponse> => {

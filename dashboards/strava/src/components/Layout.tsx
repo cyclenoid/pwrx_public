@@ -8,7 +8,9 @@ import { useCapabilities } from '../hooks/useCapabilities'
 export function Layout() {
   const location = useLocation()
   const { t, i18n } = useTranslation()
-  const { capabilities } = useCapabilities()
+  const { capabilities, data } = useCapabilities()
+  const versionLabel = data?.version?.label || null
+  const versionCommit = data?.version?.commit || null
 
   const toggleLanguage = () => {
     const next = i18n.language?.startsWith('de') ? 'en' : 'de'
@@ -129,6 +131,15 @@ export function Layout() {
                 >
                   <Settings size={20} />
                 </Link>
+
+                {versionLabel && (
+                  <span
+                    className="px-2 py-1 text-[10px] rounded border border-border text-muted-foreground"
+                    title={versionCommit ? `${versionLabel} (${String(versionCommit).slice(0, 12)})` : versionLabel}
+                  >
+                    {versionLabel}
+                  </span>
+                )}
 
                 {/* Language Toggle */}
                 <button
