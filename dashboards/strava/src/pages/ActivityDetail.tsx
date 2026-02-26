@@ -1486,7 +1486,10 @@ export function ActivityDetail() {
                           || segment.end_index === undefined
                         const isActive = segment.effort_id === selectedSegmentEffortId
                         const isPr = segment.is_pr === true
-                        const climbCategoryLabel = formatClimbCategory(segment.climb_category)
+                        const climbCategoryLabel = formatClimbCategory(segment.climb_category, {
+                          source: segment.segment_source,
+                          isAutoClimb: segment.segment_is_auto_climb,
+                        })
 
                         return (
                           <div

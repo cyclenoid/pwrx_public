@@ -304,6 +304,12 @@
         "avgHr": "Avg HR"
       },
       "segmentNumber": "Segment #{{id}}",
+      "rename": {
+        "editButton": "Rename segment",
+        "placeholder": "Segment name",
+        "saving": "Saving...",
+        "autoHint": "Custom rename disables automatic renaming for this segment."
+      },
       "activityFallback": "Activity {{id}}",
       "stats": {
         "distance": "Distance",

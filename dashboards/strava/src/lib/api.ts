@@ -153,6 +153,8 @@ export interface ActivitySegmentEffort {
   start_latlng?: [number, number] | null
   end_latlng?: [number, number] | null
   climb_category?: number | null
+  segment_source?: 'strava' | 'local' | string | null
+  segment_is_auto_climb?: boolean | null
   city?: string | null
   state?: string | null
   country?: string | null
@@ -182,10 +184,23 @@ export interface SegmentEffortsResponse {
   efforts: SegmentEffort[]
 }
 
+export interface RenameSegmentResponse {
+  segment_id: number
+  name: string
+  source: string
+  is_auto_climb: boolean
+  renamed: boolean
+}
+
 export const getSegmentEfforts = async (id: number, limit: number = 200): Promise<SegmentEffortsResponse> => {
   const { data } = await api.get<SegmentEffortsResponse>(`/segments/${id}/efforts`, {
     params: { limit },
   })
+  return data
+}
+
+export const renameSegment = async (id: number, name: string): Promise<RenameSegmentResponse> => {
+  const { data } = await api.patch<RenameSegmentResponse>(`/segments/${id}`, { name })
   return data
 }
 

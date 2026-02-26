@@ -304,6 +304,12 @@
         "avgHr": "Ø HF"
       },
       "segmentNumber": "Segment #{{id}}",
+      "rename": {
+        "editButton": "Segment umbenennen",
+        "placeholder": "Segmentname",
+        "saving": "Speichere...",
+        "autoHint": "Eigener Name deaktiviert die automatische Umbenennung für dieses Segment."
+      },
       "activityFallback": "Aktivität {{id}}",
       "stats": {
         "distance": "Distanz",

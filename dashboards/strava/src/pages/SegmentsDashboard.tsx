@@ -345,7 +345,10 @@ export function SegmentsDashboard() {
                 const location = locationLabel(segment)
                 const improvement = segment.improvement
                 const sourceTag = getSegmentSourceTag(segment)
-                const categoryLabel = formatClimbCategory(segment.climb_category)
+                const categoryLabel = formatClimbCategory(segment.climb_category, {
+                  source: segment.source,
+                  isAutoClimb: segment.is_auto_climb,
+                })
                 return (
                   <Card key={segment.segment_id} className="overflow-hidden">
                     <div className="h-36 bg-muted/30 border-b border-border/40">
@@ -509,7 +512,10 @@ export function SegmentsDashboard() {
                   {segments.map((segment: SegmentListItem) => {
                     const location = locationLabel(segment)
                     const sourceTag = getSegmentSourceTag(segment)
-                    const categoryLabel = formatClimbCategory(segment.climb_category)
+                    const categoryLabel = formatClimbCategory(segment.climb_category, {
+                      source: segment.source,
+                      isAutoClimb: segment.is_auto_climb,
+                    })
                     return (
                       <tr key={segment.segment_id} className="border-b border-border/50">
                         <td className="py-2 px-2">

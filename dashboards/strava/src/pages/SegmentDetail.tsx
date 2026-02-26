@@ -1,9 +1,9 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link, useParams, useSearchParams } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, AreaChart, Area } from 'recharts'
-import { getActivity, getSegmentEfforts, type SegmentEffort } from '../lib/api'
+import { getActivity, getSegmentEfforts, renameSegment, type SegmentEffort } from '../lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -61,12 +61,16 @@ const StatItem = ({ label, value }: { label: string; value: string }) => (
   </div>
 )
 
-const getCategoryBadgeClass = (value: number | null | undefined): string => {
-  if (value === null || value === undefined || !Number.isFinite(Number(value))) {
+const getCategoryBadgeClass = (
+  value: number | null | undefined,
+  options?: { source?: string | null; isAutoClimb?: boolean | null }
+): string => {
+  const label = formatClimbCategory(value, options)
+  if (!label) {
     return 'border-border/60 bg-secondary/20 text-foreground'
   }
   const numeric = Math.round(Number(value))
-  if (numeric <= 0) return 'border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-300'
+  if (label === 'HC' || numeric <= 0) return 'border-rose-500/40 bg-rose-500/10 text-rose-600 dark:text-rose-300'
   if (numeric === 1) return 'border-orange-500/40 bg-orange-500/10 text-orange-600 dark:text-orange-300'
   if (numeric === 2) return 'border-amber-500/40 bg-amber-500/10 text-amber-700 dark:text-amber-300'
   if (numeric === 3) return 'border-lime-500/40 bg-lime-500/10 text-lime-700 dark:text-lime-300'
@@ -77,6 +81,7 @@ const getCategoryBadgeClass = (value: number | null | undefined): string => {
 export function SegmentDetail() {
   const { id } = useParams<{ id: string }>()
   const segmentId = Number(id)
+  const queryClient = useQueryClient()
   const { resolvedTheme } = useTheme()
   const { t } = useTranslation()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -91,6 +96,10 @@ export function SegmentDetail() {
     const value = searchParams.get('attempts_order')
     return value === 'asc' || value === 'desc' ? value : 'desc'
   })
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [segmentNameDraft, setSegmentNameDraft] = useState('')
+  const [segmentNameSaveState, setSegmentNameSaveState] = useState<'idle' | 'saved'>('idle')
+  const [segmentNameError, setSegmentNameError] = useState<string | null>(null)
 
   const { data, isLoading } = useQuery({
     queryKey: ['segment-efforts', segmentId],
@@ -99,6 +108,38 @@ export function SegmentDetail() {
   })
   const efforts = data?.efforts || []
   const segmentInfo = efforts[0] || null
+  const segmentName = segmentInfo?.segment_name || segmentInfo?.effort_name || 'Segment'
+  const segmentSource = segmentInfo?.segment_source || null
+  const segmentIsAutoClimb = segmentInfo?.segment_is_auto_climb ?? null
+  const canRenameSegment = segmentSource === 'local'
+
+  useEffect(() => {
+    if (!isEditingName) {
+      setSegmentNameDraft(segmentName)
+      setSegmentNameError(null)
+    }
+  }, [segmentName, isEditingName])
+
+  const renameSegmentMutation = useMutation({
+    mutationFn: async (nextName: string) => renameSegment(segmentId, nextName),
+    onSuccess: async (result) => {
+      setSegmentNameDraft(result.name)
+      setIsEditingName(false)
+      setSegmentNameError(null)
+      setSegmentNameSaveState('saved')
+      window.setTimeout(() => setSegmentNameSaveState('idle'), 1400)
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['segment-efforts', segmentId] }),
+        queryClient.invalidateQueries({ queryKey: ['segments-list'] }),
+        queryClient.invalidateQueries({ queryKey: ['segments-summary'] }),
+      ])
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.error || error?.message || 'Failed to rename segment'
+      setSegmentNameError(String(detail))
+      setSegmentNameSaveState('idle')
+    },
+  })
 
   const effortsWithDates = useMemo(() => {
     return efforts
@@ -444,7 +485,10 @@ export function SegmentDetail() {
 
   const location = [segmentInfo.city, segmentInfo.state, segmentInfo.country].filter(Boolean).join(', ')
   const segmentDistance = segmentInfo.segment_distance ?? segmentInfo.effort_distance ?? null
-  const categoryLabel = formatClimbCategory(segmentInfo.climb_category)
+  const categoryLabel = formatClimbCategory(segmentInfo.climb_category, {
+    source: segmentSource,
+    isAutoClimb: segmentIsAutoClimb,
+  })
   const categoryDisplay = categoryLabel || t('segment.detail.categoryNone')
   const avgGrade = segmentInfo.average_grade !== null && segmentInfo.average_grade !== undefined
     ? `${Number(segmentInfo.average_grade).toFixed(1)}%`
@@ -473,11 +517,77 @@ export function SegmentDetail() {
             </Button>
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">
-            {segmentInfo.segment_name || segmentInfo.effort_name || 'Segment'}
+            {segmentName}
           </h1>
           <div className="text-sm text-muted-foreground">
             {location || t('segment.detail.unknownLocation')} · {segmentInfo.activity_type || t('segment.detail.activity')}
           </div>
+          {canRenameSegment && (
+            <div className="mt-2">
+              {!isEditingName ? (
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant={segmentNameSaveState === 'saved' ? 'default' : 'outline'}
+                    size="sm"
+                    className={segmentNameSaveState === 'saved' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}
+                    onClick={() => {
+                      setSegmentNameDraft(segmentName)
+                      setSegmentNameError(null)
+                      setIsEditingName(true)
+                    }}
+                  >
+                    {segmentNameSaveState === 'saved' ? t('common.saved') : t('segment.detail.rename.editButton')}
+                  </Button>
+                  {segmentIsAutoClimb && (
+                    <span className="text-xs text-muted-foreground">{t('segment.detail.rename.autoHint')}</span>
+                  )}
+                </div>
+              ) : (
+                <div className="space-y-2 max-w-xl">
+                  <div className="flex flex-col sm:flex-row gap-2 sm:items-center">
+                    <input
+                      type="text"
+                      value={segmentNameDraft}
+                      onChange={(e) => {
+                        setSegmentNameDraft(e.target.value)
+                        if (segmentNameError) setSegmentNameError(null)
+                      }}
+                      maxLength={160}
+                      className="h-9 w-full rounded-md border border-border bg-background px-3 text-sm shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring disabled:opacity-50"
+                      placeholder={t('segment.detail.rename.placeholder')}
+                      disabled={renameSegmentMutation.isPending}
+                    />
+                    <Button
+                      type="button"
+                      size="sm"
+                      disabled={renameSegmentMutation.isPending || segmentNameDraft.trim().length < 2}
+                      className={segmentNameSaveState === 'saved' ? 'bg-emerald-600 hover:bg-emerald-600 text-white' : ''}
+                      onClick={() => renameSegmentMutation.mutate(segmentNameDraft)}
+                    >
+                      {renameSegmentMutation.isPending ? t('segment.detail.rename.saving') : t('common.save')}
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      disabled={renameSegmentMutation.isPending}
+                      onClick={() => {
+                        setIsEditingName(false)
+                        setSegmentNameDraft(segmentName)
+                        setSegmentNameError(null)
+                      }}
+                    >
+                      {t('common.cancel')}
+                    </Button>
+                  </div>
+                  {segmentNameError && (
+                    <div className="text-xs text-red-500">{segmentNameError}</div>
+                  )}
+                </div>
+              )}
+            </div>
+          )}
         </div>
         <div className="text-xs text-muted-foreground">
           {t('segment.detail.segmentNumber', { id: segmentInfo.segment_id })}
@@ -503,7 +613,13 @@ export function SegmentDetail() {
           </div>
           {showCategory && (
             <div className="mt-3">
-              <Badge variant="outline" className={`text-[11px] font-medium ${getCategoryBadgeClass(segmentInfo.climb_category)}`}>
+              <Badge
+                variant="outline"
+                className={`text-[11px] font-medium ${getCategoryBadgeClass(segmentInfo.climb_category, {
+                  source: segmentSource,
+                  isAutoClimb: segmentIsAutoClimb,
+                })}`}
+              >
                 {t('segment.detail.category', { value: categoryDisplay })}
               </Badge>
             </div>
