@@ -553,6 +553,19 @@ export interface HeatmapResponse {
   sampling_max_points?: number
 }
 
+export interface HeatmapHotspotLabelRequestItem {
+  id: string
+  lat: number
+  lng: number
+}
+
+export interface HeatmapHotspotLabelResponse {
+  labels: Array<{
+    id: string
+    label: string | null
+  }>
+}
+
 export const getHeatmapData = async (params?: {
   type?: string
   year?: number
@@ -564,6 +577,13 @@ export const getHeatmapData = async (params?: {
 
 export const clearHeatmapCache = async (): Promise<{ cleared: number; message: string }> => {
   const { data } = await api.delete('/cache/heatmap')
+  return data
+}
+
+export const getHeatmapHotspotLabels = async (
+  hotspots: HeatmapHotspotLabelRequestItem[]
+): Promise<HeatmapHotspotLabelResponse> => {
+  const { data } = await api.post('/activities/heatmap/hotspot-labels', { hotspots })
   return data
 }
 

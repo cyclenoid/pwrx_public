@@ -305,7 +305,7 @@ const getMidpointLatLng = (
   return startLatLng || endLatLng;
 };
 
-const resolveLocationLabel = async (
+export const resolveLocationLabel = async (
   latLng: [number, number] | null,
   options?: LocalSegmentNamingOptions
 ): Promise<string | null> => {

@@ -2,7 +2,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
 import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { getHeatmapData, clearHeatmapCache } from '../lib/api'
+import { getHeatmapData, clearHeatmapCache, getHeatmapHotspotLabels } from '../lib/api'
 import { useTheme } from '../components/ThemeProvider'
 import { Link } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
@@ -116,6 +116,7 @@ export function Heatmap() {
   const [defaultTypeFilterApplied, setDefaultTypeFilterApplied] = useState(false)
   const [focusBounds, setFocusBounds] = useState<BoundsTuple | null>(null)
   const [focusKey, setFocusKey] = useState(0)
+  const [hotspotLabels, setHotspotLabels] = useState<Record<string, string | null>>({})
   const canvasRenderer = useMemo(() => L.canvas({ padding: 0.5 }), [])
 
   const { data, isLoading } = useQuery({
@@ -342,6 +343,43 @@ export function Heatmap() {
     setFocusKey((prev) => prev + 1)
   }
 
+  useEffect(() => {
+    if (hotspots.length === 0) return
+
+    const missing = hotspots
+      .filter((h) => hotspotLabels[h.id] === undefined)
+      .map((h) => ({ id: h.id, lat: h.centroid[0], lng: h.centroid[1] }))
+
+    if (missing.length === 0) return
+
+    let cancelled = false
+    getHeatmapHotspotLabels(missing)
+      .then((response) => {
+        if (cancelled) return
+        setHotspotLabels((prev) => {
+          const next = { ...prev }
+          for (const item of response.labels || []) {
+            next[item.id] = item.label
+          }
+          return next
+        })
+      })
+      .catch(() => {
+        if (cancelled) return
+        setHotspotLabels((prev) => {
+          const next = { ...prev }
+          for (const item of missing) {
+            if (next[item.id] === undefined) next[item.id] = null
+          }
+          return next
+        })
+      })
+
+    return () => {
+      cancelled = true
+    }
+  }, [hotspots, hotspotLabels])
+
   const toggleType = (type: string) => {
     setSelectedTypes((prev) => (
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
@@ -558,8 +596,8 @@ export function Heatmap() {
                       className="w-full rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-left hover:bg-secondary/60 transition-colors"
                     >
                       <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium">
-                          {t('heatmap.hotspots.item', { index: index + 1 })}
+                        <span className="text-sm font-medium truncate pr-2">
+                          {hotspotLabels[hotspot.id] || t('heatmap.hotspots.item', { index: index + 1 })}
                         </span>
                         <span className="text-xs text-muted-foreground">
                           {t('heatmap.hotspots.activities', { count: hotspot.count })}

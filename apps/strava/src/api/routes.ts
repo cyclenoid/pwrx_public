@@ -35,6 +35,7 @@ import {
   createManualLocalSegmentFromActivity,
   renameLocalSegments,
   rebuildLocalClimbsForActivity,
+  resolveLocationLabel,
 } from '../services/localSegments';
 import {
   buildSegmentSourceAndTypeFilters,
@@ -385,8 +386,10 @@ interface HeatmapCache {
   timestamp: number;
   activityCount: number;
 }
+const heatmapHotspotLabelCache = new Map<string, { label: string | null; timestamp: number }>();
 const heatmapCache: Map<string, HeatmapCache> = new Map();
 const HEATMAP_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
+const HEATMAP_HOTSPOT_LABEL_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
 const HEATMAP_PREWARM_ENABLED = ['1', 'true', 'yes', 'on']
   .includes(String(process.env.HEATMAP_PREWARM_ENABLED || 'true').trim().toLowerCase());
 const HEATMAP_PREWARM_DELAY_MS = Math.max(1000, Number(process.env.HEATMAP_PREWARM_DELAY_MS || 12000));
@@ -397,6 +400,9 @@ let heatmapPrewarmLastReason: string | null = null;
 
 const buildHeatmapCacheKey = (type?: string | null, year?: number | string | null) =>
   `heatmap_${type || 'all'}_${year || 'all'}`;
+
+const buildHeatmapHotspotLabelCacheKey = (lat: number, lng: number, language: string, url: string) =>
+  `${url}|${language}|${lat.toFixed(3)}|${lng.toFixed(3)}`;
 
 async function generateAndCacheHeatmapData(type?: string | null, year?: number | string | null) {
   const cacheKey = buildHeatmapCacheKey(type, year);
@@ -1159,6 +1165,61 @@ router.get('/activities/:id', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error fetching activity:', error);
     res.status(500).json({ error: 'Failed to fetch activity' });
+  }
+});
+
+/**
+ * POST /api/activities/heatmap/hotspot-labels
+ * Reverse-geocode labels for heatmap hotspots (batched, cached).
+ */
+router.post('/activities/heatmap/hotspot-labels', async (req: Request, res: Response) => {
+  try {
+    const rawHotspots = Array.isArray(req.body?.hotspots) ? req.body.hotspots : [];
+    const hotspots: Array<{ id: string; lat: number; lng: number }> = rawHotspots
+      .slice(0, 12)
+      .map((item: any) => ({
+        id: String(item?.id || ''),
+        lat: Number(item?.lat),
+        lng: Number(item?.lng),
+      }))
+      .filter((item: { id: string; lat: number; lng: number }) => item.id && Number.isFinite(item.lat) && Number.isFinite(item.lng));
+
+    if (hotspots.length === 0) {
+      return res.json({ labels: [] });
+    }
+
+    const naming = await getLocalClimbNamingDefaults();
+    const now = Date.now();
+    const labels: Array<{ id: string; label: string | null }> = [];
+
+    for (const hotspot of hotspots) {
+      const cacheKey = buildHeatmapHotspotLabelCacheKey(
+        hotspot.lat,
+        hotspot.lng,
+        String(naming.reverseGeocodeLanguage || ''),
+        String(naming.reverseGeocodeUrl || '')
+      );
+      const cached = heatmapHotspotLabelCache.get(cacheKey);
+      if (cached && (now - cached.timestamp) < HEATMAP_HOTSPOT_LABEL_CACHE_TTL) {
+        labels.push({ id: hotspot.id, label: cached.label });
+        continue;
+      }
+
+      const label = await resolveLocationLabel([hotspot.lat, hotspot.lng], {
+        ...naming,
+        reverseGeocodeEnabled: true,
+      });
+      heatmapHotspotLabelCache.set(cacheKey, {
+        label,
+        timestamp: Date.now(),
+      });
+      labels.push({ id: hotspot.id, label });
+    }
+
+    return res.json({ labels });
+  } catch (error: any) {
+    console.error('Error resolving heatmap hotspot labels:', error);
+    return res.status(500).json({ error: 'Failed to resolve heatmap hotspot labels' });
   }
 });
 
