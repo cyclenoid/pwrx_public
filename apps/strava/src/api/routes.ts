@@ -3,6 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { createHash, randomUUID } from 'crypto';
 import multer from 'multer';
+import axios from 'axios';
 import DatabaseService from '../services/database';
 import { loadSyncSettings } from '../services/syncSettings';
 import { checkPendingMigrations } from '../services/migrations';
@@ -403,6 +404,79 @@ const buildHeatmapCacheKey = (type?: string | null, year?: number | string | nul
 
 const buildHeatmapHotspotLabelCacheKey = (lat: number, lng: number, language: string, url: string) =>
   `${url}|${language}|${lat.toFixed(3)}|${lng.toFixed(3)}`;
+
+const normalizeHeatmapHotspotLabelPart = (value: unknown): string | null => {
+  const text = String(value || '')
+    .replace(/\s+/g, ' ')
+    .trim();
+  return text || null;
+};
+
+const clampHeatmapHotspotLabel = (value: string | null): string | null => {
+  const text = normalizeHeatmapHotspotLabelPart(value);
+  if (!text) return null;
+  return text.length > 56 ? `${text.slice(0, 53)}...` : text;
+};
+
+const resolveHeatmapHotspotRegionPlaceLabel = async (
+  lat: number,
+  lng: number,
+  naming: LocalSegmentNamingOptions
+): Promise<string | null> => {
+  if (!naming.reverseGeocodeEnabled || !naming.reverseGeocodeUrl) {
+    return null;
+  }
+
+  try {
+    const response = await axios.get(String(naming.reverseGeocodeUrl), {
+      params: {
+        format: 'jsonv2',
+        addressdetails: 1,
+        zoom: 12,
+        lat,
+        lon: lng,
+      },
+      timeout: Number(naming.reverseGeocodeTimeoutMs || 4000),
+      headers: {
+        'User-Agent': String(naming.reverseGeocodeUserAgent || 'PWRX/1.0'),
+        'Accept-Language': String(naming.reverseGeocodeLanguage || ''),
+      },
+    });
+
+    const payload = response.data || {};
+    const address = payload.address || {};
+
+    const place = normalizeHeatmapHotspotLabelPart(
+      address.city
+      || address.town
+      || address.village
+      || address.hamlet
+      || address.municipality
+      || address.suburb
+      || address.city_district
+      || address.county
+      || null
+    );
+
+    const region = normalizeHeatmapHotspotLabelPart(
+      address.state
+      || address.state_district
+      || address.province
+      || address.region
+      || address.county
+      || null
+    );
+
+    const country = normalizeHeatmapHotspotLabelPart(address.country || null);
+
+    if (place && region && place.toLowerCase() !== region.toLowerCase()) {
+      return clampHeatmapHotspotLabel(`${region} / ${place}`);
+    }
+    return clampHeatmapHotspotLabel(place || region || country || null);
+  } catch {
+    return null;
+  }
+};
 
 async function generateAndCacheHeatmapData(type?: string | null, year?: number | string | null) {
   const cacheKey = buildHeatmapCacheKey(type, year);
@@ -1205,10 +1279,17 @@ router.post('/activities/heatmap/hotspot-labels', async (req: Request, res: Resp
         continue;
       }
 
-      const label = await resolveLocationLabel([hotspot.lat, hotspot.lng], {
-        ...naming,
-        reverseGeocodeEnabled: true,
-      });
+      const label = (
+        await resolveHeatmapHotspotRegionPlaceLabel(hotspot.lat, hotspot.lng, {
+          ...naming,
+          reverseGeocodeEnabled: true,
+        })
+      ) || (
+        await resolveLocationLabel([hotspot.lat, hotspot.lng], {
+          ...naming,
+          reverseGeocodeEnabled: true,
+        })
+      );
       heatmapHotspotLabelCache.set(cacheKey, {
         label,
         timestamp: Date.now(),
