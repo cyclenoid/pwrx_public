@@ -1420,6 +1420,7 @@
       "allTypes": "Alle Typen",
       "year": "Jahr",
       "allYears": "Alle Jahre",
+      "virtualHiddenByDefault": "Standardmäßig werden virtuelle Aktivitäten ausgeblendet.",
       "clear": "Filter zurücksetzen"
     },
     "selected": {

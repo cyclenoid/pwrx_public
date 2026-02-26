@@ -8,6 +8,9 @@ import { Link } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import { useTranslation } from 'react-i18next'
 
+const HOTSPOT_MIN_DISTANCE_KM = 50
+const HOTSPOT_MAX_COUNT = 8
+
 const TYPE_PALETTE = [
   '#f97316', // orange
   '#06b6d4', // cyan
@@ -42,6 +45,21 @@ const getReadableTextColor = (hexColor: string) => {
   const b = parseInt(hex.slice(4, 6), 16) / 255
   const luminance = 0.2126 * r + 0.7152 * g + 0.0722 * b
   return luminance > 0.6 ? '#0f172a' : '#f8fafc'
+}
+
+const isVirtualActivityType = (type: string) => String(type || '').toLowerCase().startsWith('virtual')
+
+const haversineKm = (a: [number, number], b: [number, number]) => {
+  const toRad = (deg: number) => (deg * Math.PI) / 180
+  const R = 6371
+  const dLat = toRad(b[0] - a[0])
+  const dLng = toRad(b[1] - a[1])
+  const lat1 = toRad(a[0])
+  const lat2 = toRad(b[0])
+  const h =
+    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
+  return 2 * R * Math.asin(Math.sqrt(h))
 }
 
 // Component to fit all routes - only runs once
@@ -95,6 +113,7 @@ export function Heatmap() {
   const [selectedActivity, setSelectedActivity] = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [defaultTypeFilterApplied, setDefaultTypeFilterApplied] = useState(false)
   const [focusBounds, setFocusBounds] = useState<BoundsTuple | null>(null)
   const [focusKey, setFocusKey] = useState(0)
   const canvasRenderer = useMemo(() => L.canvas({ padding: 0.5 }), [])
@@ -141,6 +160,17 @@ export function Heatmap() {
     })
     return map
   }, [years])
+
+  useEffect(() => {
+    if (defaultTypeFilterApplied) return
+    if (activityTypes.length === 0) return
+
+    const nonVirtualTypes = activityTypes.filter((type) => !isVirtualActivityType(type))
+    if (nonVirtualTypes.length > 0 && nonVirtualTypes.length < activityTypes.length) {
+      setSelectedTypes(nonVirtualTypes)
+    }
+    setDefaultTypeFilterApplied(true)
+  }, [activityTypes, defaultTypeFilterApplied])
 
   const getActivityColor = (activity: { type: string; start_date: string }) => {
     return typeColors.get(activity.type) || '#f97316'
@@ -241,7 +271,7 @@ export function Heatmap() {
       existing.centroidLngSum += centerLng
     }
 
-    return Array.from(buckets.entries())
+    const candidates = Array.from(buckets.entries())
       .map(([id, bucket]) => ({
         id,
         count: bucket.count,
@@ -254,7 +284,18 @@ export function Heatmap() {
         ] as BoundsTuple,
       }))
       .sort((a, b) => (b.count - a.count) || (b.distanceKm - a.distanceKm))
-      .slice(0, 8)
+
+    const deduped: HeatmapHotspot[] = []
+    for (const candidate of candidates) {
+      const tooClose = deduped.some((existing) =>
+        haversineKm(existing.centroid, candidate.centroid) < HOTSPOT_MIN_DISTANCE_KM
+      )
+      if (tooClose) continue
+      deduped.push(candidate)
+      if (deduped.length >= HOTSPOT_MAX_COUNT) break
+    }
+
+    return deduped
   }, [filteredActivities])
 
   const initialViewportBounds = useMemo<BoundsTuple | null>(() => {
@@ -405,6 +446,11 @@ export function Heatmap() {
           <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
             {t('heatmap.filters.title')}
           </div>
+          {defaultTypeFilterApplied && selectedTypes.length > 0 && activityTypes.some(isVirtualActivityType) && (
+            <div className="text-[11px] text-muted-foreground rounded-lg border border-border/60 bg-muted/20 px-2.5 py-2">
+              {t('heatmap.filters.virtualHiddenByDefault')}
+            </div>
+          )}
           <div>
             <div className="text-xs text-muted-foreground mb-1">{t('heatmap.filters.type')}</div>
             <div className="flex flex-wrap gap-2">
