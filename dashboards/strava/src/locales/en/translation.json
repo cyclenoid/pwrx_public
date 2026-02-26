@@ -1420,6 +1420,7 @@
       "allTypes": "All types",
       "year": "Year",
       "allYears": "All years",
+      "virtualHiddenByDefault": "Virtual activities are hidden by default.",
       "clear": "Clear filters"
     },
     "selected": {
