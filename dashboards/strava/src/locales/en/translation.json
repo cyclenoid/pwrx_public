@@ -865,6 +865,11 @@
     "profilePhotoAlt": "Profile photo",
     "notSet": "Not set",
     "lastSync": "Last sync: {{value}}",
+    "version": {
+      "label": "Version: {{value}}",
+      "commit": "Commit: {{value}}",
+      "backend": "Backend: {{value}}"
+    },
     "defaults": {
       "athlete": "Athlete",
       "username": "default",
