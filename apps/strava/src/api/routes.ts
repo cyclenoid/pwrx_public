@@ -1002,14 +1002,21 @@ router.get('/activities/heatmap', async (req: Request, res: Response) => {
 
     const result = await db.query(query, params);
 
+    // Simplify coordinates to reduce payload size while maintaining good detail.
+    // For large datasets, reduce points per activity adaptively to keep the UI responsive.
+    const targetTotalPoints = 220000;
+    const maxPointsPerActivity = Math.max(
+      60,
+      Math.min(200, Math.floor(targetTotalPoints / Math.max(result.rows.length, 1)))
+    );
+
     // Simplify coordinates to reduce payload size while maintaining good detail
     const simplifiedActivities = result.rows.map((activity: any) => {
       const coords = activity.latlng;
       if (!coords || coords.length === 0) return activity;
 
-      // Keep max 200 points per activity for detailed heatmap display
-      // Good balance between detail and performance
-      const maxPoints = 200;
+      // Dynamic point cap: higher for small datasets, lower for large datasets
+      const maxPoints = maxPointsPerActivity;
       if (coords.length <= maxPoints) {
         // Round coordinates to 5 decimal places (1.1m precision)
         return {
@@ -1039,6 +1046,7 @@ router.get('/activities/heatmap', async (req: Request, res: Response) => {
     const responseData = {
       count: result.rows.length,
       activities: simplifiedActivities,
+      sampling_max_points: maxPointsPerActivity,
     };
 
     // Store in cache

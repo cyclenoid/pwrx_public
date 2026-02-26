@@ -45,23 +45,45 @@ const getReadableTextColor = (hexColor: string) => {
 }
 
 // Component to fit all routes - only runs once
-function FitAllBounds({ coordinates }: { coordinates: [number, number][][] }) {
+type BoundsTuple = [[number, number], [number, number]]
+
+function HeatmapViewportController({
+  initialBounds,
+  focusBounds,
+  focusKey,
+}: {
+  initialBounds: BoundsTuple | null
+  focusBounds: BoundsTuple | null
+  focusKey: number
+}) {
   const map = useMap()
-  const hasFitted = useRef(false)
+  const hasInitialFit = useRef(false)
+  const lastFocusKey = useRef(0)
 
   useEffect(() => {
-    if (hasFitted.current) return
-    if (coordinates.length === 0) return
+    if (hasInitialFit.current) return
+    if (!initialBounds) return
+    map.fitBounds(initialBounds, { padding: [30, 30], maxZoom: 13 })
+    hasInitialFit.current = true
+  }, [map, initialBounds])
 
-    const allPoints = coordinates.flat()
-    if (allPoints.length === 0) return
-
-    const bounds = L.latLngBounds(allPoints)
-    map.fitBounds(bounds, { padding: [30, 30] })
-    hasFitted.current = true
-  }, [map, coordinates])
+  useEffect(() => {
+    if (!focusBounds) return
+    if (!focusKey || focusKey === lastFocusKey.current) return
+    map.fitBounds(focusBounds, { padding: [40, 40], maxZoom: 14 })
+    lastFocusKey.current = focusKey
+  }, [map, focusBounds, focusKey])
 
   return null
+}
+
+type HeatmapHotspot = {
+  id: string
+  count: number
+  distanceKm: number
+  latestDate: string
+  centroid: [number, number]
+  bounds: BoundsTuple
 }
 
 export function Heatmap() {
@@ -73,6 +95,9 @@ export function Heatmap() {
   const [selectedActivity, setSelectedActivity] = useState<number | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
+  const [focusBounds, setFocusBounds] = useState<BoundsTuple | null>(null)
+  const [focusKey, setFocusKey] = useState(0)
+  const canvasRenderer = useMemo(() => L.canvas({ padding: 0.5 }), [])
 
   const { data, isLoading } = useQuery({
     queryKey: ['heatmap'],
@@ -140,6 +165,102 @@ export function Heatmap() {
     return filteredActivities.map(a => a.latlng).filter(coords => coords && coords.length > 0)
   }, [filteredActivities])
 
+  const allBounds = useMemo<BoundsTuple | null>(() => {
+    if (allCoordinates.length === 0) return null
+    const allPoints = allCoordinates.flat()
+    if (allPoints.length === 0) return null
+    const bounds = L.latLngBounds(allPoints)
+    return [
+      [bounds.getSouth(), bounds.getWest()],
+      [bounds.getNorth(), bounds.getEast()],
+    ]
+  }, [allCoordinates])
+
+  const hotspots = useMemo<HeatmapHotspot[]>(() => {
+    const gridSize = 0.12 // ~13 km; good balance for "usual areas" grouping
+    const buckets = new Map<string, {
+      count: number
+      distanceKm: number
+      latestDate: string
+      minLat: number
+      minLng: number
+      maxLat: number
+      maxLng: number
+      centroidLatSum: number
+      centroidLngSum: number
+    }>()
+
+    for (const activity of filteredActivities) {
+      const coords = activity.latlng
+      if (!coords || coords.length === 0) continue
+
+      let minLat = Infinity
+      let minLng = Infinity
+      let maxLat = -Infinity
+      let maxLng = -Infinity
+      for (const [lat, lng] of coords) {
+        if (lat < minLat) minLat = lat
+        if (lng < minLng) minLng = lng
+        if (lat > maxLat) maxLat = lat
+        if (lng > maxLng) maxLng = lng
+      }
+      if (!Number.isFinite(minLat) || !Number.isFinite(minLng) || !Number.isFinite(maxLat) || !Number.isFinite(maxLng)) continue
+
+      const centerLat = (minLat + maxLat) / 2
+      const centerLng = (minLng + maxLng) / 2
+      const bucketLat = Math.round(centerLat / gridSize) * gridSize
+      const bucketLng = Math.round(centerLng / gridSize) * gridSize
+      const key = `${bucketLat.toFixed(2)}:${bucketLng.toFixed(2)}`
+
+      const existing = buckets.get(key)
+      if (!existing) {
+        buckets.set(key, {
+          count: 1,
+          distanceKm: Number(activity.distance_km) || 0,
+          latestDate: activity.start_date,
+          minLat,
+          minLng,
+          maxLat,
+          maxLng,
+          centroidLatSum: centerLat,
+          centroidLngSum: centerLng,
+        })
+        continue
+      }
+
+      existing.count += 1
+      existing.distanceKm += Number(activity.distance_km) || 0
+      if (new Date(activity.start_date).getTime() > new Date(existing.latestDate).getTime()) {
+        existing.latestDate = activity.start_date
+      }
+      existing.minLat = Math.min(existing.minLat, minLat)
+      existing.minLng = Math.min(existing.minLng, minLng)
+      existing.maxLat = Math.max(existing.maxLat, maxLat)
+      existing.maxLng = Math.max(existing.maxLng, maxLng)
+      existing.centroidLatSum += centerLat
+      existing.centroidLngSum += centerLng
+    }
+
+    return Array.from(buckets.entries())
+      .map(([id, bucket]) => ({
+        id,
+        count: bucket.count,
+        distanceKm: bucket.distanceKm,
+        latestDate: bucket.latestDate,
+        centroid: [bucket.centroidLatSum / bucket.count, bucket.centroidLngSum / bucket.count] as [number, number],
+        bounds: [
+          [bucket.minLat, bucket.minLng],
+          [bucket.maxLat, bucket.maxLng],
+        ] as BoundsTuple,
+      }))
+      .sort((a, b) => (b.count - a.count) || (b.distanceKm - a.distanceKm))
+      .slice(0, 8)
+  }, [filteredActivities])
+
+  const initialViewportBounds = useMemo<BoundsTuple | null>(() => {
+    return hotspots[0]?.bounds || allBounds
+  }, [hotspots, allBounds])
+
   // Tile layers for different themes
   const tileUrl = resolvedTheme === 'dark'
     ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -174,6 +295,12 @@ export function Heatmap() {
     }
   }, [selectedActivity, filteredActivities])
 
+  const focusMapBounds = (bounds: BoundsTuple | null) => {
+    if (!bounds) return
+    setFocusBounds(bounds)
+    setFocusKey((prev) => prev + 1)
+  }
+
   const toggleType = (type: string) => {
     setSelectedTypes((prev) => (
       prev.includes(type) ? prev.filter(t => t !== type) : [...prev, type]
@@ -203,9 +330,14 @@ export function Heatmap() {
             zoom={6}
             className="h-full w-full"
             zoomControl={false}
+            preferCanvas
           >
             <TileLayer url={tileUrl} attribution={attribution} />
-            {allCoordinates.length > 0 && <FitAllBounds coordinates={allCoordinates} />}
+            <HeatmapViewportController
+              initialBounds={initialViewportBounds}
+              focusBounds={focusBounds}
+              focusKey={focusKey}
+            />
 
             {/* All routes */}
             {filteredActivities.map((activity) => (
@@ -224,6 +356,7 @@ export function Heatmap() {
                     opacity: isSelected ? 1 : 0.6,
                     lineJoin: 'round',
                   }}
+                  renderer={canvasRenderer}
                   eventHandlers={{
                     click: () => setSelectedActivity(activity.strava_activity_id),
                     mouseover: (e) => {
@@ -236,7 +369,7 @@ export function Heatmap() {
                     mouseout: (e) => {
                       const layer = e.target
                       if (!isSelected) {
-                        layer.setStyle({ weight: 2, opacity: 0.6 })
+                        layer.setStyle({ weight: 1.5, opacity: 0.6 })
                       }
                       layer.closeTooltip()
                     },
@@ -356,6 +489,46 @@ export function Heatmap() {
                 <p className="text-xl font-bold">{totalDistance.toFixed(0)} {t('records.units.km')}</p>
               </div>
             </div>
+            {hotspots.length > 0 && (
+              <div className="mt-4 space-y-2">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                    {t('heatmap.hotspots.title')}
+                  </p>
+                  <button
+                    type="button"
+                    onClick={() => focusMapBounds(allBounds)}
+                    className="text-xs text-primary hover:underline"
+                  >
+                    {t('heatmap.hotspots.showAll')}
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {hotspots.map((hotspot, index) => (
+                    <button
+                      key={hotspot.id}
+                      type="button"
+                      onClick={() => focusMapBounds(hotspot.bounds)}
+                      className="w-full rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-left hover:bg-secondary/60 transition-colors"
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <span className="text-sm font-medium">
+                          {t('heatmap.hotspots.item', { index: index + 1 })}
+                        </span>
+                        <span className="text-xs text-muted-foreground">
+                          {t('heatmap.hotspots.activities', { count: hotspot.count })}
+                        </span>
+                      </div>
+                      <div className="mt-1 text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
+                        <span>{hotspot.distanceKm.toFixed(0)} {t('records.units.km')}</span>
+                        <span>{new Date(hotspot.latestDate).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</span>
+                        <span className="font-mono">{hotspot.centroid[0].toFixed(2)}, {hotspot.centroid[1].toFixed(2)}</span>
+                      </div>
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Selected Activity */}
@@ -399,11 +572,16 @@ export function Heatmap() {
           {/* Cache Status & Refresh */}
           <div className="p-4 border-t space-y-2">
             {data?.cached !== undefined && (
-              <div className="text-xs text-muted-foreground">
-                {data.cached ? (
-                  <span className="text-green-500">{t('heatmap.cache.cached', { hours: data.cache_age_hours })}</span>
-                ) : (
-                  <span className="text-yellow-500">{t('heatmap.cache.fresh', { ms: data.generation_time_ms })}</span>
+              <div className="space-y-1 text-xs text-muted-foreground">
+                <div>
+                  {data.cached ? (
+                    <span className="text-green-500">{t('heatmap.cache.cached', { hours: data.cache_age_hours })}</span>
+                  ) : (
+                    <span className="text-yellow-500">{t('heatmap.cache.fresh', { ms: data.generation_time_ms })}</span>
+                  )}
+                </div>
+                {data.sampling_max_points && (
+                  <div>{t('heatmap.cache.sampling', { value: data.sampling_max_points })}</div>
                 )}
               </div>
             )}
