@@ -99,6 +99,23 @@ export interface ImportQueueAlert {
   threshold: number;
 }
 
+export interface ImportRunCompletedEvent {
+  importId: number;
+  status: ImportStatus;
+  filesTotal: number;
+  filesOk: number;
+  filesSkipped: number;
+  filesFailed: number;
+}
+
+type ImportRunCompletedHook = (event: ImportRunCompletedEvent) => void | Promise<void>;
+const importRunCompletedHooks = new Set<ImportRunCompletedHook>();
+
+export const registerImportRunCompletedHook = (hook: ImportRunCompletedHook): (() => void) => {
+  importRunCompletedHooks.add(hook);
+  return () => importRunCompletedHooks.delete(hook);
+};
+
 const IMPORT_STORAGE_ROOT = process.env.IMPORT_STORAGE_PATH
   || path.join(process.cwd(), 'storage', 'imports');
 const PHOTO_STORAGE_ROOT = process.env.PHOTO_STORAGE_PATH
@@ -1063,6 +1080,22 @@ export const refreshImportRunFromFiles = async (
     filesFailed: counts.failed,
     finishedAt,
   });
+
+  if (pending === 0 && counts.ok > 0 && importRunCompletedHooks.size > 0) {
+    const event: ImportRunCompletedEvent = {
+      importId,
+      status,
+      filesTotal: counts.total,
+      filesOk: counts.ok,
+      filesSkipped: counts.skipped,
+      filesFailed: counts.failed,
+    };
+    for (const hook of importRunCompletedHooks) {
+      Promise.resolve(hook(event)).catch((error: any) => {
+        console.warn(`⚠️  Import completion hook failed for import ${importId}: ${error?.message || error}`);
+      });
+    }
+  }
 
   return {
     status,
