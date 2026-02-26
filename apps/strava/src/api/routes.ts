@@ -24,6 +24,7 @@ import {
   importQueueWorker,
   importSingleFile,
   importStravaExportZipFromPath,
+  registerImportRunCompletedHook,
   refreshImportRunFromFiles,
   retryFailedImportFiles,
 } from '../services/import/service';
@@ -386,6 +387,154 @@ interface HeatmapCache {
 }
 const heatmapCache: Map<string, HeatmapCache> = new Map();
 const HEATMAP_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
+const HEATMAP_PREWARM_ENABLED = ['1', 'true', 'yes', 'on']
+  .includes(String(process.env.HEATMAP_PREWARM_ENABLED || 'true').trim().toLowerCase());
+const HEATMAP_PREWARM_DELAY_MS = Math.max(1000, Number(process.env.HEATMAP_PREWARM_DELAY_MS || 12000));
+let heatmapPrewarmTimer: NodeJS.Timeout | null = null;
+let heatmapPrewarmRunning = false;
+let heatmapPrewarmRunRequested = false;
+let heatmapPrewarmLastReason: string | null = null;
+
+const buildHeatmapCacheKey = (type?: string | null, year?: number | string | null) =>
+  `heatmap_${type || 'all'}_${year || 'all'}`;
+
+async function generateAndCacheHeatmapData(type?: string | null, year?: number | string | null) {
+  const cacheKey = buildHeatmapCacheKey(type, year);
+  console.log(`Generating heatmap data for ${cacheKey}...`);
+  const startTime = Date.now();
+
+  let query = `
+    SELECT
+      a.strava_activity_id,
+      a.name,
+      a.type,
+      a.start_date,
+      a.distance / 1000 as distance_km,
+      s.data as latlng
+    FROM strava.activities a
+    JOIN strava.activity_streams s ON s.activity_id = a.strava_activity_id
+    WHERE jsonb_typeof(s.data->0) = 'array'
+  `;
+
+  const params: any[] = [];
+  let paramIndex = 1;
+
+  if (type) {
+    query += ` AND a.type = $${paramIndex}`;
+    params.push(type);
+    paramIndex++;
+  }
+
+  if (year) {
+    query += ` AND EXTRACT(YEAR FROM a.start_date) = $${paramIndex}`;
+    params.push(parseInt(String(year)));
+    paramIndex++;
+  }
+
+  query += ` ORDER BY a.start_date DESC`;
+  const result = await db.query(query, params);
+
+  const targetTotalPoints = 220000;
+  const maxPointsPerActivity = Math.max(
+    60,
+    Math.min(200, Math.floor(targetTotalPoints / Math.max(result.rows.length, 1)))
+  );
+
+  const simplifiedActivities = result.rows.map((activity: any) => {
+    const coords = activity.latlng;
+    if (!coords || coords.length === 0) return activity;
+
+    const maxPoints = maxPointsPerActivity;
+    if (coords.length <= maxPoints) {
+      return {
+        ...activity,
+        latlng: coords.map((coord: [number, number]) => [
+          Math.round(coord[0] * 100000) / 100000,
+          Math.round(coord[1] * 100000) / 100000
+        ])
+      };
+    }
+
+    const step = Math.ceil(coords.length / maxPoints);
+    const simplified = coords.filter((_: any, i: number) => i % step === 0);
+    const rounded = simplified.map((coord: [number, number]) => [
+      Math.round(coord[0] * 100000) / 100000,
+      Math.round(coord[1] * 100000) / 100000
+    ]);
+
+    return {
+      ...activity,
+      latlng: rounded
+    };
+  });
+
+  const responseData = {
+    count: result.rows.length,
+    activities: simplifiedActivities,
+    sampling_max_points: maxPointsPerActivity,
+  };
+
+  heatmapCache.set(cacheKey, {
+    data: responseData,
+    timestamp: Date.now(),
+    activityCount: result.rows.length
+  });
+
+  const duration = Date.now() - startTime;
+  console.log(`Heatmap data generated in ${duration}ms - ${result.rows.length} activities`);
+
+  return {
+    ...responseData,
+    cached: false,
+    generation_time_ms: duration,
+  };
+}
+
+const runHeatmapPrewarm = async (reason: string): Promise<void> => {
+  if (!HEATMAP_PREWARM_ENABLED) return;
+  if (heatmapPrewarmRunning) {
+    heatmapPrewarmRunRequested = true;
+    return;
+  }
+
+  heatmapPrewarmRunning = true;
+  heatmapPrewarmLastReason = reason;
+  try {
+    await generateAndCacheHeatmapData(null, null);
+    console.log(`🔥 Heatmap cache prewarmed (reason=${reason})`);
+  } catch (error: any) {
+    console.warn(`⚠️  Heatmap prewarm failed (reason=${reason}): ${error?.message || error}`);
+  } finally {
+    heatmapPrewarmRunning = false;
+    if (heatmapPrewarmRunRequested) {
+      heatmapPrewarmRunRequested = false;
+      void runHeatmapPrewarm('queued-followup');
+    }
+  }
+};
+
+export function scheduleHeatmapCachePrewarm(reason: string = 'data-change', delayMs: number = HEATMAP_PREWARM_DELAY_MS): void {
+  if (!HEATMAP_PREWARM_ENABLED) return;
+
+  if (heatmapCache.size > 0) {
+    heatmapCache.clear();
+  }
+
+  if (heatmapPrewarmTimer) {
+    clearTimeout(heatmapPrewarmTimer);
+    heatmapPrewarmTimer = null;
+  }
+
+  heatmapPrewarmTimer = setTimeout(() => {
+    heatmapPrewarmTimer = null;
+    void runHeatmapPrewarm(reason);
+  }, Math.max(1000, delayMs));
+}
+
+registerImportRunCompletedHook((event) => {
+  if (event.filesOk <= 0) return;
+  scheduleHeatmapCachePrewarm(`import:${event.importId}`);
+});
 
 const hasCapability = (capability: keyof AdapterCapabilities): boolean =>
   Boolean(adapterRegistry.getCapabilities().capabilities[capability]);
@@ -950,7 +1099,7 @@ router.get('/activities', async (req: Request, res: Response) => {
 router.get('/activities/heatmap', async (req: Request, res: Response) => {
   try {
     const { type, year, refresh } = req.query;
-    const cacheKey = `heatmap_${type || 'all'}_${year || 'all'}`;
+    const cacheKey = buildHeatmapCacheKey(String(type || ''), year as any);
 
     // Check cache (unless refresh=true)
     if (refresh !== 'true') {
@@ -964,106 +1113,8 @@ router.get('/activities/heatmap', async (req: Request, res: Response) => {
         });
       }
     }
-
-    console.log(`Generating heatmap data for ${cacheKey}...`);
-    const startTime = Date.now();
-
-    // GPS coordinates are stored where data->0 is an array (contains [lat, lng] pairs)
-    // NO LIMIT - get all activities with GPS data
-    let query = `
-      SELECT
-        a.strava_activity_id,
-        a.name,
-        a.type,
-        a.start_date,
-        a.distance / 1000 as distance_km,
-        s.data as latlng
-      FROM strava.activities a
-      JOIN strava.activity_streams s ON s.activity_id = a.strava_activity_id
-      WHERE jsonb_typeof(s.data->0) = 'array'
-    `;
-
-    const params: any[] = [];
-    let paramIndex = 1;
-
-    if (type) {
-      query += ` AND a.type = $${paramIndex}`;
-      params.push(type);
-      paramIndex++;
-    }
-
-    if (year) {
-      query += ` AND EXTRACT(YEAR FROM a.start_date) = $${paramIndex}`;
-      params.push(parseInt(year as string));
-      paramIndex++;
-    }
-
-    query += ` ORDER BY a.start_date DESC`;
-
-    const result = await db.query(query, params);
-
-    // Simplify coordinates to reduce payload size while maintaining good detail.
-    // For large datasets, reduce points per activity adaptively to keep the UI responsive.
-    const targetTotalPoints = 220000;
-    const maxPointsPerActivity = Math.max(
-      60,
-      Math.min(200, Math.floor(targetTotalPoints / Math.max(result.rows.length, 1)))
-    );
-
-    // Simplify coordinates to reduce payload size while maintaining good detail
-    const simplifiedActivities = result.rows.map((activity: any) => {
-      const coords = activity.latlng;
-      if (!coords || coords.length === 0) return activity;
-
-      // Dynamic point cap: higher for small datasets, lower for large datasets
-      const maxPoints = maxPointsPerActivity;
-      if (coords.length <= maxPoints) {
-        // Round coordinates to 5 decimal places (1.1m precision)
-        return {
-          ...activity,
-          latlng: coords.map((coord: [number, number]) => [
-            Math.round(coord[0] * 100000) / 100000,
-            Math.round(coord[1] * 100000) / 100000
-          ])
-        };
-      }
-
-      const step = Math.ceil(coords.length / maxPoints);
-      const simplified = coords.filter((_: any, i: number) => i % step === 0);
-
-      // Round coordinates to 5 decimal places (1.1m precision)
-      const rounded = simplified.map((coord: [number, number]) => [
-        Math.round(coord[0] * 100000) / 100000,
-        Math.round(coord[1] * 100000) / 100000
-      ]);
-
-      return {
-        ...activity,
-        latlng: rounded
-      };
-    });
-
-    const responseData = {
-      count: result.rows.length,
-      activities: simplifiedActivities,
-      sampling_max_points: maxPointsPerActivity,
-    };
-
-    // Store in cache
-    heatmapCache.set(cacheKey, {
-      data: responseData,
-      timestamp: Date.now(),
-      activityCount: result.rows.length
-    });
-
-    const duration = Date.now() - startTime;
-    console.log(`Heatmap data generated in ${duration}ms - ${result.rows.length} activities`);
-
-    res.json({
-      ...responseData,
-      cached: false,
-      generation_time_ms: duration
-    });
+    const fresh = await generateAndCacheHeatmapData(type ? String(type) : null, year ? String(year) : null);
+    res.json(fresh);
   } catch (error: any) {
     console.error('Error fetching heatmap data:', error);
     res.status(500).json({ error: 'Failed to fetch heatmap data' });
