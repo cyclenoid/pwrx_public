@@ -688,8 +688,12 @@ export function Heatmap() {
                 <p className="text-xl font-bold">{totalDistance.toFixed(0)} {t('records.units.km')}</p>
               </div>
             </div>
-            {(hotspots.length > 0 || additionalHotspots.length > 0) && (
-              <div className="mt-4 space-y-2">
+          </div>
+
+          {/* Hotspots */}
+          <div className="flex-1 min-h-0 p-4 border-b flex flex-col">
+            {(hotspots.length > 0 || additionalHotspots.length > 0) ? (
+              <>
                 <div className="flex items-center justify-between">
                   <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
                     {t('heatmap.hotspots.title')}
@@ -705,7 +709,7 @@ export function Heatmap() {
                     {t('heatmap.hotspots.showAll')}
                   </button>
                 </div>
-                <div className="max-h-96 overflow-y-auto pr-1 space-y-3">
+                <div className="mt-3 flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
                   <div className="space-y-2">
                     {hotspots.map((hotspot, index) => {
                       const isActive = activeHotspotId === hotspot.id
@@ -730,6 +734,11 @@ export function Heatmap() {
                             <span className={`text-xs ${isActive ? 'text-emerald-200/90' : 'text-muted-foreground'}`}>
                               {t('heatmap.hotspots.activities', { count: hotspot.count })}
                             </span>
+                          </div>
+                          <div className={`mt-1 text-xs flex flex-wrap gap-x-3 gap-y-1 ${isActive ? 'text-emerald-100/80' : 'text-muted-foreground'}`}>
+                            <span>{hotspot.distanceKm.toFixed(0)} {t('records.units.km')}</span>
+                            <span>{new Date(hotspot.latestDate).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</span>
+                            <span className="font-mono">{hotspot.centroid[0].toFixed(2)}, {hotspot.centroid[1].toFixed(2)}</span>
                           </div>
                         </button>
                       )
@@ -765,6 +774,11 @@ export function Heatmap() {
                                   {t('heatmap.hotspots.activities', { count: hotspot.count })}
                                 </span>
                               </div>
+                              <div className={`mt-1 text-xs flex flex-wrap gap-x-3 gap-y-1 ${isActive ? 'text-emerald-100/80' : 'text-muted-foreground'}`}>
+                                <span>{hotspot.distanceKm.toFixed(0)} {t('records.units.km')}</span>
+                                <span>{new Date(hotspot.latestDate).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</span>
+                                <span className="font-mono">{hotspot.centroid[0].toFixed(2)}, {hotspot.centroid[1].toFixed(2)}</span>
+                              </div>
                             </button>
                           )
                         })}
@@ -772,11 +786,13 @@ export function Heatmap() {
                     </div>
                   )}
                 </div>
+              </>
+            ) : (
+              <div className="text-center text-muted-foreground text-sm my-auto">
+                <p>{t('heatmap.loading')}</p>
               </div>
             )}
           </div>
-
-          <div className="flex-1" />
 
           {/* Cache Status & Refresh */}
           <div className="p-4 border-t space-y-2">
