@@ -2,13 +2,11 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
 import { ThemeToggle } from './ThemeToggle'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, Trophy, Map, Activity, Zap, Bike, Settings, Flag, FileUp } from 'lucide-react'
-import { useCapabilities } from '../hooks/useCapabilities'
+import { LayoutDashboard, Trophy, Map, Activity, Zap, Bike, Settings, FileUp } from 'lucide-react'
 
 export function Layout() {
   const location = useLocation()
   const { t, i18n } = useTranslation()
-  const { capabilities } = useCapabilities()
 
   const toggleLanguage = () => {
     const next = i18n.language?.startsWith('de') ? 'en' : 'de'
@@ -22,16 +20,6 @@ export function Layout() {
       icon: <LayoutDashboard size={16} />,
     },
     {
-      path: '/records',
-      label: t('nav.records'),
-      icon: <Trophy size={16} />,
-    },
-    {
-      path: '/heatmap',
-      label: t('nav.heatmap'),
-      icon: <Map size={16} />,
-    },
-    {
       path: '/training',
       label: t('nav.training'),
       icon: <Activity size={16} />,
@@ -42,17 +30,21 @@ export function Layout() {
       icon: <Zap size={16} />,
     },
     {
-      path: '/segments',
-      label: t('nav.segments'),
-      icon: <Flag size={16} />,
-      enabled: capabilities.supportsSegments,
+      path: '/records',
+      label: t('nav.records'),
+      icon: <Trophy size={16} />,
+    },
+    {
+      path: '/heatmap',
+      label: t('nav.heatmap'),
+      icon: <Map size={16} />,
     },
     {
       path: '/gear',
       label: t('nav.gear'),
       icon: <Bike size={16} />,
     },
-  ].filter((item) => item.enabled !== false)
+  ]
 
   return (
     <div className="min-h-screen bg-background">
