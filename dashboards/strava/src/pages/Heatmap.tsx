@@ -9,8 +9,8 @@ import 'leaflet/dist/leaflet.css'
 import { useTranslation } from 'react-i18next'
 
 const HOTSPOT_MIN_DISTANCE_KM = 50
-const HOTSPOT_FILL_MIN_DISTANCE_KM = 25
-const HOTSPOT_MAX_COUNT = 8
+const HOTSPOT_FILL_MIN_DISTANCE_KM = 18
+const HOTSPOT_MAX_COUNT = 10
 
 const TYPE_PALETTE = [
   '#f97316', // orange
@@ -306,43 +306,13 @@ export function Heatmap() {
       const usedIds = new Set(deduped.map((item) => item.id))
       const remaining = candidates.filter((item) => !usedIds.has(item.id))
 
-      while (deduped.length < HOTSPOT_MAX_COUNT && remaining.length > 0) {
-        let bestIndex = -1
-        let bestNearestDistance = -1
-        let bestCount = -1
-        let bestDistanceKm = -1
-
-        for (let i = 0; i < remaining.length; i += 1) {
-          const candidate = remaining[i]
-          const nearestDistance = deduped.reduce((nearest, existing) => {
-            const distance = haversineKm(existing.centroid, candidate.centroid)
-            return Math.min(nearest, distance)
-          }, Number.POSITIVE_INFINITY)
-
-          if (nearestDistance > bestNearestDistance) {
-            bestNearestDistance = nearestDistance
-            bestCount = candidate.count
-            bestDistanceKm = candidate.distanceKm
-            bestIndex = i
-            continue
-          }
-
-          if (nearestDistance === bestNearestDistance) {
-            if (candidate.count > bestCount || (candidate.count === bestCount && candidate.distanceKm > bestDistanceKm)) {
-              bestNearestDistance = nearestDistance
-              bestCount = candidate.count
-              bestDistanceKm = candidate.distanceKm
-              bestIndex = i
-            }
-          }
-        }
-
-        if (bestIndex < 0 || bestNearestDistance < HOTSPOT_FILL_MIN_DISTANCE_KM) {
-          break
-        }
-
-        const [selected] = remaining.splice(bestIndex, 1)
-        deduped.push(selected)
+      for (const candidate of remaining) {
+        const tooClose = deduped.some((existing) =>
+          haversineKm(existing.centroid, candidate.centroid) < HOTSPOT_FILL_MIN_DISTANCE_KM
+        )
+        if (tooClose) continue
+        deduped.push(candidate)
+        if (deduped.length >= HOTSPOT_MAX_COUNT) break
       }
     }
 
