@@ -1439,6 +1439,7 @@
     "hotspots": {
       "title": "Hotspots",
       "showAll": "Alles zeigen",
+      "moreTitle": "Weitere Orte",
       "item": "Hotspot {{index}}",
       "activities": "{{count}} Aktivitäten"
     },
