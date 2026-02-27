@@ -116,6 +116,7 @@ export function Heatmap() {
   const [defaultTypeFilterApplied, setDefaultTypeFilterApplied] = useState(false)
   const [focusBounds, setFocusBounds] = useState<BoundsTuple | null>(null)
   const [focusKey, setFocusKey] = useState(0)
+  const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null)
   const [hotspotLabels, setHotspotLabels] = useState<Record<string, string | null>>({})
   const canvasRenderer = useMemo(() => L.canvas({ padding: 0.5 }), [])
 
@@ -336,6 +337,13 @@ export function Heatmap() {
       setSelectedActivity(null)
     }
   }, [selectedActivity, filteredActivities])
+
+  useEffect(() => {
+    if (!activeHotspotId) return
+    if (!hotspots.some((h) => h.id === activeHotspotId)) {
+      setActiveHotspotId(null)
+    }
+  }, [activeHotspotId, hotspots])
 
   const focusMapBounds = (bounds: BoundsTuple | null) => {
     if (!bounds) return
@@ -581,35 +589,48 @@ export function Heatmap() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => focusMapBounds(allBounds)}
+                    onClick={() => {
+                      setActiveHotspotId(null)
+                      focusMapBounds(allBounds)
+                    }}
                     className="text-xs text-primary hover:underline"
                   >
                     {t('heatmap.hotspots.showAll')}
                   </button>
                 </div>
                 <div className="space-y-2">
-                  {hotspots.map((hotspot, index) => (
-                    <button
-                      key={hotspot.id}
-                      type="button"
-                      onClick={() => focusMapBounds(hotspot.bounds)}
-                      className="w-full rounded-lg border border-border/60 bg-secondary/30 px-3 py-2 text-left hover:bg-secondary/60 transition-colors"
-                    >
-                      <div className="flex items-center justify-between gap-2">
-                        <span className="text-sm font-medium truncate pr-2">
-                          {hotspotLabels[hotspot.id] || t('heatmap.hotspots.item', { index: index + 1 })}
-                        </span>
-                        <span className="text-xs text-muted-foreground">
-                          {t('heatmap.hotspots.activities', { count: hotspot.count })}
-                        </span>
-                      </div>
-                      <div className="mt-1 text-xs text-muted-foreground flex flex-wrap gap-x-3 gap-y-1">
-                        <span>{hotspot.distanceKm.toFixed(0)} {t('records.units.km')}</span>
-                        <span>{new Date(hotspot.latestDate).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</span>
-                        <span className="font-mono">{hotspot.centroid[0].toFixed(2)}, {hotspot.centroid[1].toFixed(2)}</span>
-                      </div>
-                    </button>
-                  ))}
+                  {hotspots.map((hotspot, index) => {
+                    const isActive = activeHotspotId === hotspot.id
+                    return (
+                      <button
+                        key={hotspot.id}
+                        type="button"
+                        onClick={() => {
+                          setActiveHotspotId(hotspot.id)
+                          focusMapBounds(hotspot.bounds)
+                        }}
+                        className={`w-full rounded-lg border px-3 py-2 text-left transition-all duration-200 ${
+                          isActive
+                            ? 'border-emerald-400/80 bg-emerald-500/15 shadow-[0_0_0_1px_rgba(16,185,129,0.45),0_0_18px_rgba(16,185,129,0.35)]'
+                            : 'border-border/60 bg-secondary/30 hover:bg-secondary/65 hover:border-primary/40 hover:shadow-[0_0_18px_rgba(56,189,248,0.28)]'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className={`text-sm font-medium truncate pr-2 ${isActive ? 'text-emerald-200' : ''}`}>
+                            {hotspotLabels[hotspot.id] || t('heatmap.hotspots.item', { index: index + 1 })}
+                          </span>
+                          <span className={`text-xs ${isActive ? 'text-emerald-200/90' : 'text-muted-foreground'}`}>
+                            {t('heatmap.hotspots.activities', { count: hotspot.count })}
+                          </span>
+                        </div>
+                        <div className={`mt-1 text-xs flex flex-wrap gap-x-3 gap-y-1 ${isActive ? 'text-emerald-100/80' : 'text-muted-foreground'}`}>
+                          <span>{hotspot.distanceKm.toFixed(0)} {t('records.units.km')}</span>
+                          <span>{new Date(hotspot.latestDate).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</span>
+                          <span className="font-mono">{hotspot.centroid[0].toFixed(2)}, {hotspot.centroid[1].toFixed(2)}</span>
+                        </div>
+                      </button>
+                    )
+                  })}
                 </div>
               </div>
             )}
