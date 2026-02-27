@@ -569,7 +569,7 @@ export function Heatmap() {
       </button>
 
       {/* Floating Filters */}
-      <div className="absolute top-4 right-4 z-[1001] w-[calc(100vw-2rem)] max-w-sm sm:max-w-md">
+      <div className="absolute top-4 right-4 z-[1001] w-[calc(100vw-2rem)] max-w-sm sm:max-w-md space-y-3">
         <div className="rounded-xl bg-background/95 backdrop-blur border shadow-lg p-3 space-y-3">
           <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
             {t('heatmap.filters.title')}
@@ -626,6 +626,31 @@ export function Heatmap() {
             </button>
           )}
         </div>
+        {selectedActivityData && (
+          <div className="rounded-xl bg-background/95 backdrop-blur border shadow-lg p-3 space-y-3">
+            <h3 className="font-medium text-sm">{t('heatmap.selected.title')}</h3>
+            <div className="p-3 rounded-lg bg-secondary/50 space-y-2">
+              <p className="font-medium text-sm truncate">{selectedActivityData.name}</p>
+              <div className="text-xs text-muted-foreground space-y-1">
+                <p>{t(`activities.filters.types.${selectedActivityData.type}`, { defaultValue: selectedActivityData.type })}</p>
+                <p>{Number(selectedActivityData.distance_km).toFixed(2)} {t('records.units.km')}</p>
+                <p>{new Date(selectedActivityData.start_date).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</p>
+              </div>
+              <Link
+                to={`/activity/${selectedActivityData.strava_activity_id}`}
+                className="block mt-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-center text-sm hover:bg-primary/90 transition-colors"
+              >
+                {t('heatmap.selected.viewDetails')}
+              </Link>
+            </div>
+            <button
+              onClick={() => setSelectedActivity(null)}
+              className="w-full px-3 py-2 rounded-lg border text-sm hover:bg-secondary transition-colors"
+            >
+              {t('heatmap.selected.deselect')}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Sidebar */}
@@ -680,7 +705,7 @@ export function Heatmap() {
                     {t('heatmap.hotspots.showAll')}
                   </button>
                 </div>
-                <div className="max-h-72 overflow-y-auto pr-1 space-y-3">
+                <div className="max-h-96 overflow-y-auto pr-1 space-y-3">
                   <div className="space-y-2">
                     {hotspots.map((hotspot, index) => {
                       const isActive = activeHotspotId === hotspot.id
@@ -705,11 +730,6 @@ export function Heatmap() {
                             <span className={`text-xs ${isActive ? 'text-emerald-200/90' : 'text-muted-foreground'}`}>
                               {t('heatmap.hotspots.activities', { count: hotspot.count })}
                             </span>
-                          </div>
-                          <div className={`mt-1 text-xs flex flex-wrap gap-x-3 gap-y-1 ${isActive ? 'text-emerald-100/80' : 'text-muted-foreground'}`}>
-                            <span>{hotspot.distanceKm.toFixed(0)} {t('records.units.km')}</span>
-                            <span>{new Date(hotspot.latestDate).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</span>
-                            <span className="font-mono">{hotspot.centroid[0].toFixed(2)}, {hotspot.centroid[1].toFixed(2)}</span>
                           </div>
                         </button>
                       )
@@ -745,11 +765,6 @@ export function Heatmap() {
                                   {t('heatmap.hotspots.activities', { count: hotspot.count })}
                                 </span>
                               </div>
-                              <div className={`mt-1 text-xs flex flex-wrap gap-x-3 gap-y-1 ${isActive ? 'text-emerald-100/80' : 'text-muted-foreground'}`}>
-                                <span>{hotspot.distanceKm.toFixed(0)} {t('records.units.km')}</span>
-                                <span>{new Date(hotspot.latestDate).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</span>
-                                <span className="font-mono">{hotspot.centroid[0].toFixed(2)}, {hotspot.centroid[1].toFixed(2)}</span>
-                              </div>
                             </button>
                           )
                         })}
@@ -761,43 +776,7 @@ export function Heatmap() {
             )}
           </div>
 
-          {/* Selected Activity */}
-          <div className="flex-1 overflow-auto p-4">
-            {selectedActivityData ? (
-              <div className="space-y-3">
-                <h3 className="font-medium text-sm">{t('heatmap.selected.title')}</h3>
-                <div className="p-3 rounded-lg bg-secondary/50 space-y-2">
-                  <p className="font-medium text-sm truncate">{selectedActivityData.name}</p>
-                  <div className="text-xs text-muted-foreground space-y-1">
-                    <p>{t(`activities.filters.types.${selectedActivityData.type}`, { defaultValue: selectedActivityData.type })}</p>
-                    <p>{Number(selectedActivityData.distance_km).toFixed(2)} {t('records.units.km')}</p>
-                    <p>{new Date(selectedActivityData.start_date).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</p>
-                  </div>
-                  <Link
-                    to={`/activity/${selectedActivityData.strava_activity_id}`}
-                    className="block mt-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-center text-sm hover:bg-primary/90 transition-colors"
-                  >
-                    {t('heatmap.selected.viewDetails')}
-                  </Link>
-                </div>
-                <button
-                  onClick={() => setSelectedActivity(null)}
-                  className="w-full px-3 py-2 rounded-lg border text-sm hover:bg-secondary transition-colors"
-                >
-                  {t('heatmap.selected.deselect')}
-                </button>
-              </div>
-            ) : (
-              <div className="text-center text-muted-foreground text-sm">
-                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-2 opacity-50">
-                  <circle cx="12" cy="12" r="10"/>
-                  <path d="m15 9-6 6"/>
-                  <path d="m9 9 6 6"/>
-                </svg>
-                <p>{t('heatmap.selected.empty')}</p>
-              </div>
-            )}
-          </div>
+          <div className="flex-1" />
 
           {/* Cache Status & Refresh */}
           <div className="p-4 border-t space-y-2">
