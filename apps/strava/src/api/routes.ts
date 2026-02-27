@@ -391,6 +391,7 @@ const heatmapHotspotLabelCache = new Map<string, { label: string | null; timesta
 const heatmapCache: Map<string, HeatmapCache> = new Map();
 const HEATMAP_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
 const HEATMAP_HOTSPOT_LABEL_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
+const HEATMAP_HOTSPOT_LABEL_REQUEST_LIMIT = Math.max(8, Number(process.env.HEATMAP_HOTSPOT_LABEL_REQUEST_LIMIT || 40));
 const HEATMAP_PREWARM_ENABLED = ['1', 'true', 'yes', 'on']
   .includes(String(process.env.HEATMAP_PREWARM_ENABLED || 'true').trim().toLowerCase());
 const HEATMAP_PREWARM_DELAY_MS = Math.max(1000, Number(process.env.HEATMAP_PREWARM_DELAY_MS || 12000));
@@ -1250,7 +1251,7 @@ router.post('/activities/heatmap/hotspot-labels', async (req: Request, res: Resp
   try {
     const rawHotspots = Array.isArray(req.body?.hotspots) ? req.body.hotspots : [];
     const hotspots: Array<{ id: string; lat: number; lng: number }> = rawHotspots
-      .slice(0, 12)
+      .slice(0, HEATMAP_HOTSPOT_LABEL_REQUEST_LIMIT)
       .map((item: any) => ({
         id: String(item?.id || ''),
         lat: Number(item?.lat),
