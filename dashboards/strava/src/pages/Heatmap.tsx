@@ -118,6 +118,7 @@ export function Heatmap() {
   const [focusKey, setFocusKey] = useState(0)
   const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null)
   const [hotspotLabels, setHotspotLabels] = useState<Record<string, string | null>>({})
+  const initialHotspotSelectionApplied = useRef(false)
   const canvasRenderer = useMemo(() => L.canvas({ padding: 0.5 }), [])
 
   const { data, isLoading } = useQuery({
@@ -344,6 +345,13 @@ export function Heatmap() {
       setActiveHotspotId(null)
     }
   }, [activeHotspotId, hotspots])
+
+  useEffect(() => {
+    if (initialHotspotSelectionApplied.current) return
+    if (hotspots.length === 0) return
+    setActiveHotspotId(hotspots[0].id)
+    initialHotspotSelectionApplied.current = true
+  }, [hotspots])
 
   const focusMapBounds = (bounds: BoundsTuple | null) => {
     if (!bounds) return
@@ -609,10 +617,10 @@ export function Heatmap() {
                           setActiveHotspotId(hotspot.id)
                           focusMapBounds(hotspot.bounds)
                         }}
-                        className={`w-full rounded-lg border px-3 py-2 text-left transition-all duration-200 ${
+                        className={`w-full rounded-lg border px-3 py-2 text-left transition-colors duration-150 ${
                           isActive
-                            ? 'border-emerald-400/80 bg-emerald-500/15 shadow-[0_0_0_1px_rgba(16,185,129,0.45),0_0_18px_rgba(16,185,129,0.35)]'
-                            : 'border-border/60 bg-secondary/30 hover:bg-secondary/65 hover:border-primary/40 hover:shadow-[0_0_18px_rgba(56,189,248,0.28)]'
+                            ? 'border-emerald-400/70 bg-emerald-500/20'
+                            : 'border-border/60 bg-secondary/30 hover:bg-emerald-500/12 hover:border-emerald-400/45'
                         }`}
                       >
                         <div className="flex items-center justify-between gap-2">
