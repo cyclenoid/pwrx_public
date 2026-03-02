@@ -865,11 +865,6 @@
     "profilePhotoAlt": "Profilbild",
     "notSet": "Nicht gesetzt",
     "lastSync": "Letzter Sync: {{value}}",
-    "version": {
-      "label": "Version: {{value}}",
-      "commit": "Commit: {{value}}",
-      "backend": "Backend: {{value}}"
-    },
     "defaults": {
       "athlete": "Athlet",
       "username": "default",
@@ -1420,7 +1415,6 @@
       "allTypes": "Alle Typen",
       "year": "Jahr",
       "allYears": "Alle Jahre",
-      "virtualHiddenByDefault": "Standardmäßig werden virtuelle Aktivitäten ausgeblendet.",
       "clear": "Filter zurücksetzen"
     },
     "selected": {
@@ -1432,16 +1426,8 @@
     "cache": {
       "cached": "Im Cache (vor {{hours}}h)",
       "fresh": "Frische Daten ({{ms}}ms)",
-      "sampling": "Heatmap-Detail: max. {{value}} Punkte pro Aktivität",
       "refresh": "Daten aktualisieren",
       "refreshing": "Aktualisiere..."
-    },
-    "hotspots": {
-      "title": "Hotspots",
-      "showAll": "Alles zeigen",
-      "moreTitle": "Weitere Orte",
-      "item": "Hotspot {{index}}",
-      "activities": "{{count}} Aktivitäten"
     },
     "footer": {
       "years": "Jahre: {{value}}",

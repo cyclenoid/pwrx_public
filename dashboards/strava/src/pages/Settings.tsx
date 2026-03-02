@@ -48,13 +48,10 @@ import {
 
 export default function Settings() {
   const { t, i18n } = useTranslation()
-  const { capabilities, data: capabilitiesData } = useCapabilities()
+  const { capabilities } = useCapabilities()
   const supportsFiles = capabilities.supportsFiles
   const supportsSync = capabilities.supportsSync
   const supportsOAuth = capabilities.supportsOAuth
-  const versionLabel = capabilitiesData?.version?.label || null
-  const versionCommit = capabilitiesData?.version?.commit || null
-  const backendVersion = capabilitiesData?.version?.backend || null
   const queryClient = useQueryClient()
   const { toast, toasts, dismiss } = useToast()
   const { data: profile, isLoading } = useUserProfile()
@@ -612,13 +609,13 @@ export default function Settings() {
               {t('common.saved')}
             </Button>
           ) : (
-            <Button
-              size="sm"
-              variant="outline"
-              onClick={() => startEdit(field, currentValue)}
-            >
-              {t('common.edit')}
-            </Button>
+          <Button
+            size="sm"
+            variant="outline"
+            onClick={() => startEdit(field, currentValue)}
+          >
+            {t('common.edit')}
+          </Button>
           )
         ) : (
           <>
@@ -906,25 +903,6 @@ export default function Settings() {
         <p className="text-muted-foreground mt-1">
           {t('settings.subtitle')}
         </p>
-        {(versionLabel || versionCommit || backendVersion) && (
-          <div className="mt-3 inline-flex flex-wrap items-center gap-x-3 gap-y-1 rounded-lg border border-border/70 bg-muted/20 px-3 py-2 text-xs">
-            {versionLabel && (
-              <span className="font-medium text-foreground">
-                {t('settings.version.label', { value: versionLabel })}
-              </span>
-            )}
-            {versionCommit && (
-              <span className="text-muted-foreground" title={versionCommit}>
-                {t('settings.version.commit', { value: String(versionCommit).slice(0, 12) })}
-              </span>
-            )}
-            {backendVersion && (
-              <span className="text-muted-foreground">
-                {t('settings.version.backend', { value: backendVersion })}
-              </span>
-            )}
-          </div>
-        )}
       </div>
 
       {/* Avatar & Name Card */}

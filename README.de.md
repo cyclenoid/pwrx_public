@@ -1,16 +1,10 @@
 # PWRX - Power Explorer for Training Data
 
-Selbst gehostetes Trainingsdaten-Dashboard mit PostgreSQL (Schema-Trennung) und React-UI.
-
-> Public Beta (`v0.9.0-beta.1`)
-> Das Standard-Setup ist file-import-first (FIT/GPX/TCX + Strava-Export-ZIP). Optionale Integrationen sind nicht Teil der Standard-Distribution und muessen vom Nutzer in Eigenregie konfiguriert werden.
+Selbst gehosteter Strava-Hub mit PostgreSQL (Schema-Trennung) und React-Dashboard.
 
 ## Voraussetzungen
 - Docker + Docker Compose
-- Git (zum Klonen des Repositories)
-- Genug freier Speicherplatz fuer Datenbank/Importe/Fotos (je nach Nutzung)
-
-Release Notes: `docs/RELEASE_NOTES_v0.9.0-beta.1.de.md` / `docs/RELEASE_NOTES_v0.9.0-beta.1.en.md`
+- Strava API App + Refresh Token
 
 ## Quick Start (Docker)
 1. `.env.example` nach `.env` kopieren
@@ -19,22 +13,15 @@ cp .env.example .env
 ```
 
 2. Pflichtwerte in `.env` setzen
+- `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
-- `PGADMIN_DEFAULT_EMAIL`, `PGADMIN_DEFAULT_PASSWORD`
 - Optional: `DATA_HUB_DATA_DIR` (Default: `./data`)
-Hinweis: PWRX funktioniert standardmaessig mit Datei-Import. Direkte Drittanbieter-API-Integrationen sind nicht Teil des Standard-Setups und muessen vom Nutzer in Eigenregie konfiguriert werden.
 Hinweis: Das Postgres-Passwort wird nur beim ersten Initialisieren des DB-Volumes gesetzt. Wenn du es spaeter aenderst, musst du das Passwort in Postgres aktualisieren oder das Volume zuruecksetzen.
 
 3. Dienste starten
 ```bash
 docker compose up -d
 ```
-
-Optional (Self-hosted Add-on): direkte Strava-Sync-Funktionen auf derselben Public-Basis aktivieren:
-```bash
-docker compose -f docker-compose.yml -f docker-compose.strava-addon.yml up -d
-```
-Der eingebaute Add-on-Modus nutzt deine eigenen Strava-Zugangsdaten aus der `.env`. Externe/private Adapter-Module bleiben optional und in Eigenregie.
 
 4. Dienste aufrufen
 ```text
@@ -43,13 +30,39 @@ API Health: http://localhost:3001/api/health
 pgAdmin: http://localhost:5050
 ```
 
-Hinweis: `strava-tracker` in den Docker-Kommandos unten ist ein historischer interner Service-Name. Das oeffentliche Standard-Setup bleibt Datei-Import-first.
+## Public-Core Testmodus (ohne Strava API)
+Diesen Modus nutzen, um die App wie ein oeffentlicher User nur mit Datei-Import zu testen.
 
-## Erster Start (empfohlener Ablauf)
-1. `http://localhost:8088` im Browser oeffnen
-2. Ueber den Import-Button FIT/GPX/TCX-Dateien oder eine Strava-Account-Export-ZIP hochladen
-3. In den Einstellungen mindestens Koerpergewicht setzen (FTP optional, aber empfohlen)
-4. Bei Bedarf Ausruestung und Segment-Einstellungen pruefen
+In `.env` setzen:
+```env
+ADAPTER_FILE_ENABLED=true
+ADAPTER_STRAVA_ENABLED=false
+STRAVA_CLIENT_ID=
+STRAVA_CLIENT_SECRET=
+STRAVA_REFRESH_TOKEN=
+```
+
+Dann Backend + Dashboard neu starten:
+```bash
+docker compose up -d --force-recreate strava-tracker strava-dashboard
+```
+
+In diesem Modus sind keine privaten Adapter-Deploy-Keys noetig (`PWRX_ADAPTER_KEY` / `PWRX_SSH_DIR`).
+
+## Erster Sync
+Beim ersten Start laeuft automatisch ein Initial-Sync (Default: letzte 180 Tage). Das kann je nach Datenmenge und Strava-Rate-Limits dauern.
+
+## Sync (Auto + Manuell)
+- Auto-Sync laeuft taeglich zur gewaehlten Uhrzeit.
+- Optional: Catch-up nach dem Start, wenn der Rechner aus war.
+- Manueller Sync ist in der UI (Settings/Dashboard) verfuegbar.
+
+API-Endpunkte:
+- Full Sync (Activity + Backfill): `POST /api/sync` (Alias: `POST /api/sync/full`)
+- Backfill only (Luecken): `POST /api/sync/backfill`
+
+## Kein 24/7 Rechner
+Wenn der Rechner zur geplanten Zeit aus ist, aktiviere "Catch-up nach dem Start" in den Settings. Beim naechsten Start wird der Sync nachgeholt.
 
 ## Update
 ```bash
@@ -80,47 +93,76 @@ docker compose exec strava-tracker npm run db:check
 ## Daten & Storage
 Exports, Logs und Fotos liegen unter `DATA_HUB_DATA_DIR` (Default: `./data`).
 
+## Workshop App (optional, gemeinsame DB)
+Die Fahrrad-Workshop-App kann auf derselben PostgreSQL-Instanz laufen, mit sauber getrennter Schema-Struktur.
+
+1. Optionale Variablen in `.env` setzen:
+```env
+WORKSHOP_APP_PATH=../workshop
+WORKSHOP_APP_PORT=8096
+WORKSHOP_DB_SCHEMA=workshop
+```
+
+2. Overlay-Service starten:
+```bash
+docker compose -f docker-compose.yml -f docker-compose.workshop.yml up -d workshop-app
+```
+
+3. Aufruf:
+```text
+Workshop App: http://localhost:8096
+```
+
+Die App nutzt dieselben DB-Zugangsdaten (`POSTGRES_*`), erstellt/verwendet aber nur das Schema `workshop`. `discogs` und `strava` bleiben unberuehrt.
+
+Optionale Erinnerungs-Kanaele fuer Werkstatttermine:
+- SMTP: `WORKSHOP_SMTP_*`
+- Telegram-Bot: `WORKSHOP_TELEGRAM_BOT_TOKEN`, `WORKSHOP_TELEGRAM_CHAT_ID`
+
 ## Import von Aktivitaetsdateien
-- Kernpfad in der Public Beta: manueller Import von FIT/GPX/TCX-Dateien und Strava-Account-Export-ZIPs (inkl. Namens-/Gear-Zuordnung und optionalem Medienimport aus dem Export).
 - Quickstart: `docs/IMPORT_QUICKSTART.md`
 - Provider-Guide (Zwift/Wahoo/Garmin/Apple Health): `docs/IMPORT_PROVIDER_GUIDE.md`
 - Docker-Release-Testablauf: `docs/DOCKER_RELEASE_TEST_PLAN.md`
 - PowerShell-Smoketest-Script: `scripts/docker-release-smoke.ps1`
 
-### Watch Folder (Self-hosted / SMB)
-- PWRX ueberwacht im Container den Pfad `/imports/watch`.
-- Die Standard-Docker-Installation bindet dazu den Host-Pfad `./data/imports/watch` ein und zeigt ihn in der UI als Zielpfad an.
-- Optional: `WATCH_FOLDER_SMB_PATH` in `.env` setzen, um einen Netzwerkpfad in der UI anzuzeigen (z. B. `\\\\unraid\\pwrx-import`).
+## Privater Strava-Adapter in CI
+Wenn das Backend das private Paket `@your-org/pwrx-adapter-strava` nutzt, braucht der Backend-CI-Job ein Repository-Secret:
+- `PWRX_ADAPTER_KEY`
 
-## Public-Basis + optionales Add-on (Unraid / Self-hosted)
-- Empfehlung fuer Tests und den Alltag: dieselbe Public-Basis wie alle Nutzer verwenden (`docker-compose.yml`).
-- Direkten Strava-Sync nur auf der eigenen Instanz optional ueber `docker-compose.strava-addon.yml` zuschalten.
-- Repo-Strategie und Workflow: `docs/REPO_STRATEGY.md`
-- Unraid-Beispielablauf: `docs/UNRAID_PUBLIC_BASE_PRIVATE_ADDON.md`
+Wert des Secrets:
+- kompletter privater SSH-Key (OpenSSH-Format), passend zu einem Read-only Deploy Key im Repo `your-org/pwrx-adapter-strava`.
+- OpenSSH-Format beibehalten (mehrzeilig):
+  - `-----BEGIN OPENSSH PRIVATE KEY-----`
+  - Base64-Zeilen
+  - `-----END OPENSSH PRIVATE KEY-----`
 
-## Optionale Integrationen (Advanced / in Eigenregie)
-Das oeffentliche Standard-Setup ist file-import-first und benoetigt keine direkte API-Integration.
+Ohne dieses Secret scheitert `npm ci` in `apps/strava` in GitHub Actions.
 
-Wenn Nutzer eigene Integrationen bauen (z. B. ueber externe Adapter-Module), ist das nicht Teil der Standard-Distribution und muss eigenstaendig konfiguriert und betrieben werden.
+Fuer lokale Docker-Tests mit privatem Adapter unter Windows/Linux:
+- `PWRX_SSH_DIR` in `.env` setzen (z. B. `C:/Users/<du>/.ssh` unter Windows)
+- sicherstellen, dass dort `pwrx_adapter_key` liegt und gueltig ist:
+```bash
+ssh-keygen -y -f ~/.ssh/pwrx_adapter_key
+```
 
 ## Sicherheit
 - Security-Policy und Meldung von Schwachstellen: `SECURITY.md`
 
 ## FAQ
 **Was bedeuten Foto-Sync und Downloads?**  
-Bei optionalen Sync-Integrationen bedeutet Foto-Sync = importierte Foto-Metadaten (URLs/Caption). Downloads = lokal gespeicherte Dateien. Die Zahlen sind pro Lauf.
+Foto-Sync = Metadaten von Strava (URLs/Caption). Downloads = lokal gespeicherte Dateien. Die Zahlen sind pro Lauf.
 
-**Warum dauert der erste Import so lange?**  
-Große Export-ZIPs, Medienimport und viele Aktivitaeten koennen den ersten Import verlangsamen. Die Queue-Verarbeitung laeuft im Hintergrund weiter.
+**Warum dauert der erste Sync so lange?**  
+Große Historien und Strava-Rate-Limits verlangsamen den Import. Er laeuft im Hintergrund weiter.
 
 **Warum bleiben Segmente offen?**  
 Segmente werden in Paketen nachgeladen. Bei Rate-Limits einfach spaeter erneut syncen.
 
 **Kann ich ohne Auto-Sync laufen?**  
-Ja. Das oeffentliche Standard-Setup arbeitet mit Datei-Import. Wenn du eine optionale Sync-Integration nutzt, kannst du Auto-Sync in den Settings deaktivieren und manuell syncen.
+Ja. Auto-Sync in den Settings deaktivieren und manuell syncen.
 
 **Laptop nicht immer an?**  
-Manuellen Import nutzen oder (self-hosted) den Watch-Folder verwenden. Importe laufen weiter, sobald der Rechner wieder an ist.
+Catch-up nach dem Start aktivieren. Dann wird der Sync beim naechsten Start ausgefuehrt.
 
 **Brauche ich Migrationen nach Updates?**  
 Nur wenn ein Release das DB-Schema aendert. Dann `npm run db:migrate` ausfuehren.
@@ -130,8 +172,3 @@ Apache-2.0 (siehe `LICENSE`).
 
 ## Support
 Buy me a coffee: `https://buymeacoffee.com/cyclenoid`
-
-## Public-Beta Feedback
-- Nutze GitHub Issues fuer Bugreports und Feature-Requests (Templates sind enthalten).
-- Wenn du GitHub Discussions im Repo aktivierst, nutze sie fuer Setup-Fragen und UX-Feedback, damit Issues technisch fokussiert bleiben.
-- Bitte bei Import-/Queue-Themen Version (`v0.9.0-beta.1`), Umgebung (OS/Docker/Browser/Proxy) und Reproduktionsschritte angeben.
