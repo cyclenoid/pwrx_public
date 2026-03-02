@@ -4,7 +4,7 @@ import compression from 'compression';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as cron from 'node-cron';
-import apiRoutes, { refreshTechStatsCache, scheduleHeatmapCachePrewarm } from './api/routes';
+import apiRoutes, { refreshTechStatsCache } from './api/routes';
 import DatabaseService from './services/database';
 import { loadSyncSettings, SyncSettings } from './services/syncSettings';
 import { checkPendingMigrations, runMigrations } from './services/migrations';
@@ -61,12 +61,7 @@ const stravaAdapterEnabled = Boolean(adapterRegistry.getAdapter('strava')?.enabl
 if (stravaAdapterEnabled) {
   const createStravaRoutes = loadStravaRoutesFactory();
   if (createStravaRoutes) {
-    app.use('/api', createStravaRoutes({
-      onDataChanged: () => {
-        refreshTechStatsCache();
-        scheduleHeatmapCachePrewarm('adapter-route');
-      }
-    }));
+    app.use('/api', createStravaRoutes({ onDataChanged: refreshTechStatsCache }));
   } else {
     console.warn('Strava adapter enabled but Strava routes are unavailable; skipping Strava route mount.');
   }
@@ -259,7 +254,6 @@ async function runSyncPipeline(
       await db.completeSyncLog(syncLogId, itemsProcessed, undefined, `${reason}: ${summary.join(' | ')}`);
       console.log(`✅ ${reason} completed (${itemsProcessed} items processed)\n`);
       refreshTechStatsCache();
-      scheduleHeatmapCachePrewarm(`sync:${mode}`);
     } catch (error: any) {
       const message = [reason, ...summary, formatSyncError(error)].join(' | ');
       console.error(`❌ ${reason} failed:`, message);
@@ -327,7 +321,6 @@ async function runInitialSync(settings: SyncSettings, userId: number, days: numb
       await setUserSetting(db, userId, 'sync_initial_last_error', '');
       console.log(`✅ Initial sync completed (${itemsProcessed} items processed)\n`);
       refreshTechStatsCache();
-      scheduleHeatmapCachePrewarm('sync:initial');
     } catch (error: any) {
       const message = [...summary, formatSyncError(error)].join(' | ');
       console.error('❌ Initial sync failed:', message);

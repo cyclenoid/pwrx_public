@@ -550,20 +550,40 @@ export interface HeatmapResponse {
   cached?: boolean
   cache_age_hours?: number
   generation_time_ms?: number
-  sampling_max_points?: number
 }
 
-export interface HeatmapHotspotLabelRequestItem {
+export interface HeatmapHotspotLocationResponse {
+  id?: string
+  lat: number
+  lng: number
+  label: string | null
+}
+
+export interface HeatmapHotspot {
   id: string
   lat: number
   lng: number
+  activity_count: number
+  distance_km: number
+  label: string | null
 }
 
-export interface HeatmapHotspotLabelResponse {
-  labels: Array<{
-    id: string
-    label: string | null
-  }>
+export interface HeatmapHotspotsResponse {
+  count: number
+  source_activity_count: number
+  filtered_activity_count: number
+  filters: {
+    types: string[]
+    years: number[]
+    exclude_virtual: boolean
+    limit: number
+    min_activity_count: number
+    min_distance_km: number
+  }
+  hotspots: HeatmapHotspot[]
+  generation_time_ms: number
+  cached?: boolean
+  cache_age_hours?: number
 }
 
 export const getHeatmapData = async (params?: {
@@ -580,10 +600,46 @@ export const clearHeatmapCache = async (): Promise<{ cleared: number; message: s
   return data
 }
 
-export const getHeatmapHotspotLabels = async (
-  hotspots: HeatmapHotspotLabelRequestItem[]
-): Promise<HeatmapHotspotLabelResponse> => {
-  const { data } = await api.post('/activities/heatmap/hotspot-labels', { hotspots })
+export const getHeatmapHotspotLocation = async (
+  lat: number,
+  lng: number
+): Promise<HeatmapHotspotLocationResponse> => {
+  const { data } = await api.get('/activities/heatmap/hotspots/reverse-geocode', {
+    params: { lat, lng },
+  })
+  return data
+}
+
+export const getHeatmapHotspotLocations = async (
+  hotspots: Array<{ id?: string; lat: number; lng: number }>
+): Promise<{ count: number; results: HeatmapHotspotLocationResponse[] }> => {
+  const { data } = await api.post('/activities/heatmap/hotspots/reverse-geocode', {
+    hotspots,
+  })
+  return data
+}
+
+export const getHeatmapHotspots = async (params?: {
+  types?: string[]
+  years?: number[]
+  exclude_virtual?: boolean
+  limit?: number
+  min_activity_count?: number
+  min_distance_km?: number
+  include_labels?: boolean
+  refresh?: boolean
+}): Promise<HeatmapHotspotsResponse> => {
+  const queryParams: Record<string, string | number | boolean | undefined> = {
+    types: params?.types && params.types.length > 0 ? params.types.join(',') : undefined,
+    years: params?.years && params.years.length > 0 ? params.years.join(',') : undefined,
+    exclude_virtual: params?.exclude_virtual,
+    limit: params?.limit,
+    min_activity_count: params?.min_activity_count,
+    min_distance_km: params?.min_distance_km,
+    include_labels: params?.include_labels,
+    refresh: params?.refresh,
+  }
+  const { data } = await api.get('/activities/heatmap/hotspots', { params: queryParams })
   return data
 }
 

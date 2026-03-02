@@ -3,7 +3,6 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { createHash, randomUUID } from 'crypto';
 import multer from 'multer';
-import axios from 'axios';
 import DatabaseService from '../services/database';
 import { loadSyncSettings } from '../services/syncSettings';
 import { checkPendingMigrations } from '../services/migrations';
@@ -25,7 +24,6 @@ import {
   importQueueWorker,
   importSingleFile,
   importStravaExportZipFromPath,
-  registerImportRunCompletedHook,
   refreshImportRunFromFiles,
   retryFailedImportFiles,
 } from '../services/import/service';
@@ -36,7 +34,6 @@ import {
   createManualLocalSegmentFromActivity,
   renameLocalSegments,
   rebuildLocalClimbsForActivity,
-  resolveLocationLabel,
 } from '../services/localSegments';
 import {
   buildSegmentSourceAndTypeFilters,
@@ -387,103 +384,169 @@ interface HeatmapCache {
   timestamp: number;
   activityCount: number;
 }
-const heatmapHotspotLabelCache = new Map<string, { label: string | null; timestamp: number }>();
 const heatmapCache: Map<string, HeatmapCache> = new Map();
 const HEATMAP_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
-const HEATMAP_HOTSPOT_LABEL_CACHE_TTL = 7 * 24 * 60 * 60 * 1000;
-const HEATMAP_HOTSPOT_LABEL_REQUEST_LIMIT = Math.max(8, Number(process.env.HEATMAP_HOTSPOT_LABEL_REQUEST_LIMIT || 40));
-const HEATMAP_PREWARM_ENABLED = ['1', 'true', 'yes', 'on']
-  .includes(String(process.env.HEATMAP_PREWARM_ENABLED || 'true').trim().toLowerCase());
-const HEATMAP_PREWARM_DELAY_MS = Math.max(1000, Number(process.env.HEATMAP_PREWARM_DELAY_MS || 12000));
-let heatmapPrewarmTimer: NodeJS.Timeout | null = null;
-let heatmapPrewarmRunning = false;
-let heatmapPrewarmRunRequested = false;
-let heatmapPrewarmLastReason: string | null = null;
+const HEATMAP_MAX_POINTS_PER_ACTIVITY = Math.max(
+  200,
+  Number(process.env.HEATMAP_MAX_POINTS_PER_ACTIVITY || 600)
+);
+const HEATMAP_HOTSPOT_GRID_DEG = Math.max(
+  0.002,
+  Number(process.env.HEATMAP_HOTSPOT_GRID_DEG || 0.018)
+);
+const HEATMAP_HOTSPOT_SAMPLE_TARGET = Math.max(
+  120,
+  Number(process.env.HEATMAP_HOTSPOT_SAMPLE_TARGET || 320)
+);
+const HEATMAP_HOTSPOT_DEFAULT_LIMIT = Math.max(
+  5,
+  Number(process.env.HEATMAP_HOTSPOT_DEFAULT_LIMIT || 24)
+);
+const HEATMAP_HOTSPOT_DEFAULT_MIN_ACTIVITY_COUNT = Math.max(
+  1,
+  Number(process.env.HEATMAP_HOTSPOT_DEFAULT_MIN_ACTIVITY_COUNT || 1)
+);
+const HEATMAP_HOTSPOT_MIN_DISTANCE_KM = Math.max(
+  0,
+  Number(process.env.HEATMAP_HOTSPOT_MIN_DISTANCE_KM || 40)
+);
+const HEATMAP_HOTSPOT_CACHE_TTL_MS = Math.max(
+  60 * 1000,
+  Number(process.env.HEATMAP_HOTSPOT_CACHE_TTL_MS || (6 * 60 * 60 * 1000))
+);
+type HeatmapHotspotLocationCache = {
+  label: string | null;
+  timestamp: number;
+};
+const heatmapHotspotLocationCache = new Map<string, HeatmapHotspotLocationCache>();
+const HEATMAP_HOTSPOT_LOCATION_CACHE_TTL_MS = 14 * 24 * 60 * 60 * 1000;
+type HeatmapHotspotCache = {
+  data: any;
+  timestamp: number;
+  sourceActivityCount: number;
+};
+const heatmapHotspotCache = new Map<string, HeatmapHotspotCache>();
+let heatmapPrewarmTimeout: NodeJS.Timeout | null = null;
 
-const buildHeatmapCacheKey = (type?: string | null, year?: number | string | null) =>
-  `heatmap_${type || 'all'}_${year || 'all'}`;
-
-const buildHeatmapHotspotLabelCacheKey = (lat: number, lng: number, language: string, url: string) =>
-  `${url}|${language}|${lat.toFixed(3)}|${lng.toFixed(3)}`;
-
-const normalizeHeatmapHotspotLabelPart = (value: unknown): string | null => {
-  const text = String(value || '')
+const normalizeHeatmapHotspotLocationLabel = (value: string | null | undefined): string | null => {
+  const normalized = String(value || '')
     .replace(/\s+/g, ' ')
     .trim();
-  return text || null;
+  return normalized.length >= 2 ? normalized : null;
 };
 
-const clampHeatmapHotspotLabel = (value: string | null): string | null => {
-  const text = normalizeHeatmapHotspotLabelPart(value);
-  if (!text) return null;
-  return text.length > 56 ? `${text.slice(0, 53)}...` : text;
-};
-
-const resolveHeatmapHotspotRegionPlaceLabel = async (
+const resolveHeatmapHotspotLocation = async (
   lat: number,
-  lng: number,
-  naming: LocalSegmentNamingOptions
+  lng: number
 ): Promise<string | null> => {
-  if (!naming.reverseGeocodeEnabled || !naming.reverseGeocodeUrl) {
+  const cacheKey = `${lat.toFixed(4)},${lng.toFixed(4)}`;
+  const cached = heatmapHotspotLocationCache.get(cacheKey);
+  if (cached && (Date.now() - cached.timestamp) < HEATMAP_HOTSPOT_LOCATION_CACHE_TTL_MS) {
+    return cached.label;
+  }
+
+  const namingDefaults = await getLocalClimbNamingDefaults();
+  const endpoint = String(
+    process.env.HEATMAP_HOTSPOT_REVERSE_GEOCODE_URL
+    || namingDefaults.reverseGeocodeUrl
+    || 'https://nominatim.openstreetmap.org/reverse'
+  ).trim();
+  const timeoutMs = Math.max(
+    400,
+    Number(
+      process.env.HEATMAP_HOTSPOT_REVERSE_GEOCODE_TIMEOUT_MS
+      || namingDefaults.reverseGeocodeTimeoutMs
+      || 2200
+    )
+  );
+  const language = String(
+    process.env.HEATMAP_HOTSPOT_REVERSE_GEOCODE_LANGUAGE
+    || namingDefaults.reverseGeocodeLanguage
+    || 'de,en'
+  ).trim();
+  const userAgent = String(
+    process.env.HEATMAP_HOTSPOT_REVERSE_GEOCODE_USER_AGENT
+    || namingDefaults.reverseGeocodeUserAgent
+    || 'PWRX/1.0 (heatmap-hotspots)'
+  ).trim();
+
+  if (!endpoint) {
+    heatmapHotspotLocationCache.set(cacheKey, { label: null, timestamp: Date.now() });
     return null;
   }
 
+  const abortController = new AbortController();
+  const timeout = setTimeout(() => abortController.abort(), timeoutMs);
+
   try {
-    const response = await axios.get(String(naming.reverseGeocodeUrl), {
-      params: {
-        format: 'jsonv2',
-        addressdetails: 1,
-        zoom: 12,
-        lat,
-        lon: lng,
-      },
-      timeout: Number(naming.reverseGeocodeTimeoutMs || 4000),
+    const url = new URL(endpoint);
+    url.searchParams.set('format', 'jsonv2');
+    url.searchParams.set('addressdetails', '1');
+    url.searchParams.set('zoom', '14');
+    url.searchParams.set('lat', String(lat));
+    url.searchParams.set('lon', String(lng));
+
+    const response = await fetch(url.toString(), {
+      signal: abortController.signal,
       headers: {
-        'User-Agent': String(naming.reverseGeocodeUserAgent || 'PWRX/1.0'),
-        'Accept-Language': String(naming.reverseGeocodeLanguage || ''),
+        'Accept': 'application/json',
+        'Accept-Language': language,
+        'User-Agent': userAgent,
       },
     });
 
-    const payload = response.data || {};
-    const address = payload.address || {};
+    if (!response.ok) {
+      throw new Error(`Reverse geocode request failed (${response.status})`);
+    }
 
-    const place = normalizeHeatmapHotspotLabelPart(
-      address.city
+    const payload = (await response.json()) as any;
+    const address = payload?.address || {};
+    const road = address.road
+      || address.cycleway
+      || address.pedestrian
+      || address.path
+      || address.footway
+      || null;
+    const place = address.city
       || address.town
       || address.village
       || address.hamlet
       || address.municipality
-      || address.suburb
-      || address.city_district
       || address.county
-      || null
-    );
+      || address.state
+      || null;
 
-    const region = normalizeHeatmapHotspotLabelPart(
-      address.state
-      || address.state_district
-      || address.province
-      || address.region
-      || address.county
-      || null
-    );
-
-    const country = normalizeHeatmapHotspotLabelPart(address.country || null);
-
-    if (place && region && place.toLowerCase() !== region.toLowerCase()) {
-      return clampHeatmapHotspotLabel(`${region} / ${place}`);
-    }
-    return clampHeatmapHotspotLabel(place || region || country || null);
+    const rawLabel = road && place
+      ? `${road}, ${place}`
+      : (road || place || payload?.name || payload?.display_name || null);
+    const label = normalizeHeatmapHotspotLocationLabel(rawLabel);
+    heatmapHotspotLocationCache.set(cacheKey, { label, timestamp: Date.now() });
+    return label;
   } catch {
+    heatmapHotspotLocationCache.set(cacheKey, { label: null, timestamp: Date.now() });
     return null;
+  } finally {
+    clearTimeout(timeout);
   }
 };
 
-async function generateAndCacheHeatmapData(type?: string | null, year?: number | string | null) {
-  const cacheKey = buildHeatmapCacheKey(type, year);
-  console.log(`Generating heatmap data for ${cacheKey}...`);
-  const startTime = Date.now();
+const parseHeatmapQueryString = (value: unknown): string | null => {
+  const normalized = String(value ?? '').trim();
+  return normalized || null;
+};
 
+const parseHeatmapQueryYear = (value: unknown): number | null => {
+  if (value === undefined || value === null || value === '') return null;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed)) return null;
+  return Math.trunc(parsed);
+};
+
+const buildHeatmapCacheKey = (type: string | null, year: number | null) => (
+  `heatmap_${type || 'all'}_${year || 'all'}`
+);
+
+const buildHeatmapActivityQuery = (type: string | null, year: number | null) => {
   let query = `
     SELECT
       a.strava_activity_id,
@@ -503,119 +566,299 @@ async function generateAndCacheHeatmapData(type?: string | null, year?: number |
   if (type) {
     query += ` AND a.type = $${paramIndex}`;
     params.push(type);
-    paramIndex++;
+    paramIndex += 1;
   }
 
-  if (year) {
+  if (year !== null && Number.isFinite(year)) {
     query += ` AND EXTRACT(YEAR FROM a.start_date) = $${paramIndex}`;
-    params.push(parseInt(String(year)));
-    paramIndex++;
+    params.push(year);
+    paramIndex += 1;
   }
 
-  query += ` ORDER BY a.start_date DESC`;
-  const result = await db.query(query, params);
+  query += ' ORDER BY a.start_date DESC';
+  return { query, params };
+};
 
-  const targetTotalPoints = 220000;
-  const maxPointsPerActivity = Math.max(
-    60,
-    Math.min(200, Math.floor(targetTotalPoints / Math.max(result.rows.length, 1)))
-  );
+const simplifyHeatmapCoordinates = (coords: [number, number][]) => {
+  if (!coords || coords.length === 0) return coords;
+
+  const maxPoints = HEATMAP_MAX_POINTS_PER_ACTIVITY;
+  if (coords.length <= maxPoints) {
+    return coords.map((coord: [number, number]) => [
+      Math.round(coord[0] * 100000) / 100000,
+      Math.round(coord[1] * 100000) / 100000,
+    ]);
+  }
+
+  const step = Math.ceil(coords.length / maxPoints);
+  const simplified = coords.filter((_: any, i: number) => i % step === 0);
+  return simplified.map((coord: [number, number]) => [
+    Math.round(coord[0] * 100000) / 100000,
+    Math.round(coord[1] * 100000) / 100000,
+  ]);
+};
+
+const loadHeatmapDataWithCache = async (
+  type: string | null,
+  year: number | null,
+  refresh: boolean
+) => {
+  const cacheKey = buildHeatmapCacheKey(type, year);
+  if (!refresh) {
+    const cached = heatmapCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < HEATMAP_CACHE_TTL) {
+      return {
+        cacheKey,
+        response: {
+          ...cached.data,
+          cached: true,
+          cache_age_hours: Math.round((Date.now() - cached.timestamp) / 3600000 * 10) / 10,
+        },
+        data: cached.data,
+      };
+    }
+  }
+
+  console.log(`Generating heatmap data for ${cacheKey}...`);
+  const startTime = Date.now();
+  const queryData = buildHeatmapActivityQuery(type, year);
+  const result = await db.query(queryData.query, queryData.params);
 
   const simplifiedActivities = result.rows.map((activity: any) => {
     const coords = activity.latlng;
     if (!coords || coords.length === 0) return activity;
-
-    const maxPoints = maxPointsPerActivity;
-    if (coords.length <= maxPoints) {
-      return {
-        ...activity,
-        latlng: coords.map((coord: [number, number]) => [
-          Math.round(coord[0] * 100000) / 100000,
-          Math.round(coord[1] * 100000) / 100000
-        ])
-      };
-    }
-
-    const step = Math.ceil(coords.length / maxPoints);
-    const simplified = coords.filter((_: any, i: number) => i % step === 0);
-    const rounded = simplified.map((coord: [number, number]) => [
-      Math.round(coord[0] * 100000) / 100000,
-      Math.round(coord[1] * 100000) / 100000
-    ]);
-
     return {
       ...activity,
-      latlng: rounded
+      latlng: simplifyHeatmapCoordinates(coords),
     };
   });
 
   const responseData = {
     count: result.rows.length,
     activities: simplifiedActivities,
-    sampling_max_points: maxPointsPerActivity,
   };
 
   heatmapCache.set(cacheKey, {
     data: responseData,
     timestamp: Date.now(),
-    activityCount: result.rows.length
+    activityCount: result.rows.length,
   });
 
   const duration = Date.now() - startTime;
   console.log(`Heatmap data generated in ${duration}ms - ${result.rows.length} activities`);
 
   return {
-    ...responseData,
-    cached: false,
-    generation_time_ms: duration,
+    cacheKey,
+    response: {
+      ...responseData,
+      cached: false,
+      generation_time_ms: duration,
+    },
+    data: responseData,
   };
-}
-
-const runHeatmapPrewarm = async (reason: string): Promise<void> => {
-  if (!HEATMAP_PREWARM_ENABLED) return;
-  if (heatmapPrewarmRunning) {
-    heatmapPrewarmRunRequested = true;
-    return;
-  }
-
-  heatmapPrewarmRunning = true;
-  heatmapPrewarmLastReason = reason;
-  try {
-    await generateAndCacheHeatmapData(null, null);
-    console.log(`🔥 Heatmap cache prewarmed (reason=${reason})`);
-  } catch (error: any) {
-    console.warn(`⚠️  Heatmap prewarm failed (reason=${reason}): ${error?.message || error}`);
-  } finally {
-    heatmapPrewarmRunning = false;
-    if (heatmapPrewarmRunRequested) {
-      heatmapPrewarmRunRequested = false;
-      void runHeatmapPrewarm('queued-followup');
-    }
-  }
 };
 
-export function scheduleHeatmapCachePrewarm(reason: string = 'data-change', delayMs: number = HEATMAP_PREWARM_DELAY_MS): void {
-  if (!HEATMAP_PREWARM_ENABLED) return;
+const parseHeatmapListQuery = (value: unknown): string[] => {
+  if (Array.isArray(value)) {
+    return value
+      .flatMap((entry) => String(entry || '').split(','))
+      .map((entry) => entry.trim())
+      .filter((entry) => entry.length > 0);
+  }
+  const raw = String(value || '').trim();
+  if (!raw) return [];
+  return raw.split(',').map((entry) => entry.trim()).filter((entry) => entry.length > 0);
+};
 
-  if (heatmapCache.size > 0) {
+const parseHeatmapYearListQuery = (value: unknown): number[] => {
+  const items = parseHeatmapListQuery(value);
+  const years = items
+    .map((item) => Number(item))
+    .filter((item) => Number.isFinite(item))
+    .map((item) => Math.trunc(item));
+  return Array.from(new Set(years));
+};
+
+const parseBooleanQuery = (value: unknown, fallback: boolean): boolean => {
+  if (value === undefined || value === null || value === '') return fallback;
+  const normalized = String(value).trim().toLowerCase();
+  if (['1', 'true', 'yes', 'on'].includes(normalized)) return true;
+  if (['0', 'false', 'no', 'off'].includes(normalized)) return false;
+  return fallback;
+};
+
+const isVirtualHeatmapType = (type: unknown): boolean => {
+  const normalized = String(type || '').toLowerCase();
+  return normalized.includes('virtual') || normalized.includes('zwift');
+};
+
+const haversineKm = (lat1: number, lng1: number, lat2: number, lng2: number): number => {
+  const toRad = (value: number) => (value * Math.PI) / 180;
+  const dLat = toRad(lat2 - lat1);
+  const dLng = toRad(lng2 - lng1);
+  const a = Math.sin(dLat / 2) ** 2
+    + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+  return 6371 * c;
+};
+
+const applyHotspotDistanceDiversity = <T extends { lat: number; lng: number }>(
+  hotspots: T[],
+  limit: number,
+  minDistanceKm: number
+): T[] => {
+  if (limit <= 0) return [];
+  if (minDistanceKm <= 0) return hotspots.slice(0, limit);
+
+  const selected: T[] = [];
+  const deferred: T[] = [];
+
+  hotspots.forEach((spot) => {
+    const farEnough = selected.every((picked) => (
+      haversineKm(spot.lat, spot.lng, picked.lat, picked.lng) >= minDistanceKm
+    ));
+    if (farEnough && selected.length < limit) {
+      selected.push(spot);
+    } else {
+      deferred.push(spot);
+    }
+  });
+
+  for (const spot of deferred) {
+    if (selected.length >= limit) break;
+    selected.push(spot);
+  }
+
+  return selected.slice(0, limit);
+};
+
+const buildHeatmapHotspotCacheKey = (
+  types: string[],
+  years: number[],
+  excludeVirtual: boolean,
+  limit: number,
+  minActivityCount: number,
+  minDistanceKm: number
+) => {
+  const typeKey = [...types].sort().join(',');
+  const yearKey = [...years].sort((a, b) => a - b).join(',');
+  return `hotspots_${typeKey || 'all'}_${yearKey || 'all'}_${excludeVirtual ? 'xv1' : 'xv0'}_${limit}_${minActivityCount}_${minDistanceKm.toFixed(1)}_${HEATMAP_HOTSPOT_GRID_DEG}`;
+};
+
+const buildHeatmapHotspots = async (
+  activities: any[],
+  options: {
+    limit: number;
+    minActivityCount: number;
+    minDistanceKm: number;
+    includeLabels: boolean;
+  }
+) => {
+  const buckets = new Map<string, {
+    latSum: number;
+    lngSum: number;
+    sampleCount: number;
+    activityIds: Set<string>;
+    distanceKm: number;
+  }>();
+
+  activities.forEach((activity: any) => {
+    const points = activity?.latlng;
+    if (!Array.isArray(points) || points.length === 0) return;
+
+    const perActivitySeen = new Set<string>();
+    const sampleStep = Math.max(1, Math.floor(points.length / HEATMAP_HOTSPOT_SAMPLE_TARGET));
+    const activityId = String(activity.strava_activity_id || '');
+
+    for (let i = 0; i < points.length; i += sampleStep) {
+      const point = points[i];
+      if (!Array.isArray(point) || point.length < 2) continue;
+      const lat = Number(point[0]);
+      const lng = Number(point[1]);
+      if (!Number.isFinite(lat) || !Number.isFinite(lng)) continue;
+
+      const cellLat = Math.floor(lat / HEATMAP_HOTSPOT_GRID_DEG);
+      const cellLng = Math.floor(lng / HEATMAP_HOTSPOT_GRID_DEG);
+      const key = `${cellLat}:${cellLng}`;
+
+      if (perActivitySeen.has(key)) continue;
+      perActivitySeen.add(key);
+
+      let bucket = buckets.get(key);
+      if (!bucket) {
+        bucket = {
+          latSum: 0,
+          lngSum: 0,
+          sampleCount: 0,
+          activityIds: new Set<string>(),
+          distanceKm: 0,
+        };
+        buckets.set(key, bucket);
+      }
+
+      bucket.latSum += lat;
+      bucket.lngSum += lng;
+      bucket.sampleCount += 1;
+      if (!bucket.activityIds.has(activityId)) {
+        bucket.activityIds.add(activityId);
+        bucket.distanceKm += Number(activity.distance_km) || 0;
+      }
+    }
+  });
+
+  const hotspotCandidates = Array.from(buckets.entries())
+    .map(([id, bucket]) => ({
+      id,
+      lat: bucket.sampleCount > 0 ? bucket.latSum / bucket.sampleCount : 0,
+      lng: bucket.sampleCount > 0 ? bucket.lngSum / bucket.sampleCount : 0,
+      activity_count: bucket.activityIds.size,
+      distance_km: bucket.distanceKm,
+    }))
+    .filter((spot) => spot.activity_count >= options.minActivityCount)
+    .sort((a, b) => {
+      if (b.activity_count !== a.activity_count) return b.activity_count - a.activity_count;
+      return b.distance_km - a.distance_km;
+    });
+
+  const hotspots = applyHotspotDistanceDiversity(
+    hotspotCandidates,
+    options.limit,
+    options.minDistanceKm
+  );
+
+  if (!options.includeLabels || hotspots.length === 0) {
+    return hotspots.map((spot) => ({ ...spot, label: null as string | null }));
+  }
+
+  const labeled: Array<typeof hotspots[number] & { label: string | null }> = [];
+  const batchSize = 6;
+  for (let start = 0; start < hotspots.length; start += batchSize) {
+    const batch = hotspots.slice(start, start + batchSize);
+    const batchLabeled = await Promise.all(
+      batch.map(async (spot) => ({
+        ...spot,
+        label: await resolveHeatmapHotspotLocation(spot.lat, spot.lng),
+      }))
+    );
+    labeled.push(...batchLabeled);
+  }
+
+  return labeled;
+};
+
+const scheduleHeatmapCachePrewarm = (reason: string = 'manual') => {
+  if (heatmapPrewarmTimeout) {
+    clearTimeout(heatmapPrewarmTimeout);
+  }
+
+  // Debounced: avoid multiple expensive prewarm runs during consecutive sync events.
+  heatmapPrewarmTimeout = setTimeout(() => {
+    heatmapPrewarmTimeout = null;
     heatmapCache.clear();
-  }
-
-  if (heatmapPrewarmTimer) {
-    clearTimeout(heatmapPrewarmTimer);
-    heatmapPrewarmTimer = null;
-  }
-
-  heatmapPrewarmTimer = setTimeout(() => {
-    heatmapPrewarmTimer = null;
-    void runHeatmapPrewarm(reason);
-  }, Math.max(1000, delayMs));
-}
-
-registerImportRunCompletedHook((event) => {
-  if (event.filesOk <= 0) return;
-  scheduleHeatmapCachePrewarm(`import:${event.importId}`);
-});
+    heatmapHotspotCache.clear();
+    console.log(`Heatmap cache invalidated (${reason}); fresh cache will be generated on next request.`);
+  }, 1500);
+};
 
 const hasCapability = (capability: keyof AdapterCapabilities): boolean =>
   Boolean(adapterRegistry.getCapabilities().capabilities[capability]);
@@ -1179,26 +1422,198 @@ router.get('/activities', async (req: Request, res: Response) => {
  */
 router.get('/activities/heatmap', async (req: Request, res: Response) => {
   try {
-    const { type, year, refresh } = req.query;
-    const cacheKey = buildHeatmapCacheKey(String(type || ''), year as any);
+    const type = parseHeatmapQueryString(req.query.type);
+    const year = parseHeatmapQueryYear(req.query.year);
+    const refresh = req.query.refresh === 'true';
+    const heatmap = await loadHeatmapDataWithCache(type, year, refresh);
+    return res.json(heatmap.response);
+  } catch (error: any) {
+    console.error('Error fetching heatmap data:', error);
+    return res.status(500).json({ error: 'Failed to fetch heatmap data' });
+  }
+});
 
-    // Check cache (unless refresh=true)
-    if (refresh !== 'true') {
-      const cached = heatmapCache.get(cacheKey);
-      if (cached && (Date.now() - cached.timestamp) < HEATMAP_CACHE_TTL) {
-        console.log(`Heatmap cache hit for ${cacheKey}`);
+/**
+ * GET /api/activities/heatmap/hotspots
+ * Returns hotspot summary optimized for sidebar/auto-focus.
+ * Query: types=Ride,Run&years=2025,2026&exclude_virtual=true&limit=24&min_distance_km=40&refresh=false
+ * NOTE: This route must come BEFORE /activities/:id
+ */
+router.get('/activities/heatmap/hotspots', async (req: Request, res: Response) => {
+  try {
+    const types = Array.from(new Set(parseHeatmapListQuery(req.query.types)));
+    const years = parseHeatmapYearListQuery(req.query.years);
+    const excludeVirtual = parseBooleanQuery(req.query.exclude_virtual, true);
+    const includeLabels = parseBooleanQuery(req.query.include_labels, true);
+    const refresh = req.query.refresh === 'true';
+    const limitRaw = Number(req.query.limit);
+    const minActivityRaw = Number(req.query.min_activity_count);
+    const minDistanceRaw = Number(req.query.min_distance_km);
+    const limit = Number.isFinite(limitRaw)
+      ? Math.max(1, Math.min(80, Math.trunc(limitRaw)))
+      : HEATMAP_HOTSPOT_DEFAULT_LIMIT;
+    const minActivityCount = Number.isFinite(minActivityRaw)
+      ? Math.max(1, Math.min(50, Math.trunc(minActivityRaw)))
+      : HEATMAP_HOTSPOT_DEFAULT_MIN_ACTIVITY_COUNT;
+    const minDistanceKm = Number.isFinite(minDistanceRaw)
+      ? Math.max(0, Math.min(500, minDistanceRaw))
+      : HEATMAP_HOTSPOT_MIN_DISTANCE_KM;
+
+    const cacheKey = buildHeatmapHotspotCacheKey(types, years, excludeVirtual, limit, minActivityCount, minDistanceKm);
+    if (!refresh) {
+      const cached = heatmapHotspotCache.get(cacheKey);
+      if (cached && (Date.now() - cached.timestamp) < HEATMAP_HOTSPOT_CACHE_TTL_MS) {
         return res.json({
           ...cached.data,
           cached: true,
-          cache_age_hours: Math.round((Date.now() - cached.timestamp) / 3600000 * 10) / 10
+          cache_age_hours: Math.round((Date.now() - cached.timestamp) / 3600000 * 10) / 10,
         });
       }
     }
-    const fresh = await generateAndCacheHeatmapData(type ? String(type) : null, year ? String(year) : null);
-    res.json(fresh);
+
+    const allHeatmap = await loadHeatmapDataWithCache(null, null, false);
+    const sourceActivities = allHeatmap.data.activities as any[];
+
+    const filteredActivities = sourceActivities.filter((activity: any) => {
+      if (types.length > 0 && !types.includes(String(activity.type))) return false;
+      if (years.length > 0) {
+        const activityYear = new Date(activity.start_date).getFullYear();
+        if (!years.includes(activityYear)) return false;
+      }
+      if (excludeVirtual && isVirtualHeatmapType(activity.type)) return false;
+      return true;
+    });
+
+    const startTime = Date.now();
+    const hotspots = await buildHeatmapHotspots(filteredActivities, {
+      limit,
+      minActivityCount,
+      minDistanceKm,
+      includeLabels,
+    });
+    const generationTimeMs = Date.now() - startTime;
+
+    const responseData = {
+      count: hotspots.length,
+      source_activity_count: sourceActivities.length,
+      filtered_activity_count: filteredActivities.length,
+      filters: {
+        types,
+        years,
+        exclude_virtual: excludeVirtual,
+        limit,
+        min_activity_count: minActivityCount,
+        min_distance_km: minDistanceKm,
+      },
+      hotspots,
+      generation_time_ms: generationTimeMs,
+    };
+
+    heatmapHotspotCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now(),
+      sourceActivityCount: sourceActivities.length,
+    });
+
+    return res.json({
+      ...responseData,
+      cached: false,
+    });
   } catch (error: any) {
-    console.error('Error fetching heatmap data:', error);
-    res.status(500).json({ error: 'Failed to fetch heatmap data' });
+    console.error('Error fetching heatmap hotspots:', error);
+    return res.status(500).json({ error: 'Failed to fetch heatmap hotspots' });
+  }
+});
+
+/**
+ * GET /api/activities/heatmap/hotspots/reverse-geocode
+ * Resolve a readable location label for a hotspot coordinate.
+ * NOTE: This route must come BEFORE /activities/:id
+ */
+router.get('/activities/heatmap/hotspots/reverse-geocode', async (req: Request, res: Response) => {
+  try {
+    const lat = Number(req.query.lat);
+    const lng = Number(req.query.lng);
+
+    if (!Number.isFinite(lat) || !Number.isFinite(lng)) {
+      return res.status(400).json({ error: 'lat and lng query params are required and must be numbers' });
+    }
+    if (lat < -90 || lat > 90 || lng < -180 || lng > 180) {
+      return res.status(400).json({ error: 'lat/lng values out of range' });
+    }
+
+    const label = await resolveHeatmapHotspotLocation(lat, lng);
+    return res.json({
+      lat: Math.round(lat * 10000) / 10000,
+      lng: Math.round(lng * 10000) / 10000,
+      label,
+    });
+  } catch (error: any) {
+    console.error('Error resolving heatmap hotspot location:', error);
+    return res.status(500).json({ error: 'Failed to resolve hotspot location' });
+  }
+});
+
+/**
+ * POST /api/activities/heatmap/hotspots/reverse-geocode
+ * Resolve readable location labels for multiple hotspot coordinates.
+ * NOTE: This route must come BEFORE /activities/:id
+ * Body: { hotspots: Array<{ id?: string; lat: number; lng: number }> }
+ */
+router.post('/activities/heatmap/hotspots/reverse-geocode', async (req: Request, res: Response) => {
+  try {
+    const input = Array.isArray(req.body?.hotspots) ? req.body.hotspots : [];
+    if (input.length === 0) {
+      return res.status(400).json({ error: 'hotspots array is required' });
+    }
+
+    // Protect against abusive payloads.
+    const hotspots = input.slice(0, 40).map((item: any) => ({
+      id: typeof item?.id === 'string' ? item.id : undefined,
+      lat: Number(item?.lat),
+      lng: Number(item?.lng),
+    }));
+
+    const invalid = hotspots.find((item: { id?: string; lat: number; lng: number }) => (
+      !Number.isFinite(item.lat)
+      || !Number.isFinite(item.lng)
+      || item.lat < -90
+      || item.lat > 90
+      || item.lng < -180
+      || item.lng > 180
+    ));
+    if (invalid) {
+      return res.status(400).json({ error: 'Each hotspot requires valid lat/lng values' });
+    }
+
+    const results: Array<{
+      id?: string;
+      lat: number;
+      lng: number;
+      label: string | null;
+    }> = [];
+
+    const batchSize = 6;
+    for (let start = 0; start < hotspots.length; start += batchSize) {
+      const batch = hotspots.slice(start, start + batchSize);
+      const batchResults = await Promise.all(
+        batch.map(async (spot: { id?: string; lat: number; lng: number }) => ({
+          id: spot.id,
+          lat: Math.round(spot.lat * 10000) / 10000,
+          lng: Math.round(spot.lng * 10000) / 10000,
+          label: await resolveHeatmapHotspotLocation(spot.lat, spot.lng),
+        }))
+      );
+      results.push(...batchResults);
+    }
+
+    return res.json({
+      count: results.length,
+      results,
+    });
+  } catch (error: any) {
+    console.error('Error resolving heatmap hotspot locations:', error);
+    return res.status(500).json({ error: 'Failed to resolve hotspot locations' });
   }
 });
 
@@ -1240,68 +1655,6 @@ router.get('/activities/:id', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error fetching activity:', error);
     res.status(500).json({ error: 'Failed to fetch activity' });
-  }
-});
-
-/**
- * POST /api/activities/heatmap/hotspot-labels
- * Reverse-geocode labels for heatmap hotspots (batched, cached).
- */
-router.post('/activities/heatmap/hotspot-labels', async (req: Request, res: Response) => {
-  try {
-    const rawHotspots = Array.isArray(req.body?.hotspots) ? req.body.hotspots : [];
-    const hotspots: Array<{ id: string; lat: number; lng: number }> = rawHotspots
-      .slice(0, HEATMAP_HOTSPOT_LABEL_REQUEST_LIMIT)
-      .map((item: any) => ({
-        id: String(item?.id || ''),
-        lat: Number(item?.lat),
-        lng: Number(item?.lng),
-      }))
-      .filter((item: { id: string; lat: number; lng: number }) => item.id && Number.isFinite(item.lat) && Number.isFinite(item.lng));
-
-    if (hotspots.length === 0) {
-      return res.json({ labels: [] });
-    }
-
-    const naming = await getLocalClimbNamingDefaults();
-    const now = Date.now();
-    const labels: Array<{ id: string; label: string | null }> = [];
-
-    for (const hotspot of hotspots) {
-      const cacheKey = buildHeatmapHotspotLabelCacheKey(
-        hotspot.lat,
-        hotspot.lng,
-        String(naming.reverseGeocodeLanguage || ''),
-        String(naming.reverseGeocodeUrl || '')
-      );
-      const cached = heatmapHotspotLabelCache.get(cacheKey);
-      if (cached && (now - cached.timestamp) < HEATMAP_HOTSPOT_LABEL_CACHE_TTL) {
-        labels.push({ id: hotspot.id, label: cached.label });
-        continue;
-      }
-
-      const label = (
-        await resolveHeatmapHotspotRegionPlaceLabel(hotspot.lat, hotspot.lng, {
-          ...naming,
-          reverseGeocodeEnabled: true,
-        })
-      ) || (
-        await resolveLocationLabel([hotspot.lat, hotspot.lng], {
-          ...naming,
-          reverseGeocodeEnabled: true,
-        })
-      );
-      heatmapHotspotLabelCache.set(cacheKey, {
-        label,
-        timestamp: Date.now(),
-      });
-      labels.push({ id: hotspot.id, label });
-    }
-
-    return res.json({ labels });
-  } catch (error: any) {
-    console.error('Error resolving heatmap hotspot labels:', error);
-    return res.status(500).json({ error: 'Failed to resolve heatmap hotspot labels' });
   }
 });
 
@@ -4666,11 +5019,21 @@ router.get('/cache/heatmap', async (req: Request, res: Response) => {
     created: new Date(value.timestamp).toISOString(),
     expires: new Date(value.timestamp + HEATMAP_CACHE_TTL).toISOString(),
   }));
+  const hotspotEntries = Array.from(heatmapHotspotCache.entries()).map(([key, value]) => ({
+    key,
+    source_activity_count: value.sourceActivityCount,
+    age_hours: Math.round((Date.now() - value.timestamp) / 3600000 * 10) / 10,
+    created: new Date(value.timestamp).toISOString(),
+    expires: new Date(value.timestamp + HEATMAP_HOTSPOT_CACHE_TTL_MS).toISOString(),
+  }));
 
   res.json({
     cache_ttl_hours: HEATMAP_CACHE_TTL / 3600000,
+    hotspot_cache_ttl_hours: HEATMAP_HOTSPOT_CACHE_TTL_MS / 3600000,
     entries: cacheEntries,
     total_entries: cacheEntries.length,
+    hotspot_entries: hotspotEntries,
+    hotspot_total_entries: hotspotEntries.length,
   });
 });
 
@@ -4680,9 +5043,15 @@ router.get('/cache/heatmap', async (req: Request, res: Response) => {
  */
 router.delete('/cache/heatmap', async (req: Request, res: Response) => {
   const count = heatmapCache.size;
+  const hotspotCount = heatmapHotspotCache.size;
   heatmapCache.clear();
-  console.log(`Heatmap cache cleared (${count} entries)`);
-  res.json({ cleared: count, message: 'Heatmap cache cleared' });
+  heatmapHotspotCache.clear();
+  console.log(`Heatmap cache cleared (${count} entries), hotspot cache cleared (${hotspotCount} entries)`);
+  res.json({
+    cleared: count,
+    hotspot_cleared: hotspotCount,
+    message: 'Heatmap and hotspot cache cleared',
+  });
 });
 
 /**
@@ -5298,7 +5667,7 @@ async function refreshTechStatsCache(): Promise<void> {
 }
 
 // Export for use in index.ts after sync
-export { refreshTechStatsCache };
+export { refreshTechStatsCache, scheduleHeatmapCachePrewarm };
 
 /**
  * GET /api/tech/cached

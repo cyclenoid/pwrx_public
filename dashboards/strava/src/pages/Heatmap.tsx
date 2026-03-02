@@ -1,20 +1,12 @@
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Polyline, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
-import { getHeatmapData, clearHeatmapCache, getHeatmapHotspotLabels } from '../lib/api'
+import { getHeatmapData, clearHeatmapCache, getHeatmapHotspots } from '../lib/api'
 import { useTheme } from '../components/ThemeProvider'
 import { Link } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import { useTranslation } from 'react-i18next'
-
-const HOTSPOT_MIN_DISTANCE_KM = 50
-const HOTSPOT_FILL_MIN_DISTANCE_KM = 18
-const HOTSPOT_MAX_COUNT = 10
-const HOTSPOT_SECONDARY_GRID_SIZE = 0.06
-const HOTSPOT_SECONDARY_MAX_COUNT = 12
-const HOTSPOT_SECONDARY_MIN_DISTANCE_FROM_PRIMARY_KM = 12
-const HOTSPOT_SECONDARY_MIN_DISTANCE_KM = 10
 
 const TYPE_PALETTE = [
   '#f97316', // orange
@@ -42,6 +34,93 @@ const YEAR_PALETTE = [
   '#60a5fa', // blue
 ]
 
+const HEATMAP_SEGMENT_GRID_DEG = 0.00045
+const HOTSPOT_MAX_ITEMS = 24
+const HOTSPOT_MIN_ACTIVITY_COUNT = 1
+const HOTSPOT_MIN_DISTANCE_KM = 40
+
+type Hotspot = {
+  id: string
+  lat: number
+  lng: number
+  activityCount: number
+  distanceKm: number
+  label: string | null
+}
+
+type ActivityWithBounds = {
+  strava_activity_id: number
+  name: string
+  type: string
+  start_date: string
+  distance_km: number
+  latlng: [number, number][]
+  minLat: number
+  maxLat: number
+  minLng: number
+  maxLng: number
+}
+
+type MapViewportState = {
+  zoom: number
+  bounds: { south: number; west: number; north: number; east: number } | null
+}
+
+const isVirtualActivityType = (type: string) => {
+  const value = String(type || '').toLowerCase()
+  return value.includes('virtual') || value.includes('zwift')
+}
+
+const toSegmentKey = (a: [number, number], b: [number, number]) => {
+  const snap = (value: number) => Math.round(value / HEATMAP_SEGMENT_GRID_DEG) * HEATMAP_SEGMENT_GRID_DEG
+  const aKey = `${snap(a[0]).toFixed(5)},${snap(a[1]).toFixed(5)}`
+  const bKey = `${snap(b[0]).toFixed(5)},${snap(b[1]).toFixed(5)}`
+  return aKey < bKey ? `${aKey}|${bKey}` : `${bKey}|${aKey}`
+}
+
+const percentile = (values: number[], q: number) => {
+  if (values.length === 0) return 1
+  const sorted = [...values].sort((a, b) => a - b)
+  const clamped = Math.max(0, Math.min(1, q))
+  const pos = (sorted.length - 1) * clamped
+  const lower = Math.floor(pos)
+  const upper = Math.ceil(pos)
+  if (lower === upper) return sorted[lower]
+  const weight = pos - lower
+  return sorted[lower] * (1 - weight) + sorted[upper] * weight
+}
+
+const normalizeHeatIntensity = (score: number, maxScore: number) => {
+  if (!Number.isFinite(score) || score <= 1 || maxScore <= 1) return 0
+  return Math.min(1, Math.log1p(score - 1) / Math.log1p(maxScore - 1))
+}
+
+const interpolateHexColor = (from: string, to: string, t: number) => {
+  const clamp = Math.max(0, Math.min(1, t))
+  const parse = (hex: string) => {
+    const raw = hex.replace('#', '')
+    return {
+      r: parseInt(raw.slice(0, 2), 16),
+      g: parseInt(raw.slice(2, 4), 16),
+      b: parseInt(raw.slice(4, 6), 16),
+    }
+  }
+  const a = parse(from)
+  const b = parse(to)
+  const toHex = (value: number) => Math.round(value).toString(16).padStart(2, '0')
+  const r = a.r + (b.r - a.r) * clamp
+  const g = a.g + (b.g - a.g) * clamp
+  const bl = a.b + (b.b - a.b) * clamp
+  return `#${toHex(r)}${toHex(g)}${toHex(bl)}`
+}
+
+const getHeatColor = (intensity: number) => {
+  if (intensity <= 0.5) {
+    return interpolateHexColor('#ef4444', '#f97316', intensity / 0.5)
+  }
+  return interpolateHexColor('#f97316', '#fde68a', (intensity - 0.5) / 0.5)
+}
+
 const getReadableTextColor = (hexColor: string) => {
   const hex = hexColor.replace('#', '')
   if (hex.length !== 6) return '#0f172a'
@@ -52,146 +131,106 @@ const getReadableTextColor = (hexColor: string) => {
   return luminance > 0.6 ? '#0f172a' : '#f8fafc'
 }
 
-const isVirtualActivityType = (type: string) => String(type || '').toLowerCase().startsWith('virtual')
-
-const haversineKm = (a: [number, number], b: [number, number]) => {
-  const toRad = (deg: number) => (deg * Math.PI) / 180
-  const R = 6371
-  const dLat = toRad(b[0] - a[0])
-  const dLng = toRad(b[1] - a[1])
-  const lat1 = toRad(a[0])
-  const lat2 = toRad(b[0])
-  const h =
-    Math.sin(dLat / 2) * Math.sin(dLat / 2) +
-    Math.cos(lat1) * Math.cos(lat2) * Math.sin(dLng / 2) * Math.sin(dLng / 2)
-  return 2 * R * Math.asin(Math.sqrt(h))
-}
-
-// Component to fit all routes - only runs once
-type BoundsTuple = [[number, number], [number, number]]
-
-function HeatmapViewportController({
-  initialBounds,
-  focusBounds,
-  focusKey,
+function MapViewportManager({
+  allCoordinates,
+  hotspots,
+  selectedActivityCoords,
+  focusTarget,
+  viewportKey,
 }: {
-  initialBounds: BoundsTuple | null
-  focusBounds: BoundsTuple | null
-  focusKey: number
+  allCoordinates: [number, number][][]
+  hotspots: Hotspot[]
+  selectedActivityCoords: [number, number][] | null
+  focusTarget: { lat: number; lng: number; requestId: number } | null
+  viewportKey: string
 }) {
   const map = useMap()
-  const hasInitialFit = useRef(false)
-  const lastFocusKey = useRef(0)
+  const lastAutoViewport = useRef('')
+  const lastFocusRequest = useRef(0)
 
   useEffect(() => {
-    if (hasInitialFit.current) return
-    if (!initialBounds) return
-    map.fitBounds(initialBounds, { padding: [30, 30], maxZoom: 13 })
-    hasInitialFit.current = true
-  }, [map, initialBounds])
+    if (!selectedActivityCoords || selectedActivityCoords.length === 0) return
+    if (selectedActivityCoords.length === 1) {
+      map.setView(selectedActivityCoords[0], 14, { animate: true })
+      return
+    }
+    map.fitBounds(L.latLngBounds(selectedActivityCoords), { padding: [40, 40] })
+  }, [map, selectedActivityCoords])
 
   useEffect(() => {
-    if (!focusBounds) return
-    if (!focusKey || focusKey === lastFocusKey.current) return
-    map.fitBounds(focusBounds, { padding: [40, 40], maxZoom: 14 })
-    lastFocusKey.current = focusKey
-  }, [map, focusBounds, focusKey])
+    if (!focusTarget) return
+    if (lastFocusRequest.current === focusTarget.requestId) return
+    lastFocusRequest.current = focusTarget.requestId
+    map.setView([focusTarget.lat, focusTarget.lng], 13, { animate: true })
+  }, [map, focusTarget])
+
+  useEffect(() => {
+    if (selectedActivityCoords && selectedActivityCoords.length > 0) return
+    if (lastAutoViewport.current === viewportKey) return
+    lastAutoViewport.current = viewportKey
+
+    if (hotspots.length > 0) {
+      map.setView([hotspots[0].lat, hotspots[0].lng], 12, { animate: false })
+      return
+    }
+
+    if (allCoordinates.length > 0) {
+      const allPoints = allCoordinates.flat()
+      if (allPoints.length > 0) {
+        map.fitBounds(L.latLngBounds(allPoints), { padding: [30, 30] })
+      }
+    }
+  }, [map, allCoordinates, hotspots, selectedActivityCoords, viewportKey])
 
   return null
 }
 
-type HeatmapHotspot = {
-  id: string
-  count: number
-  distanceKm: number
-  latestDate: string
-  centroid: [number, number]
-  bounds: BoundsTuple
-}
-
-type HeatmapActivity = {
-  latlng: Array<[number, number]>
-  distance_km: number
-  start_date: string
-}
-
-const buildHotspotCandidates = (activities: HeatmapActivity[], gridSize: number): HeatmapHotspot[] => {
-  const buckets = new Map<string, {
-    count: number
-    distanceKm: number
-    latestDate: string
-    minLat: number
-    minLng: number
-    maxLat: number
-    maxLng: number
-    centroidLatSum: number
-    centroidLngSum: number
-  }>()
-
-  for (const activity of activities) {
-    const coords = activity.latlng
-    if (!coords || coords.length === 0) continue
-
-    let minLat = Infinity
-    let minLng = Infinity
-    let maxLat = -Infinity
-    let maxLng = -Infinity
-    for (const [lat, lng] of coords) {
-      if (lat < minLat) minLat = lat
-      if (lng < minLng) minLng = lng
-      if (lat > maxLat) maxLat = lat
-      if (lng > maxLng) maxLng = lng
-    }
-    if (!Number.isFinite(minLat) || !Number.isFinite(minLng) || !Number.isFinite(maxLat) || !Number.isFinite(maxLng)) continue
-
-    const centerLat = (minLat + maxLat) / 2
-    const centerLng = (minLng + maxLng) / 2
-    const bucketLat = Math.round(centerLat / gridSize) * gridSize
-    const bucketLng = Math.round(centerLng / gridSize) * gridSize
-    const key = `${bucketLat.toFixed(2)}:${bucketLng.toFixed(2)}`
-
-    const existing = buckets.get(key)
-    if (!existing) {
-      buckets.set(key, {
-        count: 1,
-        distanceKm: Number(activity.distance_km) || 0,
-        latestDate: activity.start_date,
-        minLat,
-        minLng,
-        maxLat,
-        maxLng,
-        centroidLatSum: centerLat,
-        centroidLngSum: centerLng,
+function MapViewStateTracker({
+  onChange,
+}: {
+  onChange: (state: MapViewportState) => void
+}) {
+  const map = useMapEvents({
+    moveend: () => {
+      const bounds = map.getBounds()
+      onChange({
+        zoom: map.getZoom(),
+        bounds: {
+          south: bounds.getSouth(),
+          west: bounds.getWest(),
+          north: bounds.getNorth(),
+          east: bounds.getEast(),
+        },
       })
-      continue
-    }
+    },
+    zoomend: () => {
+      const bounds = map.getBounds()
+      onChange({
+        zoom: map.getZoom(),
+        bounds: {
+          south: bounds.getSouth(),
+          west: bounds.getWest(),
+          north: bounds.getNorth(),
+          east: bounds.getEast(),
+        },
+      })
+    },
+  })
 
-    existing.count += 1
-    existing.distanceKm += Number(activity.distance_km) || 0
-    if (new Date(activity.start_date).getTime() > new Date(existing.latestDate).getTime()) {
-      existing.latestDate = activity.start_date
-    }
-    existing.minLat = Math.min(existing.minLat, minLat)
-    existing.minLng = Math.min(existing.minLng, minLng)
-    existing.maxLat = Math.max(existing.maxLat, maxLat)
-    existing.maxLng = Math.max(existing.maxLng, maxLng)
-    existing.centroidLatSum += centerLat
-    existing.centroidLngSum += centerLng
-  }
+  useEffect(() => {
+    const bounds = map.getBounds()
+    onChange({
+      zoom: map.getZoom(),
+      bounds: {
+        south: bounds.getSouth(),
+        west: bounds.getWest(),
+        north: bounds.getNorth(),
+        east: bounds.getEast(),
+      },
+    })
+  }, [map, onChange])
 
-  return Array.from(buckets.entries())
-    .map(([id, bucket]) => ({
-      id,
-      count: bucket.count,
-      distanceKm: bucket.distanceKm,
-      latestDate: bucket.latestDate,
-      centroid: [bucket.centroidLatSum / bucket.count, bucket.centroidLngSum / bucket.count] as [number, number],
-      bounds: [
-        [bucket.minLat, bucket.minLng],
-        [bucket.maxLat, bucket.maxLng],
-      ] as BoundsTuple,
-    }))
-    .sort((a, b) => (b.count - a.count) || (b.distanceKm - a.distanceKm))
+  return null
 }
 
 export function Heatmap() {
@@ -201,15 +240,11 @@ export function Heatmap() {
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedYears, setSelectedYears] = useState<number[]>([])
   const [selectedActivity, setSelectedActivity] = useState<number | null>(null)
+  const [focusTarget, setFocusTarget] = useState<{ lat: number; lng: number; requestId: number } | null>(null)
+  const [mapViewport, setMapViewport] = useState<MapViewportState>({ zoom: 6, bounds: null })
   const [sidebarOpen, setSidebarOpen] = useState(true)
   const [isRefreshing, setIsRefreshing] = useState(false)
-  const [defaultTypeFilterApplied, setDefaultTypeFilterApplied] = useState(false)
-  const [focusBounds, setFocusBounds] = useState<BoundsTuple | null>(null)
-  const [focusKey, setFocusKey] = useState(0)
-  const [activeHotspotId, setActiveHotspotId] = useState<string | null>(null)
-  const [hotspotLabels, setHotspotLabels] = useState<Record<string, string | null>>({})
-  const initialHotspotSelectionApplied = useRef(false)
-  const canvasRenderer = useMemo(() => L.canvas({ padding: 0.5 }), [])
+  const didInitTypeDefaults = useRef(false)
 
   const { data, isLoading } = useQuery({
     queryKey: ['heatmap'],
@@ -238,6 +273,18 @@ export function Heatmap() {
     return [...new Set(data.activities.map(a => new Date(a.start_date).getFullYear()))].sort((a, b) => b - a)
   }, [data])
 
+  useEffect(() => {
+    if (didInitTypeDefaults.current) return
+    if (activityTypes.length === 0) return
+
+    const nonVirtualTypes = activityTypes.filter((type) => !isVirtualActivityType(type))
+    if (nonVirtualTypes.length > 0 && nonVirtualTypes.length < activityTypes.length) {
+      setSelectedTypes(nonVirtualTypes)
+    }
+
+    didInitTypeDefaults.current = true
+  }, [activityTypes])
+
   const typeColors = useMemo(() => {
     const map = new Map<string, string>()
     activityTypes.forEach((type, index) => {
@@ -253,21 +300,6 @@ export function Heatmap() {
     })
     return map
   }, [years])
-
-  useEffect(() => {
-    if (defaultTypeFilterApplied) return
-    if (activityTypes.length === 0) return
-
-    const nonVirtualTypes = activityTypes.filter((type) => !isVirtualActivityType(type))
-    if (nonVirtualTypes.length > 0 && nonVirtualTypes.length < activityTypes.length) {
-      setSelectedTypes(nonVirtualTypes)
-    }
-    setDefaultTypeFilterApplied(true)
-  }, [activityTypes, defaultTypeFilterApplied])
-
-  const getActivityColor = (activity: { type: string; start_date: string }) => {
-    return typeColors.get(activity.type) || '#f97316'
-  }
 
   const filteredActivities = useMemo(() => {
     if (!data) return []
@@ -288,81 +320,50 @@ export function Heatmap() {
     return filteredActivities.map(a => a.latlng).filter(coords => coords && coords.length > 0)
   }, [filteredActivities])
 
-  const allBounds = useMemo<BoundsTuple | null>(() => {
-    if (allCoordinates.length === 0) return null
-    const allPoints = allCoordinates.flat()
-    if (allPoints.length === 0) return null
-    const bounds = L.latLngBounds(allPoints)
-    return [
-      [bounds.getSouth(), bounds.getWest()],
-      [bounds.getNorth(), bounds.getEast()],
-    ]
-  }, [allCoordinates])
+  const activityHeatData = useMemo(() => {
+    const segmentCounts = new Map<string, number>()
+    const activitySegments = new Map<number, string[]>()
 
-  const hotspotCandidates = useMemo<HeatmapHotspot[]>(() => {
-    return buildHotspotCandidates(filteredActivities as HeatmapActivity[], 0.12)
-  }, [filteredActivities])
-
-  const hotspots = useMemo<HeatmapHotspot[]>(() => {
-    const candidates = hotspotCandidates
-
-    const deduped: HeatmapHotspot[] = []
-    for (const candidate of candidates) {
-      const tooClose = deduped.some((existing) =>
-        haversineKm(existing.centroid, candidate.centroid) < HOTSPOT_MIN_DISTANCE_KM
-      )
-      if (tooClose) continue
-      deduped.push(candidate)
-      if (deduped.length >= HOTSPOT_MAX_COUNT) break
-    }
-
-    // Fill remaining slots with geographically diverse candidates using a relaxed distance.
-    // This keeps dense home-area splitting under control (strict pass) while still surfacing
-    // additional "single-activity" regions if there is room in the hotspot list.
-    if (deduped.length < HOTSPOT_MAX_COUNT) {
-      const usedIds = new Set(deduped.map((item) => item.id))
-      const remaining = candidates.filter((item) => !usedIds.has(item.id))
-
-      for (const candidate of remaining) {
-        const tooClose = deduped.some((existing) =>
-          haversineKm(existing.centroid, candidate.centroid) < HOTSPOT_FILL_MIN_DISTANCE_KM
-        )
-        if (tooClose) continue
-        deduped.push(candidate)
-        if (deduped.length >= HOTSPOT_MAX_COUNT) break
+    filteredActivities.forEach((activity) => {
+      const points = activity.latlng
+      if (!points || points.length < 2) {
+        activitySegments.set(activity.strava_activity_id, [])
+        return
       }
-    }
 
-    return deduped
-  }, [hotspotCandidates])
+      const keys: string[] = []
+      for (let i = 1; i < points.length; i += 1) {
+        const previous = points[i - 1]
+        const current = points[i]
+        const key = toSegmentKey(previous, current)
+        keys.push(key)
+        segmentCounts.set(key, (segmentCounts.get(key) || 0) + 1)
+      }
+      activitySegments.set(activity.strava_activity_id, keys)
+    })
 
-  const additionalHotspots = useMemo<HeatmapHotspot[]>(() => {
-    const primaryById = new Set(hotspots.map((item) => item.id))
-    const candidates = buildHotspotCandidates(filteredActivities as HeatmapActivity[], HOTSPOT_SECONDARY_GRID_SIZE)
-      .filter((item) => !primaryById.has(item.id))
+    const scoreByActivity = new Map<number, number>()
+    const allScores: number[] = []
 
-    const selected: HeatmapHotspot[] = []
-    for (const candidate of candidates) {
-      const tooCloseToPrimary = hotspots.some((primary) =>
-        haversineKm(primary.centroid, candidate.centroid) < HOTSPOT_SECONDARY_MIN_DISTANCE_FROM_PRIMARY_KM
-      )
-      if (tooCloseToPrimary) continue
+    filteredActivities.forEach((activity) => {
+      const keys = activitySegments.get(activity.strava_activity_id) || []
+      if (keys.length === 0) {
+        scoreByActivity.set(activity.strava_activity_id, 1)
+        allScores.push(1)
+        return
+      }
 
-      const tooCloseToSelected = selected.some((existing) =>
-        haversineKm(existing.centroid, candidate.centroid) < HOTSPOT_SECONDARY_MIN_DISTANCE_KM
-      )
-      if (tooCloseToSelected) continue
+      const segmentScores = keys.map((key) => segmentCounts.get(key) || 1)
+      // Emphasize "where activity was densest", not full-route average.
+      const score = percentile(segmentScores, 0.9)
+      scoreByActivity.set(activity.strava_activity_id, score)
+      allScores.push(score)
+    })
 
-      selected.push(candidate)
-      if (selected.length >= HOTSPOT_SECONDARY_MAX_COUNT) break
-    }
-
-    return selected
-  }, [filteredActivities, hotspots])
-
-  const initialViewportBounds = useMemo<BoundsTuple | null>(() => {
-    return hotspots[0]?.bounds || allBounds
-  }, [hotspots, allBounds])
+    // Robust scaling against single extreme outliers.
+    const maxScore = Math.max(1, percentile(allScores, 0.95))
+    return { scoreByActivity, maxScore }
+  }, [filteredActivities])
 
   // Tile layers for different themes
   const tileUrl = resolvedTheme === 'dark'
@@ -391,84 +392,94 @@ export function Heatmap() {
     return [...new Set(filteredActivities.map(a => a.type))].sort()
   }, [filteredActivities])
 
+  const { data: hotspotsResponse } = useQuery({
+    queryKey: ['heatmap-hotspots', [...selectedTypes].sort().join(','), [...selectedYears].sort((a, b) => a - b).join(',')],
+    enabled: !!data,
+    staleTime: 1000 * 60 * 30,
+    queryFn: () => getHeatmapHotspots({
+      types: selectedTypes,
+      years: selectedYears,
+      exclude_virtual: true,
+      limit: HOTSPOT_MAX_ITEMS,
+      min_activity_count: HOTSPOT_MIN_ACTIVITY_COUNT,
+      min_distance_km: HOTSPOT_MIN_DISTANCE_KM,
+      include_labels: true,
+    }),
+  })
+
+  const hotspots = useMemo<Hotspot[]>(() => {
+    const rows = hotspotsResponse?.hotspots || []
+    return rows.map((item) => ({
+      id: item.id,
+      lat: item.lat,
+      lng: item.lng,
+      activityCount: item.activity_count,
+      distanceKm: item.distance_km,
+      label: item.label,
+    }))
+  }, [hotspotsResponse])
+
+  const activityWithBounds = useMemo<ActivityWithBounds[]>(() => {
+    return filteredActivities
+      .filter((activity) => Array.isArray(activity.latlng) && activity.latlng.length > 0)
+      .map((activity) => {
+        let minLat = activity.latlng[0][0]
+        let maxLat = activity.latlng[0][0]
+        let minLng = activity.latlng[0][1]
+        let maxLng = activity.latlng[0][1]
+        activity.latlng.forEach(([lat, lng]) => {
+          if (lat < minLat) minLat = lat
+          if (lat > maxLat) maxLat = lat
+          if (lng < minLng) minLng = lng
+          if (lng > maxLng) maxLng = lng
+        })
+        return { ...activity, minLat, maxLat, minLng, maxLng }
+      })
+  }, [filteredActivities])
+
+  const renderedActivities = useMemo(() => {
+    const viewportBounds = mapViewport.bounds
+    const zoom = mapViewport.zoom
+    const targetPoints = zoom >= 15 ? 600 : zoom >= 13 ? 340 : zoom >= 11 ? 220 : zoom >= 9 ? 130 : 70
+    const boundsPadding = 0.01
+
+    return activityWithBounds
+      .filter((activity) => {
+        if (!viewportBounds) return true
+        const minLat = viewportBounds.south - boundsPadding
+        const maxLat = viewportBounds.north + boundsPadding
+        const minLng = viewportBounds.west - boundsPadding
+        const maxLng = viewportBounds.east + boundsPadding
+        return (
+          activity.maxLat >= minLat
+          && activity.minLat <= maxLat
+          && activity.maxLng >= minLng
+          && activity.minLng <= maxLng
+        )
+      })
+      .map((activity) => {
+        const points = activity.latlng
+        if (points.length <= targetPoints) return activity
+        const step = Math.ceil(points.length / targetPoints)
+        return {
+          ...activity,
+          latlng: points.filter((_, index) => index % step === 0),
+        }
+      })
+  }, [activityWithBounds, mapViewport])
+
+  const viewportKey = useMemo(() => {
+    const typeKey = [...selectedTypes].sort().join(',')
+    const yearKey = [...selectedYears].sort((a, b) => a - b).join(',')
+    return `${typeKey}|${yearKey}|${filteredActivities.length}|${hotspots[0]?.id || 'none'}`
+  }, [selectedTypes, selectedYears, filteredActivities.length, hotspots])
+
   useEffect(() => {
     if (!selectedActivity) return
     if (!filteredActivities.some(a => a.strava_activity_id === selectedActivity)) {
       setSelectedActivity(null)
     }
   }, [selectedActivity, filteredActivities])
-
-  useEffect(() => {
-    if (!activeHotspotId) return
-    if (![...hotspots, ...additionalHotspots].some((h) => h.id === activeHotspotId)) {
-      setActiveHotspotId(null)
-    }
-  }, [activeHotspotId, hotspots, additionalHotspots])
-
-  useEffect(() => {
-    if (initialHotspotSelectionApplied.current) return
-    const first = hotspots[0] || additionalHotspots[0]
-    if (!first) return
-    setActiveHotspotId(first.id)
-    initialHotspotSelectionApplied.current = true
-  }, [hotspots, additionalHotspots])
-
-  const focusMapBounds = (bounds: BoundsTuple | null) => {
-    if (!bounds) return
-    setFocusBounds(bounds)
-    setFocusKey((prev) => prev + 1)
-  }
-
-  useEffect(() => {
-    const labelTargets = [...hotspots, ...additionalHotspots]
-    if (labelTargets.length === 0) return
-
-    const missing = labelTargets
-      .filter((h) => hotspotLabels[h.id] === undefined)
-      .filter((h, idx, arr) => arr.findIndex((x) => x.id === h.id) === idx)
-      .map((h) => ({ id: h.id, lat: h.centroid[0], lng: h.centroid[1] }))
-
-    if (missing.length === 0) return
-
-    let cancelled = false
-    getHeatmapHotspotLabels(missing)
-      .then((response) => {
-        if (cancelled) return
-        setHotspotLabels((prev) => {
-          const next = { ...prev }
-          for (const item of response.labels || []) {
-            next[item.id] = item.label
-          }
-          return next
-        })
-      })
-      .catch(() => {
-        if (cancelled) return
-        setHotspotLabels((prev) => {
-          const next = { ...prev }
-          for (const item of missing) {
-            if (next[item.id] === undefined) next[item.id] = null
-          }
-          return next
-        })
-      })
-
-    return () => {
-      cancelled = true
-    }
-  }, [hotspots, additionalHotspots, hotspotLabels])
-  
-  useEffect(() => {
-    if (Object.keys(hotspotLabels).length === 0) return
-    const validIds = new Set([...hotspots, ...additionalHotspots].map((h) => h.id))
-    setHotspotLabels((prev) => {
-      const next: Record<string, string | null> = {}
-      for (const [id, label] of Object.entries(prev)) {
-        if (validIds.has(id)) next[id] = label
-      }
-      return next
-    })
-  }, [hotspots, additionalHotspots])
 
   const toggleType = (type: string) => {
     setSelectedTypes((prev) => (
@@ -481,6 +492,20 @@ export function Heatmap() {
       prev.includes(value) ? prev.filter(y => y !== value) : [...prev, value]
     ))
   }
+
+  const handleViewportChange = useCallback((next: MapViewportState) => {
+    setMapViewport((prev) => {
+      const prevBounds = prev.bounds
+      const nextBounds = next.bounds
+      const sameBounds = !!prevBounds && !!nextBounds
+        && Math.abs(prevBounds.south - nextBounds.south) < 0.0001
+        && Math.abs(prevBounds.west - nextBounds.west) < 0.0001
+        && Math.abs(prevBounds.north - nextBounds.north) < 0.0001
+        && Math.abs(prevBounds.east - nextBounds.east) < 0.0001
+      if (prev.zoom === next.zoom && sameBounds) return prev
+      return next
+    })
+  }, [])
 
   return (
     <div className="fixed inset-0 z-40">
@@ -497,49 +522,57 @@ export function Heatmap() {
           <MapContainer
             center={[51.1657, 10.4515]}
             zoom={6}
+            preferCanvas={true}
             className="h-full w-full"
             zoomControl={false}
-            preferCanvas
           >
             <TileLayer url={tileUrl} attribution={attribution} />
-            <HeatmapViewportController
-              initialBounds={initialViewportBounds}
-              focusBounds={focusBounds}
-              focusKey={focusKey}
+            <MapViewportManager
+              allCoordinates={allCoordinates}
+              hotspots={hotspots}
+              selectedActivityCoords={selectedActivityData?.latlng || null}
+              focusTarget={focusTarget}
+              viewportKey={viewportKey}
             />
+            <MapViewStateTracker onChange={handleViewportChange} />
 
             {/* All routes */}
-            {filteredActivities.map((activity) => (
+            {renderedActivities.map((activity) => (
               activity.latlng && activity.latlng.length > 0 && (
                 (() => {
-                  const lineColor = getActivityColor(activity)
                   const isSelected = selectedActivity === activity.strava_activity_id
+                  const score = activityHeatData.scoreByActivity.get(activity.strava_activity_id) || 1
+                  const intensity = normalizeHeatIntensity(score, activityHeatData.maxScore)
+                  const baseWeight = 1.2 + intensity * 2.0
+                  const baseOpacity = 0.22 + intensity * 0.55
+                  const lineColor = isSelected ? '#f8fafc' : getHeatColor(intensity)
                   return (
                 <Polyline
                   key={activity.strava_activity_id}
                   positions={activity.latlng}
-                  smoothFactor={0.2}
+                  smoothFactor={mapViewport.zoom <= 10 ? 1 : mapViewport.zoom <= 12 ? 0.6 : 0.2}
                   pathOptions={{
                     color: lineColor,
-                    weight: isSelected ? 3 : 1.5,
-                    opacity: isSelected ? 1 : 0.6,
+                    weight: isSelected ? 3.5 : baseWeight,
+                    opacity: isSelected ? 1 : baseOpacity,
                     lineJoin: 'round',
                   }}
-                  renderer={canvasRenderer}
                   eventHandlers={{
                     click: () => setSelectedActivity(activity.strava_activity_id),
                     mouseover: (e) => {
                       const layer = e.target
-                      layer.setStyle({ weight: 4, opacity: 1 })
+                      layer.setStyle({ weight: Math.max(3.6, baseWeight + 1), opacity: 1 })
                       layer.bindTooltip(`${activity.name}<br/>${Number(activity.distance_km).toFixed(1)} ${t('records.units.km')}`, {
                         sticky: true,
                       }).openTooltip()
                     },
                     mouseout: (e) => {
                       const layer = e.target
-                      if (!isSelected) {
-                        layer.setStyle({ weight: 1.5, opacity: 0.6 })
-                      }
+                      layer.setStyle({
+                        color: isSelected ? '#f8fafc' : lineColor,
+                        weight: isSelected ? 3.5 : baseWeight,
+                        opacity: isSelected ? 1 : baseOpacity,
+                      })
                       layer.closeTooltip()
                     },
                   }}
@@ -569,16 +602,11 @@ export function Heatmap() {
       </button>
 
       {/* Floating Filters */}
-      <div className="absolute top-4 right-4 z-[1001] w-[calc(100vw-2rem)] max-w-sm sm:max-w-md space-y-3">
+      <div className="absolute top-4 right-4 z-[1001] w-[calc(100vw-2rem)] max-w-sm sm:max-w-md">
         <div className="rounded-xl bg-background/95 backdrop-blur border shadow-lg p-3 space-y-3">
           <div className="text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
             {t('heatmap.filters.title')}
           </div>
-          {defaultTypeFilterApplied && selectedTypes.length > 0 && activityTypes.some(isVirtualActivityType) && (
-            <div className="text-[11px] text-muted-foreground rounded-lg border border-border/60 bg-muted/20 px-2.5 py-2">
-              {t('heatmap.filters.virtualHiddenByDefault')}
-            </div>
-          )}
           <div>
             <div className="text-xs text-muted-foreground mb-1">{t('heatmap.filters.type')}</div>
             <div className="flex flex-wrap gap-2">
@@ -626,31 +654,6 @@ export function Heatmap() {
             </button>
           )}
         </div>
-        {selectedActivityData && (
-          <div className="rounded-xl bg-background/95 backdrop-blur border shadow-lg p-3 space-y-3">
-            <h3 className="font-medium text-sm">{t('heatmap.selected.title')}</h3>
-            <div className="p-3 rounded-lg bg-secondary/50 space-y-2">
-              <p className="font-medium text-sm truncate">{selectedActivityData.name}</p>
-              <div className="text-xs text-muted-foreground space-y-1">
-                <p>{t(`activities.filters.types.${selectedActivityData.type}`, { defaultValue: selectedActivityData.type })}</p>
-                <p>{Number(selectedActivityData.distance_km).toFixed(2)} {t('records.units.km')}</p>
-                <p>{new Date(selectedActivityData.start_date).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</p>
-              </div>
-              <Link
-                to={`/activity/${selectedActivityData.strava_activity_id}`}
-                className="block mt-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-center text-sm hover:bg-primary/90 transition-colors"
-              >
-                {t('heatmap.selected.viewDetails')}
-              </Link>
-            </div>
-            <button
-              onClick={() => setSelectedActivity(null)}
-              className="w-full px-3 py-2 rounded-lg border text-sm hover:bg-secondary transition-colors"
-            >
-              {t('heatmap.selected.deselect')}
-            </button>
-          </div>
-        )}
       </div>
 
       {/* Sidebar */}
@@ -690,106 +693,76 @@ export function Heatmap() {
             </div>
           </div>
 
-          {/* Hotspots */}
-          <div className="flex-1 min-h-0 p-4 border-b flex flex-col">
-            {(hotspots.length > 0 || additionalHotspots.length > 0) ? (
-              <>
-                <div className="flex items-center justify-between">
-                  <p className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                    {t('heatmap.hotspots.title')}
-                  </p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setActiveHotspotId(null)
-                      focusMapBounds(allBounds)
-                    }}
-                    className="text-xs text-primary hover:underline"
-                  >
-                    {t('heatmap.hotspots.showAll')}
-                  </button>
-                </div>
-                <div className="mt-3 flex-1 min-h-0 overflow-y-auto pr-1 space-y-3">
-                  <div className="space-y-2">
-                    {hotspots.map((hotspot, index) => {
-                      const isActive = activeHotspotId === hotspot.id
-                      return (
-                        <button
-                          key={hotspot.id}
-                          type="button"
-                          onClick={() => {
-                            setActiveHotspotId(hotspot.id)
-                            focusMapBounds(hotspot.bounds)
-                          }}
-                          className={`w-full rounded-lg border px-3 py-2 text-left transition-colors duration-150 ${
-                            isActive
-                              ? 'border-emerald-400/70 bg-emerald-500/20'
-                              : 'border-border/60 bg-secondary/30 hover:bg-emerald-500/12 hover:border-emerald-400/45'
-                          }`}
-                        >
-                          <div className="flex items-center justify-between gap-2">
-                            <span className={`text-sm font-medium truncate pr-2 ${isActive ? 'text-emerald-200' : ''}`}>
-                              {hotspotLabels[hotspot.id] || t('heatmap.hotspots.item', { index: index + 1 })}
-                            </span>
-                            <span className={`text-xs ${isActive ? 'text-emerald-200/90' : 'text-muted-foreground'}`}>
-                              {t('heatmap.hotspots.activities', { count: hotspot.count })}
-                            </span>
-                          </div>
-                          <div className={`mt-1 text-xs flex flex-wrap gap-x-3 gap-y-1 ${isActive ? 'text-emerald-100/80' : 'text-muted-foreground'}`}>
-                            <span>{hotspot.distanceKm.toFixed(0)} {t('records.units.km')}</span>
-                            <span>{new Date(hotspot.latestDate).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</span>
-                            <span className="font-mono">{hotspot.centroid[0].toFixed(2)}, {hotspot.centroid[1].toFixed(2)}</span>
-                          </div>
-                        </button>
-                      )
-                    })}
-                  </div>
-                  {additionalHotspots.length > 0 && (
-                    <div className="pt-1">
-                      <p className="text-[11px] font-medium text-muted-foreground uppercase tracking-wider mb-2">
-                        {t('heatmap.hotspots.moreTitle')}
-                      </p>
-                      <div className="space-y-2">
-                        {additionalHotspots.map((hotspot, index) => {
-                          const isActive = activeHotspotId === hotspot.id
-                          return (
-                            <button
-                              key={hotspot.id}
-                              type="button"
-                              onClick={() => {
-                                setActiveHotspotId(hotspot.id)
-                                focusMapBounds(hotspot.bounds)
-                              }}
-                              className={`w-full rounded-lg border px-3 py-2 text-left transition-colors duration-150 ${
-                                isActive
-                                  ? 'border-emerald-400/70 bg-emerald-500/20'
-                                  : 'border-border/60 bg-secondary/20 hover:bg-emerald-500/10 hover:border-emerald-400/40'
-                              }`}
-                            >
-                              <div className="flex items-center justify-between gap-2">
-                                <span className={`text-sm font-medium truncate pr-2 ${isActive ? 'text-emerald-200' : ''}`}>
-                                  {hotspotLabels[hotspot.id] || t('heatmap.hotspots.item', { index: hotspots.length + index + 1 })}
-                                </span>
-                                <span className={`text-xs ${isActive ? 'text-emerald-200/90' : 'text-muted-foreground'}`}>
-                                  {t('heatmap.hotspots.activities', { count: hotspot.count })}
-                                </span>
-                              </div>
-                              <div className={`mt-1 text-xs flex flex-wrap gap-x-3 gap-y-1 ${isActive ? 'text-emerald-100/80' : 'text-muted-foreground'}`}>
-                                <span>{hotspot.distanceKm.toFixed(0)} {t('records.units.km')}</span>
-                                <span>{new Date(hotspot.latestDate).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</span>
-                                <span className="font-mono">{hotspot.centroid[0].toFixed(2)}, {hotspot.centroid[1].toFixed(2)}</span>
-                              </div>
-                            </button>
-                          )
-                        })}
+          {/* Hotspots + Selected Activity */}
+          <div className="flex-1 overflow-auto p-4 space-y-4">
+            <div className="space-y-2">
+              <h3 className="font-medium text-sm">{t('heatmap.hotspots.title', { defaultValue: 'Hotspot-Bereiche' })}</h3>
+              <p className="text-[11px] text-muted-foreground">
+                {t('heatmap.hotspots.note', { defaultValue: 'Zuerst geografisch getrennte Regionen, danach nahe Bereiche. Virtuelle Aktivitäten sind ausgeblendet.' })}
+              </p>
+              {hotspots.length > 0 ? (
+                <div className="space-y-2">
+                  {hotspots.map((spot, index) => (
+                    <button
+                      key={spot.id}
+                      type="button"
+                      onClick={() => {
+                        setSelectedActivity(null)
+                        setFocusTarget({ lat: spot.lat, lng: spot.lng, requestId: Date.now() })
+                      }}
+                      className="w-full text-left px-3 py-2 rounded-lg border border-border bg-secondary/40 hover:bg-secondary/70 transition-colors"
+                    >
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-medium text-foreground truncate pr-2">
+                          #{index + 1} {spot.label || t('heatmap.hotspots.area', { defaultValue: 'Bereich' })}
+                        </span>
+                        <span className="text-primary font-semibold">{spot.activityCount} {t('records.units.activities').toLowerCase()}</span>
                       </div>
-                    </div>
-                  )}
+                      <div className="text-[11px] text-muted-foreground mt-1">
+                        {spot.lat.toFixed(3)}, {spot.lng.toFixed(3)} · {spot.distanceKm.toFixed(0)} {t('records.units.km')}
+                      </div>
+                    </button>
+                  ))}
                 </div>
-              </>
+              ) : (
+                <div className="text-xs text-muted-foreground">
+                  {t('heatmap.hotspots.none', { defaultValue: 'Keine Hotspots für die aktuelle Filterung.' })}
+                </div>
+              )}
+            </div>
+
+            {selectedActivityData ? (
+              <div className="space-y-3">
+                <h3 className="font-medium text-sm">{t('heatmap.selected.title')}</h3>
+                <div className="p-3 rounded-lg bg-secondary/50 space-y-2">
+                  <p className="font-medium text-sm truncate">{selectedActivityData.name}</p>
+                  <div className="text-xs text-muted-foreground space-y-1">
+                    <p>{t(`activities.filters.types.${selectedActivityData.type}`, { defaultValue: selectedActivityData.type })}</p>
+                    <p>{Number(selectedActivityData.distance_km).toFixed(2)} {t('records.units.km')}</p>
+                    <p>{new Date(selectedActivityData.start_date).toLocaleDateString(i18n.language?.startsWith('de') ? 'de-DE' : 'en-US')}</p>
+                  </div>
+                  <Link
+                    to={`/activity/${selectedActivityData.strava_activity_id}`}
+                    className="block mt-2 px-3 py-2 rounded-lg bg-primary text-primary-foreground text-center text-sm hover:bg-primary/90 transition-colors"
+                  >
+                    {t('heatmap.selected.viewDetails')}
+                  </Link>
+                </div>
+                <button
+                  onClick={() => setSelectedActivity(null)}
+                  className="w-full px-3 py-2 rounded-lg border text-sm hover:bg-secondary transition-colors"
+                >
+                  {t('heatmap.selected.deselect')}
+                </button>
+              </div>
             ) : (
-              <div className="text-center text-muted-foreground text-sm my-auto">
-                <p>{t('heatmap.loading')}</p>
+              <div className="text-center text-muted-foreground text-sm">
+                <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-2 opacity-50">
+                  <circle cx="12" cy="12" r="10"/>
+                  <path d="m15 9-6 6"/>
+                  <path d="m9 9 6 6"/>
+                </svg>
+                <p>{t('heatmap.selected.empty')}</p>
               </div>
             )}
           </div>
@@ -797,16 +770,11 @@ export function Heatmap() {
           {/* Cache Status & Refresh */}
           <div className="p-4 border-t space-y-2">
             {data?.cached !== undefined && (
-              <div className="space-y-1 text-xs text-muted-foreground">
-                <div>
-                  {data.cached ? (
-                    <span className="text-green-500">{t('heatmap.cache.cached', { hours: data.cache_age_hours })}</span>
-                  ) : (
-                    <span className="text-yellow-500">{t('heatmap.cache.fresh', { ms: data.generation_time_ms })}</span>
-                  )}
-                </div>
-                {data.sampling_max_points && (
-                  <div>{t('heatmap.cache.sampling', { value: data.sampling_max_points })}</div>
+              <div className="text-xs text-muted-foreground">
+                {data.cached ? (
+                  <span className="text-green-500">{t('heatmap.cache.cached', { hours: data.cache_age_hours })}</span>
+                ) : (
+                  <span className="text-yellow-500">{t('heatmap.cache.fresh', { ms: data.generation_time_ms })}</span>
                 )}
               </div>
             )}
