@@ -15,6 +15,7 @@ concurrency:
 jobs:
   backend:
     name: Backend Build and Import Tests
+    if: ${{ secrets.PWRX_ADAPTER_KEY != '' }}
     runs-on: ubuntu-latest
     defaults:
       run:
