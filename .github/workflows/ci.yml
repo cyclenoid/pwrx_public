@@ -30,7 +30,7 @@ jobs:
           cache: npm
           cache-dependency-path: apps/strava/package-lock.json
 
-      - name: Validate private adapter deploy key
+      - name: Install dependencies
         env:
           PWRX_ADAPTER_KEY: ${{ secrets.PWRX_ADAPTER_KEY }}
         run: |
@@ -39,21 +39,16 @@ jobs:
             exit 1
           fi
 
-      - name: Start SSH agent for private dependencies
-        uses: webfactory/ssh-agent@v0.9.0
-        with:
-          ssh-private-key: ${{ secrets.PWRX_ADAPTER_KEY }}
-
-      - name: Configure SSH for GitHub over 443
-        run: |
           mkdir -p ~/.ssh
+          printf '%s\n' "$PWRX_ADAPTER_KEY" > ~/.ssh/pwrx_adapter_key
+          chmod 600 ~/.ssh/pwrx_adapter_key
           ssh-keyscan github.com >> ~/.ssh/known_hosts
           ssh-keyscan -p 443 ssh.github.com >> ~/.ssh/known_hosts
           git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/"
           git config --global url."ssh://git@ssh.github.com:443/".insteadOf "git@github.com:"
-
-      - name: Install dependencies
-        run: npm ci
+          export GIT_SSH_COMMAND="ssh -i ~/.ssh/pwrx_adapter_key -o IdentitiesOnly=yes -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes"
+          npm ci
+          rm -f ~/.ssh/pwrx_adapter_key
 
       - name: Lint backend
         run: npm run lint
