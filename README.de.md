@@ -123,6 +123,7 @@ Optionale Erinnerungs-Kanaele fuer Werkstatttermine:
 - Quickstart: `docs/IMPORT_QUICKSTART.md`
 - Provider-Guide (Zwift/Wahoo/Garmin/Apple Health): `docs/IMPORT_PROVIDER_GUIDE.md`
 - Docker-Release-Testablauf: `docs/DOCKER_RELEASE_TEST_PLAN.md`
+- Deployment-Runbook (Public-Repo -> Unraid + Strava-Override): `docs/DEPLOYMENT_RUNBOOK.md`
 - PowerShell-Smoketest-Script: `scripts/docker-release-smoke.ps1`
 
 ## Privater Strava-Adapter in CI
