@@ -48,10 +48,12 @@ import {
 
 export default function Settings() {
   const { t, i18n } = useTranslation()
-  const { capabilities } = useCapabilities()
+  const { capabilities, data: capabilitiesData } = useCapabilities()
   const supportsFiles = capabilities.supportsFiles
   const supportsSync = capabilities.supportsSync
   const supportsOAuth = capabilities.supportsOAuth
+  const appVersionLabel = capabilitiesData?.version?.label || capabilitiesData?.version?.backend || null
+  const appCommit = capabilitiesData?.version?.commit || null
   const queryClient = useQueryClient()
   const { toast, toasts, dismiss } = useToast()
   const { data: profile, isLoading } = useUserProfile()
@@ -1647,6 +1649,8 @@ export default function Settings() {
                       </CardTitle>
                       </CardHeader>
                       <CardContent>
+                        {renderSystemLine(t('tech.labels.appVersion'), appVersionLabel || t('common.notAvailable'))}
+                        {renderSystemLine(t('tech.labels.gitCommit'), appCommit ? String(appCommit).slice(0, 12) : t('common.notAvailable'))}
                         {renderSystemLine(t('tech.labels.node'), tech.system.node_version)}
                         {renderSystemLine(t('tech.labels.platform'), `${tech.system.platform} (${tech.system.arch})`)}
                         {renderSystemLine(t('tech.labels.uptime'), tech.system.uptime_formatted)}

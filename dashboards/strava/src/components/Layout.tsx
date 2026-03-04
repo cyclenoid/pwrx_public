@@ -95,9 +95,9 @@ export function Layout() {
                 })}
               </nav>
 
-              <div className="flex items-center gap-2 shrink-0">
+              <div className="flex items-center gap-1.5 shrink-0">
                 {/* Divider */}
-                <div className="ml-2 pl-2 border-l h-6" />
+                <div className="ml-1 mr-1 h-6 border-l border-border/80" />
 
                 {/* Theme Toggle */}
                 <ThemeToggle />
@@ -106,7 +106,7 @@ export function Layout() {
                 <Link
                   to="/import"
                   className={cn(
-                    "p-2 rounded-lg transition-all",
+                    "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all",
                     location.pathname.startsWith('/import')
                       ? "bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -120,7 +120,7 @@ export function Layout() {
                 <Link
                   to="/settings"
                   className={cn(
-                    "p-2 rounded-lg transition-all",
+                    "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all",
                     location.pathname.startsWith('/settings')
                       ? "bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg"
                       : "text-muted-foreground hover:text-foreground hover:bg-secondary"
@@ -134,7 +134,7 @@ export function Layout() {
                 <button
                   type="button"
                   onClick={toggleLanguage}
-                  className="px-2 py-1 text-xs rounded border border-border text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
+                  className="inline-flex h-9 min-w-10 items-center justify-center rounded-md border border-border px-2.5 text-xs font-medium text-muted-foreground hover:text-foreground hover:border-foreground/40 transition-colors"
                   title={t('language.label')}
                 >
                   {i18n.language?.startsWith('de') ? t('language.de') : t('language.en')}
