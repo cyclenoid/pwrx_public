@@ -126,6 +126,7 @@ Optional reminder channels for workshop appointments:
 - Quickstart: `docs/IMPORT_QUICKSTART.md`
 - Provider guide (Zwift/Wahoo/Garmin/Apple Health): `docs/IMPORT_PROVIDER_GUIDE.md`
 - Docker release test runbook: `docs/DOCKER_RELEASE_TEST_PLAN.md`
+- Deployment runbook (public repo -> Unraid + Strava override): `docs/DEPLOYMENT_RUNBOOK.md`
 - PowerShell smoke script: `scripts/docker-release-smoke.ps1`
 
 ### Watch Folder (Self-hosted / SMB)
