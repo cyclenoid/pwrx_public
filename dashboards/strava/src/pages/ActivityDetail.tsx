@@ -1549,7 +1549,7 @@ export function ActivityDetail() {
                               </div>
                             </button>
                             <Link
-                              to={`/segment/${segment.segment_id}`}
+                              to={`/segment/${segment.segment_id}?activity=${segment.activity_id}`}
                               className="shrink-0 text-[11px] text-muted-foreground hover:text-primary transition-colors pt-0.5"
                             >
                               {t('activityDetail.segments.details')}

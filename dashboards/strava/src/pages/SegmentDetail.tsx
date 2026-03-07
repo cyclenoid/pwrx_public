@@ -111,6 +111,8 @@ export function SegmentDetail() {
   const segmentName = segmentInfo?.segment_name || segmentInfo?.effort_name || 'Segment'
   const segmentSource = segmentInfo?.segment_source || null
   const segmentIsAutoClimb = segmentInfo?.segment_is_auto_climb ?? null
+  const preferredActivityParam = searchParams.get('activity')
+  const preferredActivityId = preferredActivityParam !== null ? Number(preferredActivityParam) : null
   const canRenameSegment = segmentSource === 'local'
 
   useEffect(() => {
@@ -176,18 +178,55 @@ export function SegmentDetail() {
   }, [effortsByDate])
 
   const previewEffort = useMemo(() => {
-    return efforts.reduce<SegmentEffort | null>((best, effort) => {
+    const candidateEfforts = efforts.filter((effort) => {
       const hasIndices = effort.start_index !== null
         && effort.start_index !== undefined
         && effort.end_index !== null
         && effort.end_index !== undefined
-      if (!effort.activity_id || !hasIndices) return best
+      return Boolean(effort.activity_id) && hasIndices
+    })
+
+    if (candidateEfforts.length === 0) return null
+
+    if (Number.isInteger(preferredActivityId)) {
+      const preferredEffort = candidateEfforts.find((effort) => Number(effort.activity_id) === preferredActivityId)
+      if (preferredEffort) return preferredEffort
+    }
+
+    const isManualLocalSegment = segmentSource === 'local' && segmentIsAutoClimb === false
+    if (isManualLocalSegment) {
+      const segmentDistance = Number(segmentInfo?.segment_distance ?? segmentInfo?.effort_distance ?? NaN)
+      return candidateEfforts.reduce<SegmentEffort | null>((best, effort) => {
+        if (!best) return effort
+        const effortDistance = Number(effort.effort_distance ?? effort.segment_distance ?? NaN)
+        const bestDistance = Number(best.effort_distance ?? best.segment_distance ?? NaN)
+        const effortDistanceDelta = Number.isFinite(segmentDistance) && segmentDistance > 0 && Number.isFinite(effortDistance)
+          ? Math.abs(effortDistance - segmentDistance) / segmentDistance
+          : Number.POSITIVE_INFINITY
+        const bestDistanceDelta = Number.isFinite(segmentDistance) && segmentDistance > 0 && Number.isFinite(bestDistance)
+          ? Math.abs(bestDistance - segmentDistance) / segmentDistance
+          : Number.POSITIVE_INFINITY
+        if (effortDistanceDelta !== bestDistanceDelta) {
+          return effortDistanceDelta < bestDistanceDelta ? effort : best
+        }
+        const effortDate = getEffortDate(effort)?.getTime() ?? 0
+        const bestDate = getEffortDate(best)?.getTime() ?? 0
+        if (effortDate !== bestDate) {
+          return effortDate > bestDate ? effort : best
+        }
+        const effortElapsed = effort.elapsed_time ?? Number.POSITIVE_INFINITY
+        const bestElapsed = best.elapsed_time ?? Number.POSITIVE_INFINITY
+        return effortElapsed < bestElapsed ? effort : best
+      }, null)
+    }
+
+    return candidateEfforts.reduce<SegmentEffort | null>((best, effort) => {
       if (!best) return effort
       const effortElapsed = effort.elapsed_time ?? Number.POSITIVE_INFINITY
       const bestElapsed = best.elapsed_time ?? Number.POSITIVE_INFINITY
       return effortElapsed < bestElapsed ? effort : best
     }, null)
-  }, [efforts])
+  }, [efforts, preferredActivityId, segmentInfo?.effort_distance, segmentInfo?.segment_distance, segmentIsAutoClimb, segmentSource])
 
   const { data: previewActivity, isLoading: previewLoading } = useQuery({
     queryKey: ['segment-preview-activity', previewEffort?.activity_id],
