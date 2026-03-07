@@ -909,7 +909,7 @@ const buildManualSegmentFingerprint = (
   return createHash('sha1').update(raw).digest('hex');
 };
 
-const findManualMatchCandidate = (
+export const findManualMatchCandidate = (
   streams: ManualMatchingStreams,
   target: {
     startLatLng: [number, number];
@@ -922,10 +922,14 @@ const findManualMatchCandidate = (
   const length = Math.min(streams.time.length, streams.distance.length, streams.latlng.length);
   if (length < 3) return null;
 
-  const distanceToleranceRatio = target.distanceM >= 1500 ? 0.2 : 0.3;
+  const distanceToleranceRatio = target.distanceM >= 3000
+    ? 0.1
+    : target.distanceM >= 1500
+      ? 0.15
+      : 0.25;
   const minDistance = Math.max(100, target.distanceM * (1 - distanceToleranceRatio));
   const maxDistance = Math.max(minDistance + 50, target.distanceM * (1 + distanceToleranceRatio));
-  const maxDistanceScore = distanceToleranceRatio + 0.05;
+  const maxDistanceScore = distanceToleranceRatio;
   const maxBearingDiff = 55;
   let best: { score: number; match: ManualMatchCandidate } | null = null;
 

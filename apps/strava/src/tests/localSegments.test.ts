@@ -1,6 +1,15 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { detectAutoClimbsFromStreams } from '../services/localSegments';
+import { detectAutoClimbsFromStreams, findManualMatchCandidate } from '../services/localSegments';
+
+const buildStraightRun = (totalDistanceM: number, steps: number) => {
+  const stepDistance = totalDistanceM / (steps - 1);
+  return {
+    time: Array.from({ length: steps }, (_, i) => i * 60),
+    distance: Array.from({ length: steps }, (_, i) => i * stepDistance),
+    latlng: Array.from({ length: steps }, (_, i) => [50, 10 + (i * 0.001)] as [number, number]),
+  };
+};
 
 test('detectAutoClimbsFromStreams detects one clear climb', () => {
   const time = Array.from({ length: 11 }, (_, i) => i * 60);
@@ -76,4 +85,29 @@ test('detectAutoClimbsFromStreams caps very long climbs', () => {
 
   assert.ok(climbs.length >= 1);
   assert.ok(climbs.every((climb) => climb.distanceM <= 18000));
+});
+
+test('findManualMatchCandidate rejects long matches that drift too far from target distance', () => {
+  const targetDistanceM = 5000;
+  const tooShort = buildStraightRun(4300, 12);
+  const closeEnough = buildStraightRun(4680, 12);
+
+  const rejected = findManualMatchCandidate(tooShort, {
+    startLatLng: tooShort.latlng[0],
+    endLatLng: tooShort.latlng[tooShort.latlng.length - 1],
+    distanceM: targetDistanceM,
+    bearingDeg: 90,
+    matchingRadiusM: 25,
+  });
+  const accepted = findManualMatchCandidate(closeEnough, {
+    startLatLng: closeEnough.latlng[0],
+    endLatLng: closeEnough.latlng[closeEnough.latlng.length - 1],
+    distanceM: targetDistanceM,
+    bearingDeg: 90,
+    matchingRadiusM: 25,
+  });
+
+  assert.equal(rejected, null);
+  assert.ok(accepted);
+  assert.ok(Math.abs((accepted?.distanceM || 0) - 4680) < 1);
 });
