@@ -922,9 +922,11 @@ const findManualMatchCandidate = (
   const length = Math.min(streams.time.length, streams.distance.length, streams.latlng.length);
   if (length < 3) return null;
 
-  const minDistance = Math.max(100, target.distanceM * 0.5);
-  const maxDistance = Math.max(minDistance + 50, target.distanceM * 1.8);
-  const maxBearingDiff = 70;
+  const distanceToleranceRatio = target.distanceM >= 1500 ? 0.2 : 0.3;
+  const minDistance = Math.max(100, target.distanceM * (1 - distanceToleranceRatio));
+  const maxDistance = Math.max(minDistance + 50, target.distanceM * (1 + distanceToleranceRatio));
+  const maxDistanceScore = distanceToleranceRatio + 0.05;
+  const maxBearingDiff = 55;
   let best: { score: number; match: ManualMatchCandidate } | null = null;
 
   for (let startIndex = 0; startIndex < length - 1; startIndex += 1) {
@@ -959,6 +961,7 @@ const findManualMatchCandidate = (
       if (angularDifference(target.bearingDeg, bearing) > maxBearingDiff) continue;
 
       const distanceScore = Math.abs(segmentDistance - target.distanceM) / Math.max(target.distanceM, 1);
+      if (distanceScore > maxDistanceScore) continue;
       const locationScore = (startError + endError) / Math.max(target.matchingRadiusM, 1);
       const score = distanceScore + (locationScore * 0.1);
 
