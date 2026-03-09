@@ -156,6 +156,7 @@
     "select": "Select",
     "cancel": "Cancel",
     "save": "Save",
+    "delete": "Delete",
     "saved": "Saved",
     "sorting": "Sort",
     "previous": "Previous",
@@ -309,6 +310,11 @@
         "placeholder": "Segment name",
         "saving": "Saving...",
         "autoHint": "Custom rename disables automatic renaming for this segment."
+      },
+      "delete": {
+        "confirm": "Do you really want to delete the manual segment \"{{name}}\"? This action cannot be undone.",
+        "deleting": "Deleting...",
+        "error": "Failed to delete manual segment."
       },
       "activityFallback": "Activity {{id}}",
       "stats": {

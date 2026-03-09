@@ -1,9 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Link, useParams, useSearchParams } from 'react-router-dom'
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { format, parseISO } from 'date-fns'
 import { ResponsiveContainer, LineChart, Line, XAxis, YAxis, Tooltip, CartesianGrid, ReferenceLine, AreaChart, Area } from 'recharts'
-import { getActivity, getSegmentEfforts, renameSegment, type SegmentEffort } from '../lib/api'
+import { deleteSegment, getActivity, getSegmentEfforts, renameSegment, type SegmentEffort } from '../lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
@@ -82,6 +82,7 @@ const getCategoryBadgeClass = (
 export function SegmentDetail() {
   const { id } = useParams<{ id: string }>()
   const segmentId = Number(id)
+  const navigate = useNavigate()
   const queryClient = useQueryClient()
   const { resolvedTheme } = useTheme()
   const { t } = useTranslation()
@@ -115,6 +116,7 @@ export function SegmentDetail() {
   const preferredActivityParam = searchParams.get('activity')
   const preferredActivityId = preferredActivityParam !== null ? Number(preferredActivityParam) : null
   const canRenameSegment = segmentSource === 'local'
+  const canDeleteManualSegment = segmentSource === 'local' && segmentIsAutoClimb === false
 
   useEffect(() => {
     if (!isEditingName) {
@@ -141,6 +143,23 @@ export function SegmentDetail() {
       const detail = error?.response?.data?.error || error?.message || 'Failed to rename segment'
       setSegmentNameError(String(detail))
       setSegmentNameSaveState('idle')
+    },
+  })
+
+  const deleteSegmentMutation = useMutation({
+    mutationFn: async () => deleteSegment(segmentId),
+    onSuccess: async () => {
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['segment-efforts', segmentId] }),
+        queryClient.invalidateQueries({ queryKey: ['segments-list'] }),
+        queryClient.invalidateQueries({ queryKey: ['segments-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['activity-segments'] }),
+      ])
+      navigate('/segments')
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.error || error?.message || t('segment.detail.delete.error')
+      window.alert(String(detail))
     },
   })
 
@@ -544,6 +563,9 @@ export function SegmentDetail() {
   const averageSpeed = segmentDistance !== null && stats.avgElapsed !== null && stats.avgElapsed > 0
     ? formatSpeed((Number(segmentDistance) / 1000) / (stats.avgElapsed / 3600))
     : '--'
+  const bestSpeed = segmentDistance !== null && bestEffort?.elapsed_time && bestEffort.elapsed_time > 0
+    ? formatSpeed((Number(segmentDistance) / 1000) / (Number(bestEffort.elapsed_time) / 3600))
+    : '--'
   const bestVam = bestEffort?.elapsed_time && elevationGainMeters !== null && elevationGainMeters > 0
     ? Math.round(elevationGainMeters / (bestEffort.elapsed_time / 3600))
     : null
@@ -582,6 +604,22 @@ export function SegmentDetail() {
                   >
                     {segmentNameSaveState === 'saved' ? t('common.saved') : t('segment.detail.rename.editButton')}
                   </Button>
+                  {canDeleteManualSegment && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      className="border-red-500/40 text-red-600 hover:bg-red-50 hover:text-red-700"
+                      disabled={deleteSegmentMutation.isPending}
+                      onClick={() => {
+                        const confirmed = window.confirm(t('segment.detail.delete.confirm', { name: segmentName }))
+                        if (!confirmed) return
+                        deleteSegmentMutation.mutate()
+                      }}
+                    >
+                      {deleteSegmentMutation.isPending ? t('segment.detail.delete.deleting') : t('common.delete')}
+                    </Button>
+                  )}
                   {segmentIsAutoClimb && (
                     <span className="text-xs text-muted-foreground">{t('segment.detail.rename.autoHint')}</span>
                   )}
@@ -910,6 +948,10 @@ export function SegmentDetail() {
                 <div className="font-semibold">
                   {bestEffort?.average_heartrate ? `${Math.round(Number(bestEffort.average_heartrate))} bpm` : '--'}
                 </div>
+              </div>
+              <div className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
+                <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('segment.detail.stats.avgSpeed')}</div>
+                <div className="font-semibold">{bestSpeed}</div>
               </div>
               <div className="rounded-md border border-border/50 bg-background/40 px-2 py-1">
                 <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('segment.detail.vam')}</div>
