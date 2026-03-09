@@ -7,6 +7,7 @@ import { getActivity, getSegmentEfforts, renameSegment, type SegmentEffort } fro
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
+import { formatSpeed } from '../lib/formatters'
 import { formatClimbCategory, formatDistance, formatElevation } from '../lib/utils'
 import { useTheme } from '../components/ThemeProvider'
 import { getChartColors } from '../lib/chartTheme'
@@ -540,6 +541,9 @@ export function SegmentDetail() {
     ? Math.max(0, Math.round(Number(segmentInfo.elevation_high) - Number(segmentInfo.elevation_low)))
     : null
   const elevationDiff = elevationGainMeters !== null ? `${elevationGainMeters} m` : '--'
+  const averageSpeed = segmentDistance !== null && stats.avgElapsed !== null && stats.avgElapsed > 0
+    ? formatSpeed((Number(segmentDistance) / 1000) / (stats.avgElapsed / 3600))
+    : '--'
   const bestVam = bestEffort?.elapsed_time && elevationGainMeters !== null && elevationGainMeters > 0
     ? Math.round(elevationGainMeters / (bestEffort.elapsed_time / 3600))
     : null
@@ -646,6 +650,7 @@ export function SegmentDetail() {
         <CardContent>
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
             <StatItem label={t('segment.detail.stats.distance')} value={segmentDistance ? formatDistance(Number(segmentDistance)) : '--'} />
+            <StatItem label={t('segment.detail.stats.avgSpeed')} value={averageSpeed} />
             <StatItem label={t('segment.detail.stats.avgGrade')} value={avgGrade} />
             <StatItem label={t('segment.detail.stats.maxGrade')} value={maxGrade} />
             <StatItem label={t('segment.detail.stats.elevationDiff')} value={elevationDiff} />
