@@ -313,6 +313,7 @@
       "activityFallback": "Activity {{id}}",
       "stats": {
         "distance": "Distance",
+        "avgSpeed": "Avg speed",
         "avgGrade": "Avg grade",
         "maxGrade": "Max grade",
         "elevationDiff": "Elevation diff"

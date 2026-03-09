@@ -313,6 +313,7 @@
       "activityFallback": "Aktivität {{id}}",
       "stats": {
         "distance": "Distanz",
+        "avgSpeed": "Ø Geschwindigkeit",
         "avgGrade": "Ø Steigung",
         "maxGrade": "Max Steigung",
         "elevationDiff": "Höhenunterschied"
