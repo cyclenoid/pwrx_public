@@ -197,6 +197,12 @@ export interface RenameSegmentResponse {
   renamed: boolean
 }
 
+export interface DeleteSegmentResponse {
+  segment_id: number
+  name: string
+  deleted: boolean
+}
+
 export const getSegmentEfforts = async (id: number, limit: number = 200): Promise<SegmentEffortsResponse> => {
   const { data } = await api.get<SegmentEffortsResponse>(`/segments/${id}/efforts`, {
     params: { limit },
@@ -206,6 +212,11 @@ export const getSegmentEfforts = async (id: number, limit: number = 200): Promis
 
 export const renameSegment = async (id: number, name: string): Promise<RenameSegmentResponse> => {
   const { data } = await api.patch<RenameSegmentResponse>(`/segments/${id}`, { name })
+  return data
+}
+
+export const deleteSegment = async (id: number): Promise<DeleteSegmentResponse> => {
+  const { data } = await api.delete<DeleteSegmentResponse>(`/segments/${id}`)
   return data
 }
 

@@ -156,6 +156,7 @@
     "select": "Auswählen",
     "cancel": "Abbrechen",
     "save": "Speichern",
+    "delete": "Löschen",
     "saved": "Gespeichert",
     "sorting": "Sortierung",
     "previous": "Zurück",
@@ -309,6 +310,11 @@
         "placeholder": "Segmentname",
         "saving": "Speichere...",
         "autoHint": "Eigener Name deaktiviert die automatische Umbenennung für dieses Segment."
+      },
+      "delete": {
+        "confirm": "Möchtest du das manuelle Segment \"{{name}}\" wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+        "deleting": "Lösche...",
+        "error": "Manuelles Segment konnte nicht gelöscht werden."
       },
       "activityFallback": "Aktivität {{id}}",
       "stats": {

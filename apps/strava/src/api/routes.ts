@@ -2419,6 +2419,76 @@ router.patch('/segments/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * DELETE /api/segments/:id
+ * Delete a manual local segment for the active user.
+ */
+router.delete('/segments/:id', async (req: Request, res: Response) => {
+  const segmentId = Number(req.params.id);
+  if (!Number.isInteger(segmentId)) {
+    return res.status(400).json({ error: 'Invalid segment id' });
+  }
+
+  try {
+    await db.query('BEGIN');
+
+    await db.query(
+      `
+      WITH active_user AS (
+        SELECT id FROM strava.user_profile WHERE is_active = true ORDER BY id LIMIT 1
+      )
+      DELETE FROM strava.segment_efforts se
+      USING strava.segments s
+      WHERE s.id = $1
+        AND se.segment_id = s.id
+        AND s.source = 'local'
+        AND COALESCE(s.is_auto_climb, false) = false
+        AND se.source = 'local'
+        AND COALESCE(se.user_id, (SELECT id FROM active_user)) = (SELECT id FROM active_user)
+      `,
+      [segmentId]
+    );
+
+    const deleteSegmentResult = await db.query(
+      `
+      DELETE FROM strava.segments s
+      WHERE s.id = $1
+        AND s.source = 'local'
+        AND COALESCE(s.is_auto_climb, false) = false
+        AND NOT EXISTS (
+          SELECT 1
+          FROM strava.segment_efforts se
+          WHERE se.segment_id = s.id
+        )
+      RETURNING s.id, s.name
+      `,
+      [segmentId]
+    );
+
+    const row = deleteSegmentResult.rows?.[0];
+    if (!row) {
+      await db.query('ROLLBACK');
+      return res.status(404).json({ error: 'Manual local segment not found' });
+    }
+
+    await db.query('COMMIT');
+
+    return res.json({
+      segment_id: Number(row.id),
+      name: String(row.name),
+      deleted: true,
+    });
+  } catch (error: any) {
+    try {
+      await db.query('ROLLBACK');
+    } catch {
+      // ignore rollback errors
+    }
+    console.error('Error deleting segment:', error);
+    return res.status(500).json({ error: 'Failed to delete segment' });
+  }
+});
+
+/**
  * GET /api/segment-efforts/:id/streams
  * Return sliced activity streams for a single segment effort
  */
