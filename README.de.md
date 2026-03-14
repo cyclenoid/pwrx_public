@@ -2,6 +2,14 @@
 
 Selbst gehosteter Strava-Hub mit PostgreSQL (Schema-Trennung) und React-Dashboard.
 
+## Deployment-Modell
+
+PWRX soll als eigenstaendige App direkt aus diesem Repository deploybar sein.
+
+- Anwender benoetigen nur dieses Repo, Docker und PostgreSQL.
+- Es ist kein separates `data-hub`-Repository oder eine Multi-App-Plattform noetig.
+- Gemeinsame Host-Setups sind optionale Betreiber-Varianten, nicht die Produktbasis.
+
 ## Voraussetzungen
 - Docker + Docker Compose
 - Strava API App + Refresh Token
@@ -93,14 +101,17 @@ docker compose exec strava-tracker npm run db:check
 ## Daten & Storage
 Exports, Logs und Fotos liegen unter `DATA_HUB_DATA_DIR` (Default: `./data`).
 
-## Workshop App (optional, gemeinsame DB)
-Die Fahrrad-Workshop-App kann auf derselben PostgreSQL-Instanz laufen, mit sauber getrennter Schema-Struktur.
+## Workshop App (optional, eigene DB auf gemeinsamer PostgreSQL-Instanz)
+Die Fahrrad-Workshop-App kann auf demselben PostgreSQL-Server laufen, sollte dort aber ihre eigene Datenbank und ihren eigenen App-User nutzen.
 
 1. Optionale Variablen in `.env` setzen:
 ```env
 WORKSHOP_APP_PATH=../workshop
 WORKSHOP_APP_PORT=8096
-WORKSHOP_DB_SCHEMA=workshop
+WORKSHOP_DB_NAME=workshop
+WORKSHOP_DB_USER=workshop_app
+WORKSHOP_DB_PASSWORD=...
+WORKSHOP_DB_SCHEMA=
 ```
 
 2. Overlay-Service starten:
@@ -113,7 +124,11 @@ docker compose -f docker-compose.yml -f docker-compose.workshop.yml up -d worksh
 Workshop App: http://localhost:8096
 ```
 
-Die App nutzt dieselben DB-Zugangsdaten (`POSTGRES_*`), erstellt/verwendet aber nur das Schema `workshop`. `discogs` und `strava` bleiben unberuehrt.
+Die App nutzt denselben PostgreSQL-Server, aber nicht dieselbe App-Datenbank.
+Empfohlener Laufzeitstand:
+- DB: `workshop`
+- User: `workshop_app`
+- Schema: `public` (also `WORKSHOP_DB_SCHEMA` leer lassen)
 
 Optionale Erinnerungs-Kanaele fuer Werkstatttermine:
 - SMTP: `WORKSHOP_SMTP_*`
