@@ -2,6 +2,13 @@
 
 This runbook defines the standard deployment process for PWRX.
 
+## Product baseline
+
+- PWRX must be deployable as a standalone app from `cyclenoid/pwrx_public`.
+- External users do not need a separate `data-hub` repository.
+- Shared-host or multi-app setups are optional operator-specific variants.
+- The Unraid folder name `/mnt/user/appdata/data-hub` is historical only and not part of the product contract.
+
 ## Scope
 
 - Source for production (Unraid): `cyclenoid/pwrx_public` (`main`)
@@ -17,8 +24,14 @@ This runbook defines the standard deployment process for PWRX.
 ## Environments
 
 - Public repo local working copy: `C:\DEV\pwrx-public-beta`
-- Unraid app path: `/mnt/user/appdata/data-hub`
+- Unraid app path: `/mnt/user/appdata/data-hub` (historical folder name)
 - API health endpoint: `http://<unraid-ip>:3001/api/health`
+
+## Database guidance
+
+- Official baseline: dedicated PWRX database for the PWRX app
+- Private operator variant: shared PostgreSQL server is fine, but keep a dedicated PWRX database/user
+- Avoid making a single shared application database a requirement for normal users
 
 ## One-time Unraid setup
 
