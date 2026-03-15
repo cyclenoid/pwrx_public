@@ -477,6 +477,7 @@
       "segmentFallback": "Segment",
       "highlighted": "Segment highlighted",
       "prHighlighted": "PR segment highlighted",
+      "open": "Open segment",
       "details": "Details →",
       "manual": {
         "button": "Save as segment",

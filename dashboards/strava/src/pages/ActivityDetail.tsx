@@ -195,7 +195,6 @@ export function ActivityDetail() {
   const [bestStatsType, setBestStatsType] = useState<BestStatsType>('best_power')
   const [activePowerIndex, setActivePowerIndex] = useState<number | null>(null)
   const [selectedSegmentEffortId, setSelectedSegmentEffortId] = useState<number | null>(null)
-  const [isSegmentsExpanded, setIsSegmentsExpanded] = useState(false)
   const [activityGearId, setActivityGearId] = useState('')
 
   const dateLocale = i18n.language?.startsWith('de') ? 'de-DE' : 'en-US'
@@ -917,42 +916,6 @@ export function ActivityDetail() {
     }
   }, [liveRange, distanceStream])
 
-  const segmentPreviewData = useMemo(() => {
-    if (!liveSelectionIndices || !distanceStream || !altitudeStream) return null
-    const maxIdx = Math.min(distanceStream.length, altitudeStream.length) - 1
-    if (maxIdx < 1) return null
-
-    const startIdx = Math.max(0, Math.min(liveSelectionIndices.startIndex, maxIdx))
-    const endIdx = Math.max(0, Math.min(liveSelectionIndices.endIndex, maxIdx))
-    if (endIdx <= startIdx) return null
-
-    const baseDistance = distanceStream[startIdx]
-    const points: Array<{ distance: number; altitude: number }> = []
-    for (let i = startIdx; i <= endIdx; i++) {
-      const distance = distanceStream[i]
-      const altitude = altitudeStream[i]
-      if (!Number.isFinite(distance) || !Number.isFinite(altitude)) continue
-      points.push({
-        distance: (distance - baseDistance) / 1000,
-        altitude,
-      })
-    }
-    return points.length > 1 ? points : null
-  }, [liveSelectionIndices, distanceStream, altitudeStream])
-
-  const segmentPreviewRef = useRef<HTMLDivElement | null>(null)
-
-  useEffect(() => {
-    if (!selectedSegmentEffortId || !segmentPreviewRef.current) return
-    segmentPreviewRef.current.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
-  }, [selectedSegmentEffortId])
-
-  useEffect(() => {
-    if (selectedSegmentEffortId !== null) {
-      setIsSegmentsExpanded(true)
-    }
-  }, [selectedSegmentEffortId])
-
   const canCreateManualSegment = Boolean(
     chartSelectionIndices
     && chartSelectionIndices.endIndex > chartSelectionIndices.startIndex
@@ -1019,17 +982,12 @@ export function ActivityDetail() {
     const startKm = distanceStream[Math.min(startIdx, endIdx)] / 1000
     const endKm = distanceStream[Math.max(startIdx, endIdx)] / 1000
 
-    if (selectedSegmentEffortId === segment.effort_id) {
-      clearAnalysis()
-      return
-    }
-
     setSelectedSegmentEffortId(segment.effort_id)
     setAnalysisDraft(null)
     setIsSelecting(false)
     setSelectionSource(null)
     setAnalysisRange({ startKm, endKm })
-  }, [clearAnalysis, distanceStream, selectedSegmentEffortId])
+  }, [distanceStream])
 
   const cursorStats = useMemo(() => {
     if (hoverIndex === null || !distanceStream || distanceStream[hoverIndex] === undefined) return null
@@ -1433,220 +1391,6 @@ export function ActivityDetail() {
               </CardContent>
             </Card>
           )}
-
-          {/* Segments (collapsible) */}
-          <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between gap-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M3 3v18h18" />
-                    <path d="m7 14 4-4 4 4 5-5" />
-                  </svg>
-                  {t('activityDetail.segments.title')} {segmentsData?.count ? t('activityDetail.segments.count', { count: segmentsData.count }) : ''}
-                </CardTitle>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-[11px] text-muted-foreground hover:text-foreground"
-                  onClick={() => setIsSegmentsExpanded((prev) => !prev)}
-                >
-                  {isSegmentsExpanded ? t('activityDetail.segments.hide') : t('activityDetail.segments.show')}
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="2"
-                    className={`ml-1 transition-transform ${isSegmentsExpanded ? 'rotate-180' : ''}`}
-                  >
-                    <path d="m6 9 6 6 6-6" />
-                  </svg>
-                </Button>
-              </div>
-            </CardHeader>
-            {isSegmentsExpanded && (
-              <CardContent className="space-y-3">
-                {segmentsLoading ? (
-                  <div className="text-xs text-muted-foreground">{t('activityDetail.segments.loading')}</div>
-                ) : segmentEfforts.length === 0 ? (
-                  <div className="text-xs text-muted-foreground">
-                    {t('activityDetail.segments.empty')}
-                  </div>
-                ) : (
-                  <>
-                    <div className="space-y-2">
-                      {segmentsToShow.map((segment) => {
-                        const isDisabled = segment.start_index === null
-                          || segment.end_index === null
-                          || segment.start_index === undefined
-                          || segment.end_index === undefined
-                        const isActive = segment.effort_id === selectedSegmentEffortId
-                        const isPr = segment.is_pr === true
-                        const climbCategoryLabel = formatClimbCategory(segment.climb_category, {
-                          source: segment.segment_source,
-                          isAutoClimb: segment.segment_is_auto_climb,
-                        })
-
-                        return (
-                          <div
-                            key={segment.effort_id}
-                            className={`flex items-start gap-3 border-b border-border/40 pb-2 last:border-b-0 last:pb-0 transition-colors ${
-                              isActive
-                                ? (isPr ? 'bg-yellow-500/15 ring-1 ring-yellow-400/40' : 'bg-yellow-500/10')
-                                : 'hover:bg-secondary/30'
-                            } ${isDisabled ? 'opacity-60' : ''}`}
-                          >
-                            <button
-                              type="button"
-                              onClick={() => handleSegmentHighlight(segment)}
-                              disabled={isDisabled}
-                              className={`flex-1 text-left flex items-start justify-between gap-3 ${isDisabled ? 'cursor-not-allowed' : ''}`}
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-medium text-sm truncate">
-                                    {segment.segment_name || segment.effort_name || t('activityDetail.segments.segmentFallback')}
-                                  </span>
-                                  {isPr && (
-                                    <Badge
-                                      variant="outline"
-                                      className={`text-[10px] px-1.5 py-0.5 ${isActive ? 'bg-yellow-500/20 border-yellow-500/60 text-yellow-500 font-semibold' : 'border-yellow-500/40 text-yellow-500'}`}
-                                    >
-                                      PR
-                                    </Badge>
-                                  )}
-                                </div>
-                                <div className="text-[11px] text-muted-foreground">
-                                  {segment.segment_distance ? formatDistance(Number(segment.segment_distance)) : notAvailable}
-                                  {segment.average_grade !== null && segment.average_grade !== undefined
-                                    ? ` · ${Number(segment.average_grade).toFixed(1)}%`
-                                    : ''}
-                                  {climbCategoryLabel ? ` · ${climbCategoryLabel}` : ''}
-                                  {segment.city ? ` · ${segment.city}` : ''}
-                                </div>
-                                {isActive && (
-                                  <div className={`text-[10px] mt-1 ${isPr ? 'text-yellow-500 font-semibold' : 'text-yellow-500/80'}`}>
-                                    {isPr ? t('activityDetail.segments.prHighlighted') : t('activityDetail.segments.highlighted')}
-                                  </div>
-                                )}
-                              </div>
-                              <div className="text-right">
-                                <div className="text-sm font-semibold">
-                                  {formatSegmentDuration(segment.elapsed_time ?? null, notAvailable)}
-                                </div>
-                                {(segment.average_watts || segment.average_heartrate) && (
-                                  <div className="text-[10px] text-muted-foreground">
-                                    {segment.average_watts ? `${Math.round(Number(segment.average_watts))} ${unitWatt}` : ''}
-                                    {segment.average_heartrate
-                                      ? `${segment.average_watts ? ' · ' : ''}${Math.round(Number(segment.average_heartrate))} ${unitBpm}`
-                                      : ''}
-                                  </div>
-                                )}
-                              </div>
-                            </button>
-                            <Link
-                              to={`/segment/${segment.segment_id}?activity=${segment.activity_id}`}
-                              className="shrink-0 text-[11px] text-muted-foreground hover:text-primary transition-colors pt-0.5"
-                            >
-                              {t('activityDetail.segments.details')}
-                            </Link>
-                          </div>
-                        )
-                      })}
-                    </div>
-                    {segmentsRemaining > 0 && (
-                      <div className="text-[11px] text-muted-foreground">
-                        {t('activityDetail.segments.more', { count: segmentsRemaining })}
-                      </div>
-                    )}
-
-                    {selectedSegment && liveSelectionIndices && (hasMap || hasElevation) && (
-                      <div ref={segmentPreviewRef} className="rounded-md border border-border/60 p-3">
-                        <div className="mb-1 text-sm font-medium">
-                          {t('activityDetail.segments.preview.title', {
-                            name: selectedSegment.segment_name || selectedSegment.effort_name || t('activityDetail.segments.segmentFallback'),
-                          })}
-                        </div>
-                        <p className="text-xs text-muted-foreground mb-3">
-                          {t('activityDetail.segments.preview.subtitle')}
-                        </p>
-                        <div className={`grid gap-3 ${hasMap && hasElevation ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1'}`}>
-                          {hasMap && activity?.streams?.latlng && (
-                            <div className="h-[220px] rounded-md overflow-hidden border border-border/60">
-                              <ActivityMap
-                                coordinates={activity.streams.latlng}
-                                showMarkers={false}
-                                hoverPosition={null}
-                                highlightRange={liveSelectionIndices}
-                                showHighlightMarkers={true}
-                                focusHighlight={true}
-                                highlightStyle={selectedIsPr ? { color: '#fbbf24', weight: 7, opacity: 0.95 } : undefined}
-                              />
-                            </div>
-                          )}
-                          {hasElevation && (
-                            <div className="h-[220px] rounded-md border border-border/60 p-2">
-                              {segmentPreviewData && segmentPreviewData.length > 1 ? (
-                                <ResponsiveContainer width="100%" height="100%">
-                                  <AreaChart data={segmentPreviewData}>
-                                    <defs>
-                                      <linearGradient id="segmentPreviewGradient" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#fc4c02" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#fc4c02" stopOpacity={0} />
-                                      </linearGradient>
-                                    </defs>
-                                    <XAxis
-                                      dataKey="distance"
-                                      type="number"
-                                      domain={['dataMin', 'dataMax']}
-                                      stroke={chartColors.text}
-                                      fontSize={10}
-                                      tickFormatter={(v) => `${v.toFixed(1)}`}
-                                      axisLine={false}
-                                      tickLine={false}
-                                    />
-                                    <YAxis
-                                      stroke={chartColors.text}
-                                      fontSize={10}
-                                      tickFormatter={(v) => `${v.toFixed(0)}${unitMeters}`}
-                                      width={44}
-                                      axisLine={false}
-                                      tickLine={false}
-                                    />
-                                    <Tooltip
-                                      contentStyle={{ backgroundColor: 'var(--background)', border: '1px solid var(--border)', borderRadius: '8px' }}
-                                      formatter={(value: number | undefined) => value !== undefined ? [`${value.toFixed(0)} ${unitMeters}`, t('activityDetail.charts.tooltip.elevation')] : [notAvailable, t('activityDetail.charts.tooltip.elevation')]}
-                                      labelFormatter={(label: number) => `${label.toFixed(2)} ${unitKm}`}
-                                    />
-                                    <Area
-                                      type="monotone"
-                                      dataKey="altitude"
-                                      stroke="#fc4c02"
-                                      strokeWidth={1.5}
-                                      fill="url(#segmentPreviewGradient)"
-                                      isAnimationActive={false}
-                                    />
-                                  </AreaChart>
-                                </ResponsiveContainer>
-                              ) : (
-                                <div className="h-full flex items-center justify-center text-xs text-muted-foreground">
-                                  {t('activityDetail.segments.preview.elevationEmpty')}
-                                </div>
-                              )}
-                            </div>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </>
-                )}
-              </CardContent>
-            )}
-          </Card>
 
           {/* Elevation Profile - Compact */}
           {hasElevation && (
@@ -2302,6 +2046,108 @@ export function ActivityDetail() {
 
         {/* Right Sidebar - Power Data */}
         <div className="lg:col-span-1 space-y-4">
+          {/* Segments */}
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 3v18h18" />
+                  <path d="m7 14 4-4 4 4 5-5" />
+                </svg>
+                {t('activityDetail.segments.title')} {segmentsData?.count ? t('activityDetail.segments.count', { count: segmentsData.count }) : ''}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {segmentsLoading ? (
+                <div className="text-xs text-muted-foreground">{t('activityDetail.segments.loading')}</div>
+              ) : segmentEfforts.length === 0 ? (
+                <div className="text-xs text-muted-foreground">{t('activityDetail.segments.empty')}</div>
+              ) : (
+                <div className="space-y-2">
+                  {segmentsToShow.map((segment) => {
+                    const isDisabled = segment.start_index === null
+                      || segment.end_index === null
+                      || segment.start_index === undefined
+                      || segment.end_index === undefined
+                    const isActive = segment.effort_id === selectedSegmentEffortId
+                    const isPr = segment.is_pr === true
+                    const climbCategoryLabel = formatClimbCategory(segment.climb_category, {
+                      source: segment.segment_source,
+                      isAutoClimb: segment.segment_is_auto_climb,
+                    })
+                    const targetUrl = `/segment/${segment.segment_id}?activity=${segment.activity_id}`
+
+                    return (
+                      <Link
+                        key={segment.effort_id}
+                        to={targetUrl}
+                        onMouseEnter={() => {
+                          if (!isDisabled) handleSegmentHighlight(segment)
+                        }}
+                        onFocus={() => {
+                          if (!isDisabled) handleSegmentHighlight(segment)
+                        }}
+                        className={`group block rounded-md border px-3 py-2 transition-colors ${
+                          isActive
+                            ? (isPr
+                              ? 'border-yellow-500/50 bg-yellow-500/15'
+                              : 'border-primary/40 bg-secondary/60')
+                            : 'border-border/50 hover:border-border hover:bg-secondary/40'
+                        } ${isDisabled ? 'pointer-events-none opacity-60' : ''}`}
+                      >
+                        <div className="flex items-start justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium group-hover:text-foreground">
+                                {segment.segment_name || segment.effort_name || t('activityDetail.segments.segmentFallback')}
+                              </span>
+                              {isPr && (
+                                <Badge
+                                  variant="outline"
+                                  className={`text-[10px] px-1.5 py-0.5 ${isActive ? 'bg-yellow-500/20 border-yellow-500/60 text-yellow-500 font-semibold' : 'border-yellow-500/40 text-yellow-500'}`}
+                                >
+                                  PR
+                                </Badge>
+                              )}
+                            </div>
+                            <div className="mt-0.5 text-[11px] text-muted-foreground">
+                              {segment.segment_distance ? formatDistance(Number(segment.segment_distance)) : notAvailable}
+                              {segment.average_grade !== null && segment.average_grade !== undefined
+                                ? ` · ${Number(segment.average_grade).toFixed(1)}%`
+                                : ''}
+                              {climbCategoryLabel ? ` · ${climbCategoryLabel}` : ''}
+                              {segment.city ? ` · ${segment.city}` : ''}
+                            </div>
+                            {(segment.average_watts || segment.average_heartrate) && (
+                              <div className="mt-1 text-[10px] text-muted-foreground">
+                                {segment.average_watts ? `${Math.round(Number(segment.average_watts))} ${unitWatt}` : ''}
+                                {segment.average_heartrate
+                                  ? `${segment.average_watts ? ' · ' : ''}${Math.round(Number(segment.average_heartrate))} ${unitBpm}`
+                                  : ''}
+                              </div>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <div className="text-sm font-semibold">
+                              {formatSegmentDuration(segment.elapsed_time ?? null, notAvailable)}
+                            </div>
+                            <div className={`mt-1 text-[10px] transition-colors ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                              {t('activityDetail.segments.open')}
+                            </div>
+                          </div>
+                        </div>
+                      </Link>
+                    )
+                  })}
+                  {segmentsRemaining > 0 && (
+                    <div className="pt-1 text-[11px] text-muted-foreground">
+                      {t('activityDetail.segments.more', { count: segmentsRemaining })}
+                    </div>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
           {/* Trainingsreiz */}
           <Card className={trainingStimulusCardClass}>
             <CardHeader className="pb-2">
@@ -2413,34 +2259,6 @@ export function ActivityDetail() {
               )}
             </CardContent>
           </Card>
-
-          {/* Heart Rate Summary */}
-          {activity.average_heartrate && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                  </svg>
-                  {t('activityDetail.charts.heartRate')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">{t('activityDetail.stats.average')}</span>
-                    <span className="font-medium">{Math.round(safeNumber(activity.average_heartrate))} {unitBpm}</span>
-                  </div>
-                  {activity.max_heartrate && (
-                    <div className="flex justify-between items-center text-sm">
-                      <span className="text-muted-foreground">{t('activityDetail.stats.max')}</span>
-                      <span className="font-medium text-red-500">{Math.round(safeNumber(activity.max_heartrate))} {unitBpm}</span>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Power Zones */}
           {hasPower && (
@@ -2666,3 +2484,4 @@ export function ActivityDetail() {
     </div>
   )
 }
+
