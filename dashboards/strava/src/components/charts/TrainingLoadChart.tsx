@@ -28,7 +28,9 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
     }))
   }, [data])
 
-  const tsbLineColor = colors.secondary
+  const ctlLineColor = colors.primary
+  const atlLineColor = colors.textMuted
+  const tsbLineColor = colors.accent1
 
   const toRgba = (hex: string, alpha: number) => {
     const clean = hex.replace('#', '')
@@ -169,14 +171,14 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
         <div className="grid grid-cols-3 gap-4 mb-6">
           <div className="text-center p-3 bg-secondary/50 rounded-lg">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">CTL (Fitness)</p>
-            <p className="text-2xl font-bold" style={{ color: colors.accent3 }}>
+            <p className="text-2xl font-bold" style={{ color: ctlLineColor }}>
               {currentCTL.toFixed(1)}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">42-day average</p>
           </div>
           <div className="text-center p-3 bg-secondary/50 rounded-lg">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">ATL (Fatigue)</p>
-            <p className="text-2xl font-bold" style={{ color: colors.danger }}>
+            <p className="text-2xl font-bold" style={{ color: atlLineColor }}>
               {currentATL.toFixed(1)}
             </p>
             <p className="text-[10px] text-muted-foreground mt-1">7-day average</p>
@@ -273,7 +275,7 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
               type="monotone"
               dataKey="ctl"
               name="CTL (Fitness)"
-              stroke={colors.accent3}
+              stroke={ctlLineColor}
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}
@@ -282,7 +284,7 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
               type="monotone"
               dataKey="atl"
               name="ATL (Fatigue)"
-              stroke={colors.danger}
+              stroke={atlLineColor}
               strokeWidth={2}
               dot={false}
               activeDot={{ r: 4 }}
@@ -336,7 +338,7 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
             <div className="mt-3 p-4 bg-secondary/30 rounded-lg space-y-3 text-sm">
               <div>
                 <h4 className="font-semibold mb-1 flex items-center gap-2">
-                  <span style={{ color: colors.accent3 }}>●</span> CTL (Chronic Training Load) - Fitness
+                  <span style={{ color: ctlLineColor }}>●</span> CTL (Chronic Training Load) - Fitness
                 </h4>
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   Exponentiell gewichteter Durchschnitt deines TSS über <strong>42 Tage</strong>.
@@ -346,7 +348,7 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
               </div>
               <div>
                 <h4 className="font-semibold mb-1 flex items-center gap-2">
-                  <span style={{ color: colors.danger }}>●</span> ATL (Acute Training Load) - Ermüdung
+                  <span style={{ color: atlLineColor }}>●</span> ATL (Acute Training Load) - Ermüdung
                 </h4>
                 <p className="text-muted-foreground text-xs leading-relaxed">
                   Exponentiell gewichteter Durchschnitt deines TSS über <strong>7 Tage</strong>.

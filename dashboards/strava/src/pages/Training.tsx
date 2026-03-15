@@ -8,7 +8,7 @@ import { getChartColors, getHeartRateZoneColors } from '../lib/chartTheme'
 import { buildRunningPerformanceSamples, summarizeRunningPerformance } from '../lib/runningMetrics'
 import {
   Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, Legend, ComposedChart
+  ResponsiveContainer, PieChart, Pie, Cell, ComposedChart
 } from 'recharts'
 import { TrainingLoadChart } from '../components/charts/TrainingLoadChart'
 import { useTranslation } from 'react-i18next'
@@ -176,6 +176,15 @@ export function Training() {
   const chartColors = {
     grid: colors.grid,
     text: colors.axis,
+  }
+  const trainingPalette = {
+    primary: colors.primary,
+    secondary: colors.accent1,
+    muted: colors.textMuted,
+    mutedFill: resolvedTheme === 'dark' ? 'rgba(168, 162, 158, 0.82)' : 'rgba(120, 113, 108, 0.78)',
+    primaryFill: resolvedTheme === 'dark' ? 'rgba(252, 76, 2, 0.82)' : 'rgba(252, 76, 2, 0.76)',
+    secondaryFill: resolvedTheme === 'dark' ? 'rgba(245, 158, 11, 0.78)' : 'rgba(245, 158, 11, 0.72)',
+    surface: resolvedTheme === 'dark' ? 'rgba(39, 39, 42, 0.55)' : 'rgba(249, 250, 251, 0.9)',
   }
 
   // Format time of day data for chart
@@ -369,15 +378,34 @@ export function Training() {
               </CardHeader>
               <CardContent>
                 {hrZoneData.length > 0 ? (
-                  <div className="flex items-center gap-4">
-                    <ResponsiveContainer width="50%" height={250}>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                      <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+                        <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                          {t('training.hrZones.activities')}
+                        </div>
+                        <div className="mt-1 text-xl font-semibold tabular-nums">
+                          {hrZones?.activities_analyzed ?? 0}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+                        <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                          {t('training.hrZones.title')}
+                        </div>
+                        <div className="mt-1 text-xl font-semibold tabular-nums">
+                          {formatMinutes(hrZones?.total_minutes ?? 0)}
+                        </div>
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-border/50 bg-muted/10 p-3">
+                      <ResponsiveContainer width="100%" height={220}>
                       <PieChart>
                         <Pie
                           data={hrZoneData}
                           cx="50%"
                           cy="50%"
-                          innerRadius={50}
-                          outerRadius={80}
+                          innerRadius={54}
+                          outerRadius={82}
                           paddingAngle={2}
                           dataKey="value"
                         >
@@ -394,10 +422,11 @@ export function Training() {
                           }}
                         />
                       </PieChart>
-                    </ResponsiveContainer>
-                    <div className="flex-1 space-y-2">
+                      </ResponsiveContainer>
+                    </div>
+                    <div className="grid gap-2 sm:grid-cols-2">
                       {hrZoneData.map((zone, index) => (
-                        <div key={zone.name} className="flex items-center gap-2">
+                        <div key={zone.name} className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
                           <div
                             className="w-3 h-3 rounded-full"
                             style={{ backgroundColor: zone.color || hrZoneColors[index]?.color }}
@@ -687,9 +716,9 @@ export function Training() {
                       yAxisId="left"
                       type="monotone"
                       dataKey="avg_pace_decimal"
-                      stroke={colors.primary}
+                      stroke={trainingPalette.primary}
                       strokeWidth={0}
-                      dot={{ fill: colors.primary, r: 4 }}
+                      dot={{ fill: trainingPalette.primary, r: 4 }}
                       name={paceLabel}
                       isAnimationActive={false}
                     />
@@ -835,35 +864,46 @@ export function Training() {
             </CardHeader>
             <CardContent>
               {weekdayChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <ComposedChart data={weekdayChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                    <XAxis dataKey="day" stroke={chartColors.text} fontSize={12} />
-                    <YAxis
-                      yAxisId="left"
-                      stroke="#8b5cf6"
-                      fontSize={12}
-                      label={{ value: t('training.weekday.axisActivities'), angle: -90, position: 'insideLeft', style: { fill: '#8b5cf6', fontSize: 11 } }}
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      stroke="#fc4c02"
-                      fontSize={12}
-                      label={{ value: t('training.weekday.axisDistance'), angle: 90, position: 'insideRight', style: { fill: '#fc4c02' } }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-                        border: `1px solid ${chartColors.grid}`,
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="activities" name={t('training.weekday.legendActivities')} fill="#8b5cf6" />
-                    <Bar yAxisId="right" dataKey="distance" name={t('training.weekday.legendDistance')} fill="#fc4c02" />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <ComposedChart data={weekdayChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                      <XAxis dataKey="day" stroke={chartColors.text} fontSize={12} />
+                      <YAxis
+                        yAxisId="left"
+                        stroke={chartColors.text}
+                        fontSize={12}
+                        label={{ value: t('training.weekday.axisActivities'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text, fontSize: 11 } }}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        stroke={chartColors.text}
+                        fontSize={12}
+                        label={{ value: t('training.weekday.axisDistance'), angle: 90, position: 'insideRight', style: { fill: chartColors.text } }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
+                          border: `1px solid ${chartColors.grid}`,
+                          borderRadius: '8px',
+                        }}
+                      />
+                      <Bar yAxisId="left" dataKey="activities" name={t('training.weekday.legendActivities')} fill={trainingPalette.mutedFill} radius={[4, 4, 0, 0]} />
+                      <Bar yAxisId="right" dataKey="distance" name={t('training.weekday.legendDistance')} fill={trainingPalette.primaryFill} radius={[4, 4, 0, 0]} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
+                      {t('training.weekday.legendActivities')}
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
+                      {t('training.weekday.legendDistance')}
+                    </div>
+                  </div>
+                </>
               ) : loadingWeekday ? (
                 <div className="h-[250px] flex items-center justify-center text-muted-foreground">
                   {t('training.loading.weekday')}
@@ -890,42 +930,53 @@ export function Training() {
             </CardHeader>
             <CardContent>
               {timeOfDayChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <ComposedChart data={timeOfDayChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                    <XAxis dataKey="slot" stroke={chartColors.text} fontSize={12} />
-                    <YAxis
-                      yAxisId="left"
-                      stroke="#f59e0b"
-                      fontSize={12}
-                      label={{ value: t('training.timeOfDay.axisActivities'), angle: -90, position: 'insideLeft', style: { fill: '#f59e0b', fontSize: 11 } }}
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      stroke="#06b6d4"
-                      fontSize={12}
-                      label={{ value: t('training.timeOfDay.axisDistance'), angle: 90, position: 'insideRight', style: { fill: '#06b6d4' } }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-                        border: `1px solid ${chartColors.grid}`,
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: number | undefined, name: string | undefined) => {
-                        if (!value || !name) return ['0', '']
-                        if (name === t('training.timeOfDay.legendDistance')) {
-                          return [`${value.toFixed(1)} ${t('records.units.km')}`, name]
-                        }
-                        return [value.toFixed(0), name]
-                      }}
-                    />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="activities" name={t('training.timeOfDay.legendActivities')} fill="#f59e0b" />
-                    <Bar yAxisId="right" dataKey="distance" name={t('training.timeOfDay.legendDistance')} fill="#06b6d4" />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <ComposedChart data={timeOfDayChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                      <XAxis dataKey="slot" stroke={chartColors.text} fontSize={12} />
+                      <YAxis
+                        yAxisId="left"
+                        stroke={chartColors.text}
+                        fontSize={12}
+                        label={{ value: t('training.timeOfDay.axisActivities'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text, fontSize: 11 } }}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        stroke={chartColors.text}
+                        fontSize={12}
+                        label={{ value: t('training.timeOfDay.axisDistance'), angle: 90, position: 'insideRight', style: { fill: chartColors.text } }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
+                          border: `1px solid ${chartColors.grid}`,
+                          borderRadius: '8px',
+                        }}
+                        formatter={(value: number | undefined, name: string | undefined) => {
+                          if (!value || !name) return ['0', '']
+                          if (name === t('training.timeOfDay.legendDistance')) {
+                            return [`${value.toFixed(1)} ${t('records.units.km')}`, name]
+                          }
+                          return [value.toFixed(0), name]
+                        }}
+                      />
+                      <Bar yAxisId="left" dataKey="activities" name={t('training.timeOfDay.legendActivities')} fill={trainingPalette.secondaryFill} radius={[4, 4, 0, 0]} />
+                      <Bar yAxisId="right" dataKey="distance" name={t('training.timeOfDay.legendDistance')} fill={trainingPalette.primaryFill} radius={[4, 4, 0, 0]} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.secondary }} />
+                      {t('training.timeOfDay.legendActivities')}
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
+                      {t('training.timeOfDay.legendDistance')}
+                    </div>
+                  </div>
+                </>
               ) : loadingTimeOfDay ? (
                 <div className="h-[250px] flex items-center justify-center text-muted-foreground">
                   {t('training.loading.timeOfDay')}
@@ -952,43 +1003,54 @@ export function Training() {
             </CardHeader>
             <CardContent>
               {monthlyChartData.length > 0 ? (
-                <ResponsiveContainer width="100%" height={250}>
-                  <ComposedChart data={monthlyChartData}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                    <XAxis
-                      dataKey="month"
-                      stroke={chartColors.text}
-                      fontSize={10}
-                      angle={-45}
-                      textAnchor="end"
-                      height={60}
-                      interval={Math.ceil(monthlyChartData.length / 12)}
-                    />
-                    <YAxis
-                      yAxisId="left"
-                      stroke="#fc4c02"
-                      fontSize={12}
-                      label={{ value: t('training.monthly.axisDistance'), angle: -90, position: 'insideLeft', style: { fill: '#fc4c02' } }}
-                    />
-                    <YAxis
-                      yAxisId="right"
-                      orientation="right"
-                      stroke="#22c55e"
-                      fontSize={12}
-                      label={{ value: t('training.monthly.axisHours'), angle: 90, position: 'insideRight', style: { fill: '#22c55e' } }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-                        border: `1px solid ${chartColors.grid}`,
-                        borderRadius: '8px',
-                      }}
-                    />
-                    <Legend />
-                    <Bar yAxisId="left" dataKey="distance" name={t('training.monthly.legendDistance')} fill="#fc4c02" opacity={0.8} />
-                    <Line yAxisId="right" type="monotone" dataKey="hours" name={t('training.monthly.legendHours')} stroke="#22c55e" strokeWidth={2} dot={false} />
-                  </ComposedChart>
-                </ResponsiveContainer>
+                <>
+                  <ResponsiveContainer width="100%" height={250}>
+                    <ComposedChart data={monthlyChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                      <XAxis
+                        dataKey="month"
+                        stroke={chartColors.text}
+                        fontSize={10}
+                        angle={-45}
+                        textAnchor="end"
+                        height={60}
+                        interval={Math.ceil(monthlyChartData.length / 12)}
+                      />
+                      <YAxis
+                        yAxisId="left"
+                        stroke={chartColors.text}
+                        fontSize={12}
+                        label={{ value: t('training.monthly.axisDistance'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
+                      />
+                      <YAxis
+                        yAxisId="right"
+                        orientation="right"
+                        stroke={chartColors.text}
+                        fontSize={12}
+                        label={{ value: t('training.monthly.axisHours'), angle: 90, position: 'insideRight', style: { fill: chartColors.text } }}
+                      />
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
+                          border: `1px solid ${chartColors.grid}`,
+                          borderRadius: '8px',
+                        }}
+                      />
+                      <Bar yAxisId="left" dataKey="distance" name={t('training.monthly.legendDistance')} fill={trainingPalette.primaryFill} opacity={0.82} radius={[4, 4, 0, 0]} />
+                      <Line yAxisId="right" type="monotone" dataKey="hours" name={t('training.monthly.legendHours')} stroke={trainingPalette.muted} strokeWidth={2.25} dot={false} />
+                    </ComposedChart>
+                  </ResponsiveContainer>
+                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
+                      {t('training.monthly.legendDistance')}
+                    </div>
+                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
+                      {t('training.monthly.legendHours')}
+                    </div>
+                  </div>
+                </>
               ) : loadingMonthly ? (
                 <div className="h-[250px] flex items-center justify-center text-muted-foreground">
                   {t('training.loading.monthly')}
