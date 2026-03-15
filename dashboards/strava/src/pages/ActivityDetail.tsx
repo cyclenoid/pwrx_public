@@ -421,8 +421,48 @@ export function ActivityDetail() {
       : null
   ), [segmentEfforts, selectedSegmentEffortId])
   const selectedIsPr = selectedSegment?.is_pr === true
-  const segmentsToShow = segmentEfforts.slice(0, 12)
-  const segmentsRemaining = Math.max(segmentEfforts.length - segmentsToShow.length, 0)
+  const getSegmentSourceTag = useCallback((segment: any): { label: string; className: string } => {
+    if (segment.segment_source === 'strava') {
+      return {
+        label: t('segment.list.sourceBadges.sync'),
+        className: 'border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-300',
+      }
+    }
+    if (segment.segment_source === 'local') {
+      if (segment.segment_is_auto_climb === false) {
+        return {
+          label: t('segment.list.sourceBadges.manual'),
+          className: 'border-violet-500/40 bg-violet-500/10 text-violet-600 dark:text-violet-300',
+        }
+      }
+      return {
+        label: t('segment.list.sourceBadges.auto'),
+        className: 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-300',
+      }
+    }
+    return {
+      label: t('segment.list.sourceBadges.unknown'),
+      className: 'border-border/60 bg-secondary/20 text-foreground',
+    }
+  }, [t])
+  const sortedSegments = useMemo(() => (
+    [...segmentEfforts].sort((a, b) => {
+      const prDelta = Number(b.is_pr === true) - Number(a.is_pr === true)
+      if (prDelta !== 0) return prDelta
+
+      const aStart = a.start_index ?? Number.MAX_SAFE_INTEGER
+      const bStart = b.start_index ?? Number.MAX_SAFE_INTEGER
+      if (aStart !== bStart) return aStart - bStart
+
+      const aElapsed = a.elapsed_time ?? Number.MAX_SAFE_INTEGER
+      const bElapsed = b.elapsed_time ?? Number.MAX_SAFE_INTEGER
+      if (aElapsed !== bElapsed) return aElapsed - bElapsed
+
+      return String(a.segment_name || a.effort_name || '').localeCompare(String(b.segment_name || b.effort_name || ''))
+    })
+  ), [segmentEfforts])
+  const segmentsToShow = sortedSegments.slice(0, 10)
+  const segmentsRemaining = Math.max(sortedSegments.length - segmentsToShow.length, 0)
   const selectionFill = selectedIsPr ? 'rgba(234, 179, 8, 0.22)' : 'rgba(251, 146, 60, 0.15)'
   const selectionFillStrong = selectedIsPr ? 'rgba(234, 179, 8, 0.32)' : 'rgba(251, 146, 60, 0.2)'
 
@@ -2071,6 +2111,7 @@ export function ActivityDetail() {
                       || segment.end_index === undefined
                     const isActive = segment.effort_id === selectedSegmentEffortId
                     const isPr = segment.is_pr === true
+                    const sourceTag = getSegmentSourceTag(segment)
                     const climbCategoryLabel = formatClimbCategory(segment.climb_category, {
                       source: segment.segment_source,
                       isAutoClimb: segment.segment_is_auto_climb,
@@ -2098,6 +2139,9 @@ export function ActivityDetail() {
                         <div className="flex items-start justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
+                              <Badge variant="outline" className={`shrink-0 text-[10px] px-1.5 py-0.5 ${sourceTag.className}`}>
+                                {sourceTag.label}
+                              </Badge>
                               <span className="truncate text-sm font-medium group-hover:text-foreground">
                                 {segment.segment_name || segment.effort_name || t('activityDetail.segments.segmentFallback')}
                               </span>
