@@ -32,6 +32,7 @@ import { Badge, ActivityBadge } from '../components/ui/badge'
 import { NoActivitiesFound } from '../components/ui/empty-state'
 import { ErrorState } from '../components/ui/error-state'
 import { getTrainingInsights } from '../lib/trainingInsights'
+import { buildRunningPerformanceSamples, getRecentVsPreviousRunningPerformance } from '../lib/runningMetrics'
 
 type ViewMode = 'cards' | 'table'
 
@@ -601,6 +602,28 @@ export function Dashboard() {
   const ringCircumference = 2 * Math.PI * ringRadius
   const ringOffset = ringCircumference * (1 - activeProgress)
 
+  const runningPerformanceWindow = useMemo(() => {
+    if (!activities) {
+      return getRecentVsPreviousRunningPerformance([])
+    }
+
+    const samples = buildRunningPerformanceSamples(
+      activities
+        .filter((activity) => activity.type === 'Run' || activity.type === 'TrailRun')
+        .map((activity) => ({
+          date: activity.start_date,
+          distanceKm: Number(activity.distance_km),
+          movingTimeSec: activity.moving_time,
+          avgHr: Number(activity.average_heartrate),
+        })),
+    )
+
+    return getRecentVsPreviousRunningPerformance(samples, 42)
+  }, [activities])
+
+  const recentRunPerformance = runningPerformanceWindow.recent
+  const previousRunPerformance = runningPerformanceWindow.previous
+
 
   if (statsError || activitiesError) {
     return <ErrorState onRetry={() => { refetchStats(); refetchActivities() }} />
@@ -1014,6 +1037,71 @@ export function Dashboard() {
           </Card>
         </div>
 
+        {recentRunPerformance.sampleCount > 0 && (
+          <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent shadow-lg shadow-orange-500/5">
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base flex items-center gap-2">
+                <Footprints size={18} className="text-orange-500" />
+                {t('dashboard.runningPerformance.title')}
+              </CardTitle>
+              <div className="text-xs text-muted-foreground">
+                {t('dashboard.runningPerformance.subtitle', { count: recentRunPerformance.sampleCount })}
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <div className="grid grid-cols-2 gap-2">
+                <RunningPerformanceTile
+                  label={t('dashboard.runningPerformance.pace150')}
+                  value={formatPaceMinutesValue(recentRunPerformance.medianNormalizedPace150)}
+                  unit={t('training.units.pace')}
+                  delta={formatPaceMinutesDelta(
+                    recentRunPerformance.medianNormalizedPace150,
+                    previousRunPerformance.medianNormalizedPace150,
+                  )}
+                  tone={getPaceDeltaTone(
+                    recentRunPerformance.medianNormalizedPace150,
+                    previousRunPerformance.medianNormalizedPace150,
+                  )}
+                />
+                <RunningPerformanceTile
+                  label={t('dashboard.runningPerformance.efficiency')}
+                  value={recentRunPerformance.medianEfficiency?.toFixed(2) ?? '—'}
+                  unit={t('dashboard.runningPerformance.efficiencyUnit')}
+                  delta={formatDecimalDelta(
+                    recentRunPerformance.medianEfficiency,
+                    previousRunPerformance.medianEfficiency,
+                    2,
+                  )}
+                  tone={getHigherIsBetterTone(
+                    recentRunPerformance.medianEfficiency,
+                    previousRunPerformance.medianEfficiency,
+                  )}
+                />
+                <RunningPerformanceTile
+                  label={t('dashboard.runningPerformance.avgHr')}
+                  value={recentRunPerformance.avgHr ? String(recentRunPerformance.avgHr) : '—'}
+                  unit="bpm"
+                  delta={formatIntegerDelta(recentRunPerformance.avgHr, previousRunPerformance.avgHr)}
+                  tone={getLowerIsBetterTone(recentRunPerformance.avgHr, previousRunPerformance.avgHr)}
+                />
+                <RunningPerformanceTile
+                  label={t('dashboard.runningPerformance.distance')}
+                  value={formatNumber(Math.round(recentRunPerformance.totalDistanceKm))}
+                  unit={t('records.units.km')}
+                  delta={formatIntegerDelta(
+                    Math.round(recentRunPerformance.totalDistanceKm),
+                    Math.round(previousRunPerformance.totalDistanceKm),
+                  )}
+                  tone="text-muted-foreground"
+                />
+              </div>
+              <div className="text-xs text-muted-foreground">
+                {t('dashboard.runningPerformance.footnote')}
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Weekly Training Hours - Last 4 Weeks (Strava-style) */}
         <Card>
           <CardContent className="pt-4 pb-3">
@@ -1266,6 +1354,85 @@ function CompactStat({ icon, label, value, color }: { icon: React.ReactNode; lab
       </div>
     </div>
   )
+}
+
+function RunningPerformanceTile({
+  label,
+  value,
+  unit,
+  delta,
+  tone,
+}: {
+  label: string
+  value: string
+  unit: string
+  delta: string | null
+  tone: string
+}) {
+  return (
+    <div className="rounded-lg border border-border/50 bg-background/60 px-3 py-3">
+      <div className="text-[11px] text-muted-foreground">{label}</div>
+      <div className="mt-1 flex items-baseline gap-1">
+        <span className="text-lg font-semibold tabular-nums">{value}</span>
+        <span className="text-[11px] text-muted-foreground">{unit}</span>
+      </div>
+      <div className={`mt-1 text-[11px] ${tone}`}>{delta ?? '—'}</div>
+    </div>
+  )
+}
+
+function formatPaceMinutesValue(value: number | null): string {
+  if (!value || !Number.isFinite(value)) return '—'
+  const minutes = Math.floor(value)
+  const seconds = Math.round((value - minutes) * 60)
+  const normalizedMinutes = seconds === 60 ? minutes + 1 : minutes
+  const normalizedSeconds = seconds === 60 ? 0 : seconds
+  return `${normalizedMinutes}:${normalizedSeconds.toString().padStart(2, '0')}`
+}
+
+function formatPaceMinutesDelta(current: number | null, previous: number | null): string | null {
+  if (!current || !previous) return null
+  const diffSeconds = Math.round((current - previous) * 60)
+  const sign = diffSeconds > 0 ? '+' : diffSeconds < 0 ? '-' : '±'
+  const absolute = Math.abs(diffSeconds)
+  const minutes = Math.floor(absolute / 60)
+  const seconds = absolute % 60
+  return `${sign}${minutes}:${seconds.toString().padStart(2, '0')}`
+}
+
+function formatDecimalDelta(current: number | null, previous: number | null, decimals: number): string | null {
+  if (current === null || previous === null) return null
+  const diff = current - previous
+  const sign = diff > 0 ? '+' : diff < 0 ? '' : '±'
+  return `${sign}${formatNumber(diff, decimals)}`
+}
+
+function formatIntegerDelta(current: number | null, previous: number | null): string | null {
+  if (current === null || previous === null) return null
+  const diff = current - previous
+  const sign = diff > 0 ? '+' : diff < 0 ? '' : '±'
+  return `${sign}${formatNumber(diff)}`
+}
+
+function getPaceDeltaTone(current: number | null, previous: number | null): string {
+  if (!current || !previous) return 'text-muted-foreground'
+  if (current < previous) return 'text-green-600 dark:text-green-400'
+  if (current > previous) return 'text-orange-600 dark:text-orange-400'
+  return 'text-muted-foreground'
+}
+
+function getHigherIsBetterTone(current: number | null, previous: number | null): string {
+  if (current === null || previous === null) return 'text-muted-foreground'
+  if (current > previous) return 'text-green-600 dark:text-green-400'
+  if (current < previous) return 'text-orange-600 dark:text-orange-400'
+  return 'text-muted-foreground'
+}
+
+function getLowerIsBetterTone(current: number | null, previous: number | null): string {
+  if (current === null || previous === null) return 'text-muted-foreground'
+  if (current < previous) return 'text-green-600 dark:text-green-400'
+  if (current > previous) return 'text-orange-600 dark:text-orange-400'
+  return 'text-muted-foreground'
 }
 
 // Icons

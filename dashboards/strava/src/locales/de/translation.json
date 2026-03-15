@@ -128,6 +128,16 @@
       "last12Weeks": "Letzte 12 Wochen",
       "weekLabel": "KW{{week}}"
     },
+    "runningPerformance": {
+      "title": "Laufform",
+      "subtitle": "Letzte 6 Wochen • {{count}} analysierte Läufe",
+      "pace150": "Pace @150",
+      "efficiency": "Effizienz",
+      "efficiencyUnit": "m/min/bpm",
+      "avgHr": "Ø HF",
+      "distance": "Distanz",
+      "footnote": "Verglichen wird mit den 6 Wochen davor. Berücksichtigt werden nur Läufe mit HF sowie ausreichend Distanz und Dauer."
+    },
     "quickLinks": {
       "analytics": "Analytics"
     },
@@ -772,6 +782,29 @@
         "distance": "Distanz",
         "avgHr": "Ø HF"
       }
+    },
+    "runPerformance": {
+      "title": "Laufleistung vs. Puls",
+      "subtitle": "{{count}} verwertbare Läufe • {{distance}} km im gewählten Zeitraum",
+      "axis": "Pace @150 bpm",
+      "cards": {
+        "pace150": "Pace @150 bpm",
+        "efficiency": "Effizienz",
+        "avgHr": "Typische Ø HF",
+        "avgHrHint": "Median der verwertbaren Läufe"
+      },
+      "units": {
+        "efficiency": "m/min pro bpm"
+      },
+      "trendTitle": "Trend der normalisierten Pace",
+      "trendSubtitle": "Monatliche Medianwerte. Niedriger ist besser.",
+      "tooltip": {
+        "pace150": "Pace @150 bpm",
+        "efficiency": "Effizienz",
+        "avgHr": "Ø HF",
+        "runs": "{{count}} Läufe"
+      },
+      "footnote": "Einbezogen werden nur Läufe mit Herzfrequenz, mindestens 3 km Distanz und mindestens 15 Minuten Dauer."
     },
     "trainingLoad": {
       "requiredTitle": "FTP erforderlich für TSS-Analyse",

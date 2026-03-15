@@ -128,6 +128,16 @@
       "last12Weeks": "Last 12 weeks",
       "weekLabel": "WK{{week}}"
     },
+    "runningPerformance": {
+      "title": "Running form",
+      "subtitle": "Last 6 weeks • {{count}} analyzed runs",
+      "pace150": "Pace @150",
+      "efficiency": "Efficiency",
+      "efficiencyUnit": "m/min/bpm",
+      "avgHr": "Avg HR",
+      "distance": "Distance",
+      "footnote": "Compared against the previous 6 weeks. Only runs with heart rate, enough distance and enough duration are included."
+    },
     "quickLinks": {
       "analytics": "Analytics"
     },
@@ -772,6 +782,29 @@
         "distance": "Distance",
         "avgHr": "Avg HR"
       }
+    },
+    "runPerformance": {
+      "title": "Running performance vs heart rate",
+      "subtitle": "{{count}} usable runs • {{distance}} km in the selected range",
+      "axis": "Pace @150 bpm",
+      "cards": {
+        "pace150": "Pace @150 bpm",
+        "efficiency": "Efficiency",
+        "avgHr": "Typical avg HR",
+        "avgHrHint": "Median of usable runs"
+      },
+      "units": {
+        "efficiency": "m/min per bpm"
+      },
+      "trendTitle": "Normalized pace trend",
+      "trendSubtitle": "Monthly medians. Lower is better.",
+      "tooltip": {
+        "pace150": "Pace @150 bpm",
+        "efficiency": "Efficiency",
+        "avgHr": "Avg HR",
+        "runs": "{{count}} runs"
+      },
+      "footnote": "Only runs with heart rate, at least 3 km distance and at least 15 minutes moving time are included."
     },
     "trainingLoad": {
       "requiredTitle": "FTP Required for TSS Analysis",

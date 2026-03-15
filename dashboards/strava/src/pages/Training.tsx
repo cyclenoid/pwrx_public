@@ -5,6 +5,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../co
 import { getTrainingLoadPMC, getHeartRateZones, getWeekdayDistribution, getMonthlyComparison, getTimeOfDayDistribution, getFTP, getRunningActivities, getBulkPowerMetrics } from '../lib/api'
 import { useTheme } from '../components/ThemeProvider'
 import { getChartColors, getHeartRateZoneColors } from '../lib/chartTheme'
+import { buildRunningPerformanceSamples, summarizeRunningPerformance } from '../lib/runningMetrics'
 import {
   Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Legend, ComposedChart
@@ -114,6 +115,50 @@ export function Training() {
     staleTime: 5 * 60 * 1000,
   })
 
+  const runningPerformanceSamples = useMemo(() => {
+    if (!runningActivities) return []
+    return buildRunningPerformanceSamples(
+      runningActivities.activities.map((activity) => ({
+        date: activity.date,
+        distanceKm: activity.distance_km,
+        movingTimeSec: activity.moving_time,
+        avgHr: activity.avg_hr,
+        avgPaceMinPerKm: activity.avg_pace_decimal,
+      })),
+    )
+  }, [runningActivities])
+
+  const runningPerformanceSummary = useMemo(
+    () => summarizeRunningPerformance(runningPerformanceSamples),
+    [runningPerformanceSamples],
+  )
+
+  const runningPerformanceTrendData = useMemo(() => {
+    const grouped = new Map<string, typeof runningPerformanceSamples>()
+
+    runningPerformanceSamples.forEach((sample) => {
+      const monthKey = sample.date.slice(0, 7)
+      const bucket = grouped.get(monthKey) ?? []
+      bucket.push(sample)
+      grouped.set(monthKey, bucket)
+    })
+
+    return Array.from(grouped.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, samples]) => {
+        const summary = summarizeRunningPerformance(samples)
+        return {
+          month,
+          label: formatMonthYear(`${month}-01`),
+          pace150: summary.medianNormalizedPace150,
+          efficiency: summary.medianEfficiency,
+          avgHr: summary.avgHr,
+          sampleCount: summary.sampleCount,
+        }
+      })
+      .filter((item) => item.pace150 !== null)
+  }, [runningPerformanceSamples, dateLocale])
+
   // Fetch training load data (power metrics) - filter by activity type
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
@@ -201,6 +246,15 @@ export function Training() {
     return hours > 0
       ? t('training.units.hoursMinutesCompact', { hours, minutes: minutes.toString().padStart(2, '0') })
       : t('training.units.minutesShort', { minutes })
+  }
+
+  const formatPaceValue = (paceMinPerKm: number | null) => {
+    if (!paceMinPerKm || !Number.isFinite(paceMinPerKm)) return '—'
+    const minutes = Math.floor(paceMinPerKm)
+    const seconds = Math.round((paceMinPerKm - minutes) * 60)
+    const normalizedMinutes = seconds === 60 ? minutes + 1 : minutes
+    const normalizedSeconds = seconds === 60 ? 0 : seconds
+    return `${normalizedMinutes}:${normalizedSeconds.toString().padStart(2, '0')}`
   }
 
   const isLoading = loadingTraining || loadingZones || loadingWeekday || loadingMonthly
@@ -363,6 +417,137 @@ export function Training() {
                     {t('training.noData.hrZones')}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+          )}
+
+          {isRunning && runningPerformanceSummary.sampleCount > 0 && (
+            <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                  {t('training.runPerformance.title')}
+                </CardTitle>
+                <CardDescription>
+                  {t('training.runPerformance.subtitle', {
+                    count: runningPerformanceSummary.sampleCount,
+                    distance: runningPerformanceSummary.totalDistanceKm.toFixed(0),
+                  })}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="grid gap-3 md:grid-cols-3">
+                  <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                    <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                      {t('training.runPerformance.cards.pace150')}
+                    </div>
+                    <div className="mt-2 text-3xl font-semibold tabular-nums text-orange-500">
+                      {formatPaceValue(runningPerformanceSummary.medianNormalizedPace150)}
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">{t('training.units.pace')}</div>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                    <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                      {t('training.runPerformance.cards.efficiency')}
+                    </div>
+                    <div className="mt-2 text-3xl font-semibold tabular-nums text-amber-400">
+                      {runningPerformanceSummary.medianEfficiency?.toFixed(2) ?? '—'}
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">{t('training.runPerformance.units.efficiency')}</div>
+                  </div>
+                  <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                    <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                      {t('training.runPerformance.cards.avgHr')}
+                    </div>
+                    <div className="mt-2 text-3xl font-semibold tabular-nums">
+                      {runningPerformanceSummary.avgHr ? t('activity.units.bpm', { value: runningPerformanceSummary.avgHr }) : '—'}
+                    </div>
+                    <div className="mt-1 text-sm text-muted-foreground">{t('training.runPerformance.cards.avgHrHint')}</div>
+                  </div>
+                </div>
+
+                {runningPerformanceTrendData.length > 1 && (
+                  <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                    <div className="mb-3">
+                      <div className="text-sm font-medium">{t('training.runPerformance.trendTitle')}</div>
+                      <div className="text-xs text-muted-foreground">{t('training.runPerformance.trendSubtitle')}</div>
+                    </div>
+                    <ResponsiveContainer width="100%" height={230}>
+                      <ComposedChart data={runningPerformanceTrendData}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                        <XAxis dataKey="label" stroke={chartColors.text} fontSize={11} />
+                        <YAxis
+                          stroke={chartColors.text}
+                          fontSize={11}
+                          reversed
+                          domain={['auto', 'auto']}
+                          tickFormatter={(value) => formatPaceValue(value)}
+                          label={{ value: t('training.runPerformance.axis'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
+                        />
+                        <Tooltip
+                          contentStyle={{
+                            backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
+                            border: `1px solid ${chartColors.grid}`,
+                            borderRadius: '8px',
+                          }}
+                          formatter={(value: any, name?: string) => {
+                            if (name === t('training.runPerformance.tooltip.pace150')) {
+                              return [`${formatPaceValue(Number(value))} ${t('training.units.pace')}`, name]
+                            }
+                            if (name === t('training.runPerformance.tooltip.efficiency')) {
+                              return [Number(value).toFixed(2), name]
+                            }
+                            return [value, name]
+                          }}
+                          content={({ active, payload }) => {
+                            if (active && payload && payload.length) {
+                              const data = payload[0].payload
+                              return (
+                                <div style={{
+                                  backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
+                                  border: `1px solid ${chartColors.grid}`,
+                                  borderRadius: '8px',
+                                  padding: '8px',
+                                }}>
+                                  <p className="font-semibold">{data.label}</p>
+                                  <p className="text-sm mt-1">
+                                    {t('training.runPerformance.tooltip.pace150')}: <span className="font-medium">{formatPaceValue(data.pace150)} {t('training.units.pace')}</span>
+                                  </p>
+                                  <p className="text-sm">
+                                    {t('training.runPerformance.tooltip.efficiency')}: <span className="font-medium">{data.efficiency?.toFixed(2)} {t('training.runPerformance.units.efficiency')}</span>
+                                  </p>
+                                  <p className="text-sm">
+                                    {t('training.runPerformance.tooltip.avgHr')}: <span className="font-medium">{data.avgHr ? t('activity.units.bpm', { value: data.avgHr }) : '—'}</span>
+                                  </p>
+                                  <p className="text-sm text-muted-foreground">
+                                    {t('training.runPerformance.tooltip.runs', { count: data.sampleCount })}
+                                  </p>
+                                </div>
+                              )
+                            }
+                            return null
+                          }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="pace150"
+                          stroke={colors.primary}
+                          strokeWidth={2.5}
+                          dot={{ fill: colors.primary, r: 3.5 }}
+                          activeDot={{ r: 5 }}
+                          name={t('training.runPerformance.tooltip.pace150')}
+                          isAnimationActive={false}
+                        />
+                      </ComposedChart>
+                    </ResponsiveContainer>
+                  </div>
+                )}
+
+                <div className="text-xs text-muted-foreground">
+                  {t('training.runPerformance.footnote')}
+                </div>
               </CardContent>
             </Card>
           )}
