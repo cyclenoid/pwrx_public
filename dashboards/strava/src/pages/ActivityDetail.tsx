@@ -13,7 +13,6 @@ import {
   getGear,
   getActivityVAM,
   getTrainingLoadPMC,
-  rebuildActivityLocalSegments,
   updateActivityGear,
 } from '../lib/api'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
@@ -295,19 +294,6 @@ export function ActivityDetail() {
   useEffect(() => {
     setActivityGearId(activity?.gear_id || '')
   }, [activity?.gear_id])
-
-  const rebuildLocalClimbsMutation = useMutation({
-    mutationFn: (activityId: number) => rebuildActivityLocalSegments(activityId),
-    onSuccess: async (result) => {
-      await queryClient.invalidateQueries({ queryKey: ['activity-segments', id] })
-      await queryClient.invalidateQueries({ queryKey: ['segments-summary'] })
-      await queryClient.invalidateQueries({ queryKey: ['segments-list'] })
-      window.alert(t('activityDetail.localClimbs.result', { persisted: result.persisted, detected: result.detected }))
-    },
-    onError: () => {
-      window.alert(t('activityDetail.localClimbs.error'))
-    },
-  })
 
   const createManualSegmentMutation = useMutation({
     mutationFn: (input: { activityId: number; startIndex: number; endIndex: number; name?: string }) => (
@@ -1065,8 +1051,7 @@ export function ActivityDetail() {
   const hasStravaLink = !isImportedActivity
     && Number.isFinite(Number(activity.strava_activity_id))
     && Number(activity.strava_activity_id) > 0
-  const canRebuildLocalClimbs = true
-  const showHeaderActions = hasStravaLink || canRebuildLocalClimbs || isImportedActivity
+  const showHeaderActions = hasStravaLink || isImportedActivity
 
   const handleDeleteImportedActivity = async () => {
     const confirmed = window.confirm(t('activityDetail.delete.confirm', { name: activity.name }))
@@ -1075,14 +1060,6 @@ export function ActivityDetail() {
       await deleteActivityMutation.mutateAsync(Number(activity.strava_activity_id))
     } catch {
       // Error is handled in mutation.onError
-    }
-  }
-
-  const handleRebuildLocalClimbs = async () => {
-    try {
-      await rebuildLocalClimbsMutation.mutateAsync(Number(activity.strava_activity_id))
-    } catch {
-      // Error handled in mutation.onError
     }
   }
 
@@ -1278,21 +1255,8 @@ export function ActivityDetail() {
                 {t('activityDetail.viewOnStrava')}
               </a>
             )}
-            {canRebuildLocalClimbs && (
+            {isImportedActivity && (
               <div className="flex flex-col items-end gap-1">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
-                  onClick={handleRebuildLocalClimbs}
-                  disabled={rebuildLocalClimbsMutation.isPending}
-                >
-                  {rebuildLocalClimbsMutation.isPending
-                    ? t('activityDetail.localClimbs.running')
-                    : t('activityDetail.localClimbs.button')}
-                </Button>
-                {isImportedActivity && (
                 <Button
                   type="button"
                   variant="ghost"
@@ -1305,7 +1269,6 @@ export function ActivityDetail() {
                     ? t('activityDetail.delete.deleting')
                     : t('activityDetail.delete.button')}
                 </Button>
-                )}
               </div>
             )}
           </div>
