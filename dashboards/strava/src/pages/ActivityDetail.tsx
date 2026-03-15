@@ -2119,25 +2119,25 @@ export function ActivityDetail() {
                     const targetUrl = `/segment/${segment.segment_id}?activity=${segment.activity_id}`
 
                     return (
-                      <Link
+                      <div
                         key={segment.effort_id}
-                        to={targetUrl}
-                        onMouseEnter={() => {
-                          if (!isDisabled) handleSegmentHighlight(segment)
-                        }}
-                        onFocus={() => {
-                          if (!isDisabled) handleSegmentHighlight(segment)
-                        }}
-                        className={`group block rounded-md border px-3 py-2 transition-colors ${
+                        className={`group rounded-md border px-3 py-2 transition-colors ${
                           isActive
                             ? (isPr
                               ? 'border-yellow-500/50 bg-yellow-500/15'
                               : 'border-primary/40 bg-secondary/60')
                             : 'border-border/50 hover:border-border hover:bg-secondary/40'
-                        } ${isDisabled ? 'pointer-events-none opacity-60' : ''}`}
+                        }`}
                       >
                         <div className="flex items-start justify-between gap-3">
-                          <div className="min-w-0">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (!isDisabled) handleSegmentHighlight(segment)
+                            }}
+                            disabled={isDisabled}
+                            className={`min-w-0 flex-1 text-left ${isDisabled ? 'cursor-not-allowed opacity-60' : 'cursor-pointer'}`}
+                          >
                             <div className="flex items-center gap-2">
                               <Badge variant="outline" className={`shrink-0 text-[10px] px-1.5 py-0.5 ${sourceTag.className}`}>
                                 {sourceTag.label}
@@ -2170,17 +2170,24 @@ export function ActivityDetail() {
                                   : ''}
                               </div>
                             )}
-                          </div>
-                          <div className="text-right">
+                          </button>
+                          <div className="shrink-0 text-right">
                             <div className="text-sm font-semibold">
                               {formatSegmentDuration(segment.elapsed_time ?? null, notAvailable)}
                             </div>
-                            <div className={`mt-1 text-[10px] transition-colors ${isActive ? 'text-foreground' : 'text-muted-foreground group-hover:text-foreground'}`}>
+                            <Link
+                              to={targetUrl}
+                              className={`mt-1 inline-flex rounded-sm px-2 py-1 text-[10px] font-medium transition-colors ${
+                                isActive
+                                  ? 'bg-primary/10 text-foreground'
+                                  : 'text-muted-foreground hover:bg-background hover:text-foreground'
+                              }`}
+                            >
                               {t('activityDetail.segments.open')}
-                            </div>
+                            </Link>
                           </div>
                         </div>
-                      </Link>
+                      </div>
                     )
                   })}
                   {segmentsRemaining > 0 && (
