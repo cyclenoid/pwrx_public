@@ -77,6 +77,7 @@ git push origin main
 cd /mnt/user/appdata/data-hub
 git fetch origin --prune
 git reset --hard origin/main
+# verify / restore the Unraid-only Strava runtime flags in .env if needed
 docker compose up -d --build strava-tracker strava-dashboard
 ```
 
@@ -98,6 +99,12 @@ STRAVA_REFRESH_TOKEN=...
 
 This is the only intended runtime difference on Unraid.
 
+Important operator rule on Unraid:
+
+- after updating from the public repo, verify that the Strava runtime is still enabled
+- if needed, restore the Unraid-only Strava values in `.env` before recreating containers
+- after deploy, `capabilities.adapters.strava.enabled` must still be `true`
+
 ## Verification checklist after deploy
 
 ```bash
@@ -112,6 +119,15 @@ Expected:
 - `capabilities.adapters.strava.enabled = true` (on Unraid)
 - Git head on Unraid equals `pwrx_public/main`
 - `version.commit` in capabilities is populated (compose mounts `.git` into backend)
+
+If `capabilities.adapters.strava.enabled` is `false` after the update:
+
+```bash
+cd /mnt/user/appdata/data-hub
+grep -E '^(ADAPTER_STRAVA_ENABLED|STRAVA_CLIENT_ID|STRAVA_CLIENT_SECRET|STRAVA_REFRESH_TOKEN)=' .env
+docker compose up -d --force-recreate strava-tracker
+curl -s http://127.0.0.1:3001/api/capabilities
+```
 
 ## Local Docker Desktop test modes
 
