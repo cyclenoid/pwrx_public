@@ -1513,34 +1513,40 @@ export function ActivityDetail() {
                 <div className="mt-3 border-t border-border/60 pt-3">
                   {elevationSelection && analysisStats ? (
                     <>
-                      <div className="flex items-center justify-between mb-2">
-                        <div className="text-xs text-muted-foreground">
-                          {t('activityDetail.charts.analysisRange', {
-                            start: elevationRange.startKm !== null ? elevationRange.startKm.toFixed(2) : notAvailable,
-                            end: elevationRange.endKm !== null ? elevationRange.endKm.toFixed(2) : notAvailable,
-                          })}
+                        <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+                          <div className="text-xs text-muted-foreground">
+                            {t('activityDetail.charts.analysisRange', {
+                              start: elevationRange.startKm !== null ? elevationRange.startKm.toFixed(2) : notAvailable,
+                              end: elevationRange.endKm !== null ? elevationRange.endKm.toFixed(2) : notAvailable,
+                            })}
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Button
+                              type="button"
+                              size="sm"
+                              onClick={handleCreateManualSegment}
+                              disabled={!canCreateManualSegment || createManualSegmentMutation.isPending}
+                              className="h-9 px-4 text-xs font-semibold shadow-sm"
+                            >
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="mr-1.5">
+                                <path d="M3 3v18h18" />
+                                <path d="m7 14 4-4 4 4 5-5" />
+                              </svg>
+                              {createManualSegmentMutation.isPending
+                                ? t('activityDetail.segments.manual.creating')
+                                : t('activityDetail.segments.manual.button')}
+                            </Button>
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={clearAnalysis}
+                              className="h-9 px-3 text-xs font-medium"
+                            >
+                              {t('common.reset')}
+                            </Button>
+                          </div>
                         </div>
-                        <div className="flex items-center gap-3">
-                          <Button
-                            type="button"
-                            size="sm"
-                            onClick={handleCreateManualSegment}
-                            disabled={!canCreateManualSegment || createManualSegmentMutation.isPending}
-                            className="h-7 px-2 text-[11px]"
-                          >
-                            {createManualSegmentMutation.isPending
-                              ? t('activityDetail.segments.manual.creating')
-                              : t('activityDetail.segments.manual.button')}
-                          </Button>
-                          <button
-                            type="button"
-                            onClick={clearAnalysis}
-                            className="text-[10px] text-muted-foreground hover:text-primary"
-                          >
-                            {t('common.reset')}
-                          </button>
-                        </div>
-                      </div>
                       <div className="mb-3 flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
                         <span>{t('activityDetail.segments.manual.hint')}</span>
                         <Button
@@ -2121,12 +2127,12 @@ export function ActivityDetail() {
                     return (
                       <div
                         key={segment.effort_id}
-                        className={`group rounded-md border px-3 py-2 transition-colors ${
+                        className={`group rounded-xl border px-3 py-3 transition-all duration-200 ${
                           isActive
                             ? (isPr
-                              ? 'border-yellow-500/50 bg-yellow-500/15'
-                              : 'border-primary/40 bg-secondary/60')
-                            : 'border-border/50 hover:border-border hover:bg-secondary/40'
+                              ? 'border-yellow-500/50 bg-yellow-500/15 shadow-sm'
+                              : 'border-primary/40 bg-primary/10 shadow-sm')
+                            : 'border-border/60 bg-card/40 hover:border-primary/35 hover:bg-primary/5 hover:shadow-sm'
                         }`}
                       >
                         <div className="flex items-start justify-between gap-3">
@@ -2160,7 +2166,6 @@ export function ActivityDetail() {
                                 ? ` · ${Number(segment.average_grade).toFixed(1)}%`
                                 : ''}
                               {climbCategoryLabel ? ` · ${climbCategoryLabel}` : ''}
-                              {segment.city ? ` · ${segment.city}` : ''}
                             </div>
                             {(segment.average_watts || segment.average_heartrate) && (
                               <div className="mt-1 text-[10px] text-muted-foreground">
@@ -2177,13 +2182,17 @@ export function ActivityDetail() {
                             </div>
                             <Link
                               to={targetUrl}
-                              className={`mt-1 inline-flex rounded-sm px-2 py-1 text-[10px] font-medium transition-colors ${
+                              className={`mt-2 inline-flex items-center gap-1 rounded-full border px-2.5 py-1.5 text-[10px] font-semibold transition-colors ${
                                 isActive
-                                  ? 'bg-primary/10 text-foreground'
-                                  : 'text-muted-foreground hover:bg-background hover:text-foreground'
+                                  ? 'border-primary/30 bg-background text-foreground'
+                                  : 'border-border/60 bg-background/80 text-muted-foreground hover:border-primary/30 hover:text-foreground'
                               }`}
                             >
-                              {t('activityDetail.segments.open')}
+                              <span>{t('activityDetail.segments.open')}</span>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                <path d="M7 17 17 7" />
+                                <path d="M7 7h10v10" />
+                              </svg>
                             </Link>
                           </div>
                         </div>
