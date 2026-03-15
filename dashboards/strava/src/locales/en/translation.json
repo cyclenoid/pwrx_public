@@ -996,9 +996,10 @@
       },
       "jobs": {
         "title": "Segment jobs (tech)",
-        "subtitle": "Operational segment jobs for backfill and targeted rebuilds.",
+        "subtitle": "Technical maintenance for missing segment data. The automatic backfill should keep the system clean in normal operation.",
         "backfill": {
-          "title": "Backfill",
+          "title": "Gap backfill",
+          "hint": "Processes only activities that are still missing segment data. This is the preferred maintenance path instead of rebuilding single activities.",
           "limit": "Limit",
           "button": "Start backfill",
           "buttonAll": "Run full backfill",
@@ -1014,24 +1015,6 @@
             "successBody": "{{processed}} activities processed, {{persisted}} segments persisted.",
             "errorTitle": "Backfill failed",
             "errorBody": "Failed to start backfill."
-          }
-        },
-        "rebuild": {
-          "title": "Rebuild single activity",
-          "activityId": "Activity ID",
-          "button": "Rebuild",
-          "running": "Rebuild running...",
-          "invalidActivityId": "Please enter a valid activity ID.",
-          "result": {
-            "activityId": "Activity: {{value}}",
-            "detected": "Detected: {{value}}",
-            "persisted": "Persisted: {{value}}"
-          },
-          "toast": {
-            "successTitle": "Rebuild finished",
-            "successBody": "{{detected}} detected, {{persisted}} persisted.",
-            "errorTitle": "Rebuild failed",
-            "errorBody": "Failed to start rebuild."
           }
         },
         "repairSportTypes": {

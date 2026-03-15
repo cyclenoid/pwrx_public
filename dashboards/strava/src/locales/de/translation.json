@@ -996,9 +996,10 @@
       },
       "jobs": {
         "title": "Segment-Jobs (Tech)",
-        "subtitle": "Operative Segment-Jobs für Backfill und gezielten Neuaufbau.",
+        "subtitle": "Technische Wartung für fehlende Segmentdaten. Der automatische Backfill hält das System im Normalfall sauber.",
         "backfill": {
-          "title": "Backfill",
+          "title": "Gap-Backfill",
+          "hint": "Verarbeitet gezielt Aktivitäten ohne Segmentdaten. Das ist der empfohlene Pflegeweg statt einzelner Neuaufbauten.",
           "limit": "Limit",
           "button": "Backfill starten",
           "buttonAll": "Alle backfillen",
@@ -1014,24 +1015,6 @@
             "successBody": "{{processed}} Aktivitäten verarbeitet, {{persisted}} Segmente gespeichert.",
             "errorTitle": "Backfill fehlgeschlagen",
             "errorBody": "Backfill konnte nicht gestartet werden."
-          }
-        },
-        "rebuild": {
-          "title": "Einzelaktivität neu aufbauen",
-          "activityId": "Aktivitäts-ID",
-          "button": "Neu aufbauen",
-          "running": "Neuaufbau läuft...",
-          "invalidActivityId": "Bitte eine gültige Aktivitäts-ID eingeben.",
-          "result": {
-            "activityId": "Aktivität: {{value}}",
-            "detected": "Erkannt: {{value}}",
-            "persisted": "Gespeichert: {{value}}"
-          },
-          "toast": {
-            "successTitle": "Neuaufbau abgeschlossen",
-            "successBody": "{{detected}} erkannt, {{persisted}} gespeichert.",
-            "errorTitle": "Neuaufbau fehlgeschlagen",
-            "errorBody": "Neuaufbau konnte nicht gestartet werden."
           }
         },
         "repairSportTypes": {

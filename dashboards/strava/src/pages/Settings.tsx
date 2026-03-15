@@ -6,12 +6,10 @@ import {
   getTechStats,
   repairLegacySportTypes,
   renameLocalSegmentsBulk,
-  rebuildActivityLocalSegments,
   triggerLocalSegmentsBackfill,
   triggerFullSync,
   type LocalSegmentBackfillResponse,
   type RepairLegacySportTypesResponse,
-  type LocalSegmentRebuildResponse,
   type SyncLog,
   updateUserProfile,
   updateUserSetting,
@@ -113,8 +111,6 @@ export default function Settings() {
   const [renameBatchSize, setRenameBatchSize] = useState('200')
   const [segmentBackfillLimit, setSegmentBackfillLimit] = useState('200')
   const [segmentBackfillResult, setSegmentBackfillResult] = useState<LocalSegmentBackfillResponse | null>(null)
-  const [segmentRebuildActivityId, setSegmentRebuildActivityId] = useState('')
-  const [segmentRebuildResult, setSegmentRebuildResult] = useState<LocalSegmentRebuildResponse | null>(null)
   const [repairLegacySportTypesResult, setRepairLegacySportTypesResult] = useState<RepairLegacySportTypesResponse | null>(null)
   const [segmentAdvancedOpen, setSegmentAdvancedOpen] = useState(false)
   type TabKey = 'personal' | 'segments' | 'import' | 'sync' | 'logs' | 'system'
@@ -323,35 +319,6 @@ export default function Settings() {
     },
   })
 
-  const segmentRebuildMutation = useMutation({
-    mutationFn: async (activityId: number) => rebuildActivityLocalSegments(activityId),
-    onSuccess: async (result, activityId) => {
-      setSegmentRebuildResult(result)
-      toast({
-        title: t('settings.localClimbs.jobs.rebuild.toast.successTitle'),
-        description: t('settings.localClimbs.jobs.rebuild.toast.successBody', {
-          detected: result.detected,
-          persisted: result.persisted,
-        }),
-        variant: 'success',
-      })
-      await Promise.all([
-        queryClient.invalidateQueries({ queryKey: ['activity-segments', String(activityId)] }),
-        queryClient.invalidateQueries({ queryKey: ['segments-summary'] }),
-        queryClient.invalidateQueries({ queryKey: ['segments-list'] }),
-        queryClient.invalidateQueries({ queryKey: ['tech'] }),
-      ])
-    },
-    onError: (error: any) => {
-      const detail = error?.response?.data?.error
-      toast({
-        title: t('settings.localClimbs.jobs.rebuild.toast.errorTitle'),
-        description: detail || t('settings.localClimbs.jobs.rebuild.toast.errorBody'),
-        variant: 'error',
-      })
-    },
-  })
-
   const repairLegacySportTypesMutation = useMutation({
     mutationFn: async () => repairLegacySportTypes(),
     onSuccess: async (result) => {
@@ -387,20 +354,6 @@ export default function Settings() {
     const limit = Number.isFinite(parsed) ? Math.max(1, Math.min(Math.floor(parsed), 2000)) : 200
     setSegmentBackfillLimit(String(limit))
     segmentBackfillMutation.mutate({ limit, mode })
-  }
-
-  const triggerSegmentRebuild = () => {
-    const parsed = Number(segmentRebuildActivityId)
-    const activityId = Number.isFinite(parsed) ? Math.floor(parsed) : NaN
-    if (!Number.isFinite(activityId) || activityId === 0) {
-      toast({
-        title: t('settings.localClimbs.jobs.rebuild.toast.errorTitle'),
-        description: t('settings.localClimbs.jobs.rebuild.invalidActivityId'),
-        variant: 'error',
-      })
-      return
-    }
-    segmentRebuildMutation.mutate(activityId)
   }
 
   const handleProfileUpdate = (field: string) => {
@@ -1316,6 +1269,9 @@ export default function Settings() {
 
               <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-3">
                 <div className="text-sm font-semibold">{t('settings.localClimbs.jobs.backfill.title')}</div>
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.localClimbs.jobs.backfill.hint')}
+                </p>
                 <div className="flex flex-wrap items-center gap-2">
                   <label className="text-xs text-muted-foreground" htmlFor="settings-segment-backfill-limit">
                     {t('settings.localClimbs.jobs.backfill.limit')}
@@ -1359,40 +1315,6 @@ export default function Settings() {
                     <div>{t('settings.localClimbs.jobs.backfill.result.processed', { value: segmentBackfillResult.processedActivities })}</div>
                     <div>{t('settings.localClimbs.jobs.backfill.result.persisted', { value: segmentBackfillResult.persistedClimbs })}</div>
                     {segmentBackfillResult.warning && <div>{segmentBackfillResult.warning}</div>}
-                  </div>
-                )}
-              </div>
-
-              <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-3">
-                <div className="text-sm font-semibold">{t('settings.localClimbs.jobs.rebuild.title')}</div>
-                <div className="flex flex-wrap items-center gap-2">
-                  <label className="text-xs text-muted-foreground" htmlFor="settings-segment-rebuild-activity-id">
-                    {t('settings.localClimbs.jobs.rebuild.activityId')}
-                  </label>
-                  <input
-                    id="settings-segment-rebuild-activity-id"
-                    type="number"
-                    value={segmentRebuildActivityId}
-                    onChange={(event) => setSegmentRebuildActivityId(event.target.value)}
-                    className="h-8 w-32 rounded-md border border-border bg-background px-2 text-sm"
-                    placeholder="12345"
-                  />
-                  <Button
-                    size="sm"
-                    variant="outline"
-                    disabled={segmentRebuildMutation.isPending}
-                    onClick={triggerSegmentRebuild}
-                  >
-                    {segmentRebuildMutation.isPending
-                      ? t('settings.localClimbs.jobs.rebuild.running')
-                      : t('settings.localClimbs.jobs.rebuild.button')}
-                  </Button>
-                </div>
-                {segmentRebuildResult && (
-                  <div className="text-xs text-muted-foreground rounded border border-border/60 bg-background/50 p-2 space-y-1">
-                    <div>{t('settings.localClimbs.jobs.rebuild.result.activityId', { value: segmentRebuildResult.activityId })}</div>
-                    <div>{t('settings.localClimbs.jobs.rebuild.result.detected', { value: segmentRebuildResult.detected })}</div>
-                    <div>{t('settings.localClimbs.jobs.rebuild.result.persisted', { value: segmentRebuildResult.persisted })}</div>
                   </div>
                 )}
               </div>
