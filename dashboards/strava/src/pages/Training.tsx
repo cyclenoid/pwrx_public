@@ -359,80 +359,6 @@ export function Training() {
             </>
           )}
 
-          {/* Heart Rate Zones - Only show when filtering by Run */}
-          {isRunning && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                  </svg>
-                  {t('training.hrZones.title')}
-                </CardTitle>
-                <CardDescription>
-                  {t('training.hrZones.subtitle', { months: monthsForPeriod })}
-                  {hrZones && hrZones.activities_analyzed > 0 && (
-                    <span className="ml-2">• {t('training.hrZones.activities', { count: hrZones.activities_analyzed })}</span>
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {hrZoneData.length > 0 ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
-                      <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
-                        <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                          {t('training.hrZones.activities')}
-                        </div>
-                        <div className="mt-1 text-xl font-semibold tabular-nums">
-                          {hrZones?.activities_analyzed ?? 0}
-                        </div>
-                      </div>
-                      <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
-                        <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                          {t('training.hrZones.title')}
-                        </div>
-                        <div className="mt-1 text-xl font-semibold tabular-nums">
-                          {formatMinutes(hrZones?.total_minutes ?? 0)}
-                        </div>
-                      </div>
-                      {hrZoneData[0] && (
-                        <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
-                          <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                            {hrZoneData[0].name}
-                          </div>
-                          <div className="mt-1 text-xl font-semibold tabular-nums">
-                            {hrZoneData[0].percent}%
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
-                      {hrZoneData.map((zone, index) => (
-                        <div key={zone.name} className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: zone.color || hrZoneColors[index]?.color }}
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{zone.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {zone.percent}% • {formatMinutes(zone.value)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                    {t('training.noData.hrZones')}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
           {isRunning && runningPerformanceSummary.sampleCount > 0 && (
             <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
               <CardHeader className="pb-3">
@@ -831,6 +757,81 @@ export function Training() {
             </Card>
           )}
 
+          <div className="grid gap-5 xl:grid-cols-2">
+          {/* Heart Rate Zones - Only show when filtering by Run */}
+          {isRunning && (
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                  </svg>
+                  {t('training.hrZones.title')}
+                </CardTitle>
+                <CardDescription>
+                  {t('training.hrZones.subtitle', { months: monthsForPeriod })}
+                  {hrZones && hrZones.activities_analyzed > 0 && (
+                    <span className="ml-2">• {t('training.hrZones.activities', { count: hrZones.activities_analyzed })}</span>
+                  )}
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {hrZoneData.length > 0 ? (
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
+                      <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+                        <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                          {t('training.hrZones.activities')}
+                        </div>
+                        <div className="mt-1 text-xl font-semibold tabular-nums">
+                          {hrZones?.activities_analyzed ?? 0}
+                        </div>
+                      </div>
+                      <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+                        <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                          {t('training.hrZones.title')}
+                        </div>
+                        <div className="mt-1 text-xl font-semibold tabular-nums">
+                          {formatMinutes(hrZones?.total_minutes ?? 0)}
+                        </div>
+                      </div>
+                      {hrZoneData[0] && (
+                        <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+                          <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                            {hrZoneData[0].name}
+                          </div>
+                          <div className="mt-1 text-xl font-semibold tabular-nums">
+                            {hrZoneData[0].percent}%
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                    <div className="grid gap-2 md:grid-cols-2">
+                      {hrZoneData.map((zone, index) => (
+                        <div key={zone.name} className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
+                          <div
+                            className="w-3 h-3 rounded-full"
+                            style={{ backgroundColor: zone.color || hrZoneColors[index]?.color }}
+                          />
+                          <div className="flex-1">
+                            <p className="text-sm font-medium">{zone.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {zone.percent}% • {formatMinutes(zone.value)}
+                            </p>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : (
+                  <div className="h-[220px] flex items-center justify-center text-muted-foreground">
+                    {t('training.noData.hrZones')}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Weekday Distribution */}
           <Card>
             <CardHeader>
@@ -973,7 +974,7 @@ export function Training() {
           </Card>
 
           {/* Monthly Comparison */}
-          <Card>
+          <Card className="xl:col-span-2">
             <CardHeader>
               <div className="flex items-center gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -1045,6 +1046,7 @@ export function Training() {
               )}
             </CardContent>
           </Card>
+          </div>
         </>
       )}
     </div>
