@@ -311,17 +311,19 @@ export function Training() {
   const distanceLabel = t('training.pace.tooltip.distance')
   const avgHrLabel = t('training.pace.tooltip.avgHr')
   const rollingPaceLabel = `${t('training.pace.tooltip.pace')} Trend`
+  const sidebarCardClass = 'border-border/60 bg-card/95 shadow-sm'
+  const sidebarLegendClass = 'inline-flex items-center gap-2 rounded-full border border-border/40 bg-muted/10 px-2.5 py-0.5 text-[11px] text-muted-foreground'
 
   const renderHeartRateZonesCard = () => (
-    <Card>
-      <CardHeader className="pb-3">
-        <CardTitle className="flex items-center gap-2 text-base">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+    <Card className={sidebarCardClass}>
+      <CardHeader className="space-y-1 pb-2">
+        <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
           </svg>
           {t('training.hrZones.title')}
         </CardTitle>
-        <CardDescription>
+        <CardDescription className="text-xs leading-relaxed">
           {t('training.hrZones.subtitle', { months: monthsForPeriod })}
           {hrZones && hrZones.activities_analyzed > 0 && (
             <span className="ml-2">• {t('training.hrZones.activities', { count: hrZones.activities_analyzed })}</span>
@@ -330,28 +332,28 @@ export function Training() {
       </CardHeader>
       <CardContent className="pt-0">
         {hrZoneData.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             <div className="grid grid-cols-2 gap-2">
-              <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+              <div className="rounded-xl border border-border/40 bg-muted/10 px-3 py-2">
                 <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                   {t('training.hrZones.activities')}
                 </div>
-                <div className="mt-1 text-xl font-semibold tabular-nums">{hrZones?.activities_analyzed ?? 0}</div>
+                <div className="mt-1 text-lg font-semibold tabular-nums">{hrZones?.activities_analyzed ?? 0}</div>
               </div>
-              <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+              <div className="rounded-xl border border-border/40 bg-muted/10 px-3 py-2">
                 <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                   {t('training.hrZones.title')}
                 </div>
-                <div className="mt-1 text-xl font-semibold tabular-nums">{formatMinutes(hrZones?.total_minutes ?? 0)}</div>
+                <div className="mt-1 text-lg font-semibold tabular-nums">{formatMinutes(hrZones?.total_minutes ?? 0)}</div>
               </div>
             </div>
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {hrZoneData.map((zone, index) => (
-                <div key={zone.name} className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
+                <div key={zone.name} className="flex items-center gap-2.5 rounded-lg border border-border/40 bg-muted/10 px-3 py-2">
                   <div className="h-3 w-3 rounded-full" style={{ backgroundColor: zone.color || hrZoneColors[index]?.color }} />
                   <div className="min-w-0 flex-1">
-                    <p className="truncate text-sm font-medium">{zone.name}</p>
-                    <p className="text-xs text-muted-foreground">{zone.percent}% • {formatMinutes(zone.value)}</p>
+                    <p className="truncate text-sm font-medium leading-tight">{zone.name}</p>
+                    <p className="text-[11px] text-muted-foreground">{zone.percent}% • {formatMinutes(zone.value)}</p>
                   </div>
                 </div>
               ))}
@@ -367,28 +369,28 @@ export function Training() {
   )
 
   const renderWeekdayCard = () => (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className={sidebarCardClass}>
+      <CardHeader className="space-y-1 pb-2">
         <div className="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
             <line x1="16" y1="2" x2="16" y2="6"/>
             <line x1="8" y1="2" x2="8" y2="6"/>
             <line x1="3" y1="10" x2="21" y2="10"/>
           </svg>
-          <CardTitle className="text-base">{t('training.weekday.title')}</CardTitle>
+          <CardTitle className="text-sm font-semibold">{t('training.weekday.title')}</CardTitle>
         </div>
-        <CardDescription>{t('training.weekday.subtitle')}</CardDescription>
+        <CardDescription className="text-xs leading-relaxed">{t('training.weekday.subtitle')}</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         {weekdayChartData.length > 0 ? (
           <>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={168}>
               <ComposedChart data={weekdayChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                <XAxis dataKey="day" stroke={chartColors.text} fontSize={11} />
-                <YAxis yAxisId="left" stroke={chartColors.text} fontSize={11} />
-                <YAxis yAxisId="right" orientation="right" stroke={chartColors.text} fontSize={11} />
+                <XAxis dataKey="day" stroke={chartColors.text} fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" stroke={chartColors.text} fontSize={10} tickLine={false} axisLine={false} width={24} />
+                <YAxis yAxisId="right" orientation="right" stroke={chartColors.text} fontSize={10} tickLine={false} axisLine={false} width={28} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
@@ -400,47 +402,47 @@ export function Training() {
                 <Bar yAxisId="right" dataKey="distance" name={t('training.weekday.legendDistance')} fill={trainingPalette.primaryFill} radius={[4, 4, 0, 0]} />
               </ComposedChart>
             </ResponsiveContainer>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              <div className={sidebarLegendClass}>
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
                 {t('training.weekday.legendActivities')}
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+              <div className={sidebarLegendClass}>
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
                 {t('training.weekday.legendDistance')}
               </div>
             </div>
           </>
         ) : loadingWeekday ? (
-          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.loading.weekday')}</div>
+          <div className="flex h-[188px] items-center justify-center text-muted-foreground">{t('training.loading.weekday')}</div>
         ) : (
-          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.noData.weekday')}</div>
+          <div className="flex h-[188px] items-center justify-center text-muted-foreground">{t('training.noData.weekday')}</div>
         )}
       </CardContent>
     </Card>
   )
 
   const renderTimeOfDayCard = () => (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className={sidebarCardClass}>
+      <CardHeader className="space-y-1 pb-2">
         <div className="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="12" cy="12" r="10"/>
             <polyline points="12 6 12 12 16 14"/>
           </svg>
-          <CardTitle className="text-base">{t('training.timeOfDay.title')}</CardTitle>
+          <CardTitle className="text-sm font-semibold">{t('training.timeOfDay.title')}</CardTitle>
         </div>
-        <CardDescription>{t('training.timeOfDay.subtitle')}</CardDescription>
+        <CardDescription className="text-xs leading-relaxed">{t('training.timeOfDay.subtitle')}</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         {timeOfDayChartData.length > 0 ? (
           <>
-            <ResponsiveContainer width="100%" height={200}>
+            <ResponsiveContainer width="100%" height={168}>
               <ComposedChart data={timeOfDayChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                <XAxis dataKey="slot" stroke={chartColors.text} fontSize={11} />
-                <YAxis yAxisId="left" stroke={chartColors.text} fontSize={11} />
-                <YAxis yAxisId="right" orientation="right" stroke={chartColors.text} fontSize={11} />
+                <XAxis dataKey="slot" stroke={chartColors.text} fontSize={10} tickLine={false} axisLine={false} />
+                <YAxis yAxisId="left" stroke={chartColors.text} fontSize={10} tickLine={false} axisLine={false} width={24} />
+                <YAxis yAxisId="right" orientation="right" stroke={chartColors.text} fontSize={10} tickLine={false} axisLine={false} width={28} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
@@ -459,55 +461,57 @@ export function Training() {
                 <Bar yAxisId="right" dataKey="distance" name={t('training.timeOfDay.legendDistance')} fill={trainingPalette.primaryFill} radius={[4, 4, 0, 0]} />
               </ComposedChart>
             </ResponsiveContainer>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              <div className={sidebarLegendClass}>
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.secondary }} />
                 {t('training.timeOfDay.legendActivities')}
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+              <div className={sidebarLegendClass}>
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
                 {t('training.timeOfDay.legendDistance')}
               </div>
             </div>
           </>
         ) : loadingTimeOfDay ? (
-          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.loading.timeOfDay')}</div>
+          <div className="flex h-[188px] items-center justify-center text-muted-foreground">{t('training.loading.timeOfDay')}</div>
         ) : (
-          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.noData.timeOfDay')}</div>
+          <div className="flex h-[188px] items-center justify-center text-muted-foreground">{t('training.noData.timeOfDay')}</div>
         )}
       </CardContent>
     </Card>
   )
 
   const renderMonthlyCard = () => (
-    <Card>
-      <CardHeader className="pb-3">
+    <Card className={sidebarCardClass}>
+      <CardHeader className="space-y-1 pb-2">
         <div className="flex items-center gap-2">
-          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M3 3v18h18"/>
             <path d="m19 9-5 5-4-4-3 3"/>
           </svg>
-          <CardTitle className="text-base">{t('training.monthly.title')}</CardTitle>
+          <CardTitle className="text-sm font-semibold">{t('training.monthly.title')}</CardTitle>
         </div>
-        <CardDescription>{t('training.monthly.subtitle')}</CardDescription>
+        <CardDescription className="text-xs leading-relaxed">{t('training.monthly.subtitle')}</CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
         {monthlyChartData.length > 0 ? (
           <>
-            <ResponsiveContainer width="100%" height={220}>
+            <ResponsiveContainer width="100%" height={176}>
               <ComposedChart data={monthlyChartData}>
                 <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                 <XAxis
                   dataKey="month"
                   stroke={chartColors.text}
-                  fontSize={10}
-                  angle={-40}
+                  fontSize={9}
+                  angle={-32}
                   textAnchor="end"
-                  height={52}
+                  height={42}
                   interval={Math.max(0, Math.ceil(monthlyChartData.length / 8) - 1)}
+                  tickLine={false}
+                  axisLine={false}
                 />
-                <YAxis yAxisId="left" stroke={chartColors.text} fontSize={11} />
-                <YAxis yAxisId="right" orientation="right" stroke={chartColors.text} fontSize={11} />
+                <YAxis yAxisId="left" stroke={chartColors.text} fontSize={10} tickLine={false} axisLine={false} width={26} />
+                <YAxis yAxisId="right" orientation="right" stroke={chartColors.text} fontSize={10} tickLine={false} axisLine={false} width={30} />
                 <Tooltip
                   contentStyle={{
                     backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
@@ -519,21 +523,21 @@ export function Training() {
                 <Line yAxisId="right" type="monotone" dataKey="hours" name={t('training.monthly.legendHours')} stroke={trainingPalette.muted} strokeWidth={2.25} dot={false} />
               </ComposedChart>
             </ResponsiveContainer>
-            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              <div className={sidebarLegendClass}>
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
                 {t('training.monthly.legendDistance')}
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+              <div className={sidebarLegendClass}>
                 <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
                 {t('training.monthly.legendHours')}
               </div>
             </div>
           </>
         ) : loadingMonthly ? (
-          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.loading.monthly')}</div>
+          <div className="flex h-[196px] items-center justify-center text-muted-foreground">{t('training.loading.monthly')}</div>
         ) : (
-          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.noData.monthly')}</div>
+          <div className="flex h-[196px] items-center justify-center text-muted-foreground">{t('training.noData.monthly')}</div>
         )}
       </CardContent>
     </Card>
@@ -997,7 +1001,7 @@ export function Training() {
             )}
           </div>
 
-          <div className="space-y-5 xl:sticky xl:top-20 xl:w-[24rem] xl:flex-shrink-0">
+          <div className="space-y-4 xl:sticky xl:top-20 xl:w-[22rem] xl:flex-shrink-0">
             {isRunning && renderHeartRateZonesCard()}
             {renderWeekdayCard()}
             {renderTimeOfDayCard()}
