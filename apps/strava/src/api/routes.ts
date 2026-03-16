@@ -4514,12 +4514,19 @@ router.get('/analytics/fitness-trend', async (req: Request, res: Response) => {
 router.get('/analytics/heart-rate-zones', async (req: Request, res: Response) => {
   try {
     const { type, months = '3' } = req.query;
+    const monthsValue = String(months);
+    const allTime = monthsValue.toLowerCase() === 'all';
 
     let typeFilter = '';
-    const params: any[] = [parseInt(months as string)];
+    const params: any[] = [];
+    const dateFilter = allTime ? '' : `AND a.start_date >= NOW() - ($1 || ' months')::INTERVAL`;
+
+    if (!allTime) {
+      params.push(parseInt(monthsValue));
+    }
 
     if (type) {
-      typeFilter = 'AND a.type = $2';
+      typeFilter = `AND a.type = $${params.length + 1}`;
       params.push(type);
     }
 
@@ -4542,8 +4549,9 @@ router.get('/analytics/heart-rate-zones', async (req: Request, res: Response) =>
           LIMIT 1
         ) as heartrate_data
       FROM activities a
-      WHERE a.start_date >= NOW() - ($1 || ' months')::INTERVAL
+      WHERE 1=1
         AND a.average_heartrate IS NOT NULL
+        ${dateFilter}
         ${typeFilter}
     `, params);
 
@@ -4673,10 +4681,16 @@ router.get('/analytics/efficiency', async (req: Request, res: Response) => {
 router.get('/analytics/weekday-distribution', async (req: Request, res: Response) => {
   try {
     const { type, months } = req.query;
-    const monthsBack = parseInt(months as string) || 12;
+    const monthsValue = String(months ?? '12');
+    const allTime = monthsValue.toLowerCase() === 'all';
 
     let typeFilter = '';
-    const params: any[] = [monthsBack];
+    const params: any[] = [];
+    const dateFilter = allTime ? '' : `AND start_date >= NOW() - INTERVAL '1 month' * $1`;
+
+    if (!allTime) {
+      params.push(parseInt(monthsValue) || 12);
+    }
 
     if (type) {
       if (type === 'Ride') {
@@ -4684,7 +4698,7 @@ router.get('/analytics/weekday-distribution', async (req: Request, res: Response
       } else if (type === 'Run') {
         typeFilter = "AND type IN ('Run', 'VirtualRun', 'TrailRun')";
       } else {
-        typeFilter = 'AND type = $2';
+        typeFilter = `AND type = $${params.length + 1}`;
         params.push(type);
       }
     }
@@ -4707,7 +4721,8 @@ router.get('/analytics/weekday-distribution', async (req: Request, res: Response
         ROUND(AVG(distance) / 1000, 1) as avg_distance_km,
         ROUND(AVG(moving_time) / 60.0, 0) as avg_duration_min
       FROM strava.activities
-      WHERE start_date >= NOW() - INTERVAL '1 month' * $1
+      WHERE 1=1
+        ${dateFilter}
         ${typeFilter}
       GROUP BY EXTRACT(DOW FROM start_date),
         CASE EXTRACT(DOW FROM start_date)::int
@@ -4736,10 +4751,16 @@ router.get('/analytics/weekday-distribution', async (req: Request, res: Response
 router.get('/analytics/monthly-comparison', async (req: Request, res: Response) => {
   try {
     const { type, months } = req.query;
-    const monthsBack = parseInt(months as string) || 24;
+    const monthsValue = String(months ?? '24');
+    const allTime = monthsValue.toLowerCase() === 'all';
 
     let typeFilter = '';
-    const params: any[] = [monthsBack];
+    const params: any[] = [];
+    const dateFilter = allTime ? '' : `AND start_date >= NOW() - INTERVAL '1 month' * $1`;
+
+    if (!allTime) {
+      params.push(parseInt(monthsValue) || 24);
+    }
 
     if (type) {
       if (type === 'Ride') {
@@ -4747,7 +4768,7 @@ router.get('/analytics/monthly-comparison', async (req: Request, res: Response) 
       } else if (type === 'Run') {
         typeFilter = "AND type IN ('Run', 'VirtualRun', 'TrailRun')";
       } else {
-        typeFilter = 'AND type = $2';
+        typeFilter = `AND type = $${params.length + 1}`;
         params.push(type);
       }
     }
@@ -4764,7 +4785,8 @@ router.get('/analytics/monthly-comparison', async (req: Request, res: Response) 
         ROUND(SUM(total_elevation_gain), 0) as total_elevation,
         ROUND(AVG(CASE WHEN average_speed > 0 THEN average_speed * 3.6 END), 1) as avg_speed_kmh
       FROM strava.activities
-      WHERE start_date >= NOW() - INTERVAL '1 month' * $1
+      WHERE 1=1
+        ${dateFilter}
         ${typeFilter}
       GROUP BY TO_CHAR(start_date, 'YYYY-MM'),
         EXTRACT(YEAR FROM start_date),
@@ -4787,10 +4809,16 @@ router.get('/analytics/monthly-comparison', async (req: Request, res: Response) 
 router.get('/analytics/time-of-day', async (req: Request, res: Response) => {
   try {
     const { type, months } = req.query;
-    const monthsBack = parseInt(months as string) || 12;
+    const monthsValue = String(months ?? '12');
+    const allTime = monthsValue.toLowerCase() === 'all';
 
     let typeFilter = '';
-    const params: any[] = [monthsBack];
+    const params: any[] = [];
+    const dateFilter = allTime ? '' : `AND start_date >= NOW() - INTERVAL '1 month' * $1`;
+
+    if (!allTime) {
+      params.push(parseInt(monthsValue) || 12);
+    }
 
     if (type) {
       if (type === 'Ride') {
@@ -4798,7 +4826,7 @@ router.get('/analytics/time-of-day', async (req: Request, res: Response) => {
       } else if (type === 'Run') {
         typeFilter = "AND type IN ('Run', 'VirtualRun', 'TrailRun')";
       } else {
-        typeFilter = 'AND type = $2';
+        typeFilter = `AND type = $${params.length + 1}`;
         params.push(type);
       }
     }
@@ -4825,7 +4853,8 @@ router.get('/analytics/time-of-day', async (req: Request, res: Response) => {
         ROUND(SUM(distance) / 1000, 1) as total_distance_km,
         ROUND(AVG(distance) / 1000, 1) as avg_distance_km
       FROM strava.activities
-      WHERE start_date >= NOW() - INTERVAL '1 month' * $1
+      WHERE 1=1
+        ${dateFilter}
         ${typeFilter}
       GROUP BY time_slot, slot_order
       ORDER BY slot_order
