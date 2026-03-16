@@ -7,7 +7,7 @@ import { useTheme } from '../components/ThemeProvider'
 import { getChartColors, getHeartRateZoneColors } from '../lib/chartTheme'
 import { buildRunningPerformanceSamples, summarizeRunningPerformance } from '../lib/runningMetrics'
 import {
-  Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
+  Area, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ComposedChart
 } from 'recharts'
 import { TrainingLoadChart } from '../components/charts/TrainingLoadChart'
@@ -159,6 +159,46 @@ export function Training() {
       .filter((item) => item.pace150 !== null)
   }, [runningPerformanceSamples, dateLocale])
 
+  const runningPaceChartData = useMemo(() => {
+    if (!runningActivities?.activities?.length) return []
+
+    return runningActivities.activities.map((activity, index, activities) => {
+      const windowStart = Math.max(0, index - 2)
+      const windowEnd = Math.min(activities.length, index + 3)
+      const windowActivities = activities.slice(windowStart, windowEnd)
+      const rollingAverage =
+        windowActivities.reduce((sum, item) => sum + item.avg_pace_decimal, 0) / windowActivities.length
+
+      return {
+        ...activity,
+        rolling_pace_decimal: Number(rollingAverage.toFixed(3)),
+      }
+    })
+  }, [runningActivities])
+
+  const runningPaceSummary = useMemo(() => {
+    if (!runningPaceChartData.length) {
+      return {
+        averagePace: null as number | null,
+        bestPace: null as number | null,
+        averageDistance: null as number | null,
+      }
+    }
+
+    const totalPace = runningPaceChartData.reduce((sum, activity) => sum + activity.avg_pace_decimal, 0)
+    const totalDistance = runningPaceChartData.reduce((sum, activity) => sum + activity.distance_km, 0)
+    const bestPace = runningPaceChartData.reduce(
+      (best, activity) => Math.min(best, activity.avg_pace_decimal),
+      Number.POSITIVE_INFINITY,
+    )
+
+    return {
+      averagePace: totalPace / runningPaceChartData.length,
+      bestPace: Number.isFinite(bestPace) ? bestPace : null,
+      averageDistance: totalDistance / runningPaceChartData.length,
+    }
+  }, [runningPaceChartData])
+
   // Fetch training load data (power metrics) - filter by activity type
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
@@ -270,6 +310,234 @@ export function Training() {
   const paceLabel = t('training.pace.tooltip.pace')
   const distanceLabel = t('training.pace.tooltip.distance')
   const avgHrLabel = t('training.pace.tooltip.avgHr')
+  const rollingPaceLabel = `${t('training.pace.tooltip.pace')} Trend`
+
+  const renderHeartRateZonesCard = () => (
+    <Card>
+      <CardHeader className="pb-3">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+          </svg>
+          {t('training.hrZones.title')}
+        </CardTitle>
+        <CardDescription>
+          {t('training.hrZones.subtitle', { months: monthsForPeriod })}
+          {hrZones && hrZones.activities_analyzed > 0 && (
+            <span className="ml-2">• {t('training.hrZones.activities', { count: hrZones.activities_analyzed })}</span>
+          )}
+        </CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {hrZoneData.length > 0 ? (
+          <div className="space-y-3">
+            <div className="grid grid-cols-2 gap-2">
+              <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {t('training.hrZones.activities')}
+                </div>
+                <div className="mt-1 text-xl font-semibold tabular-nums">{hrZones?.activities_analyzed ?? 0}</div>
+              </div>
+              <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+                <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                  {t('training.hrZones.title')}
+                </div>
+                <div className="mt-1 text-xl font-semibold tabular-nums">{formatMinutes(hrZones?.total_minutes ?? 0)}</div>
+              </div>
+            </div>
+            <div className="space-y-2">
+              {hrZoneData.map((zone, index) => (
+                <div key={zone.name} className="flex items-center gap-3 rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
+                  <div className="h-3 w-3 rounded-full" style={{ backgroundColor: zone.color || hrZoneColors[index]?.color }} />
+                  <div className="min-w-0 flex-1">
+                    <p className="truncate text-sm font-medium">{zone.name}</p>
+                    <p className="text-xs text-muted-foreground">{zone.percent}% • {formatMinutes(zone.value)}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        ) : (
+          <div className="flex h-[180px] items-center justify-center text-muted-foreground">
+            {t('training.noData.hrZones')}
+          </div>
+        )}
+      </CardContent>
+    </Card>
+  )
+
+  const renderWeekdayCard = () => (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+            <line x1="16" y1="2" x2="16" y2="6"/>
+            <line x1="8" y1="2" x2="8" y2="6"/>
+            <line x1="3" y1="10" x2="21" y2="10"/>
+          </svg>
+          <CardTitle className="text-base">{t('training.weekday.title')}</CardTitle>
+        </div>
+        <CardDescription>{t('training.weekday.subtitle')}</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {weekdayChartData.length > 0 ? (
+          <>
+            <ResponsiveContainer width="100%" height={200}>
+              <ComposedChart data={weekdayChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                <XAxis dataKey="day" stroke={chartColors.text} fontSize={11} />
+                <YAxis yAxisId="left" stroke={chartColors.text} fontSize={11} />
+                <YAxis yAxisId="right" orientation="right" stroke={chartColors.text} fontSize={11} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
+                    border: `1px solid ${chartColors.grid}`,
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar yAxisId="left" dataKey="activities" name={t('training.weekday.legendActivities')} fill={trainingPalette.mutedFill} radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="right" dataKey="distance" name={t('training.weekday.legendDistance')} fill={trainingPalette.primaryFill} radius={[4, 4, 0, 0]} />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
+                {t('training.weekday.legendActivities')}
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
+                {t('training.weekday.legendDistance')}
+              </div>
+            </div>
+          </>
+        ) : loadingWeekday ? (
+          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.loading.weekday')}</div>
+        ) : (
+          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.noData.weekday')}</div>
+        )}
+      </CardContent>
+    </Card>
+  )
+
+  const renderTimeOfDayCard = () => (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+          <CardTitle className="text-base">{t('training.timeOfDay.title')}</CardTitle>
+        </div>
+        <CardDescription>{t('training.timeOfDay.subtitle')}</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {timeOfDayChartData.length > 0 ? (
+          <>
+            <ResponsiveContainer width="100%" height={200}>
+              <ComposedChart data={timeOfDayChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                <XAxis dataKey="slot" stroke={chartColors.text} fontSize={11} />
+                <YAxis yAxisId="left" stroke={chartColors.text} fontSize={11} />
+                <YAxis yAxisId="right" orientation="right" stroke={chartColors.text} fontSize={11} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
+                    border: `1px solid ${chartColors.grid}`,
+                    borderRadius: '8px',
+                  }}
+                  formatter={(value: number | undefined, name: string | undefined) => {
+                    if (!value || !name) return ['0', '']
+                    if (name === t('training.timeOfDay.legendDistance')) {
+                      return [`${value.toFixed(1)} ${t('records.units.km')}`, name]
+                    }
+                    return [value.toFixed(0), name]
+                  }}
+                />
+                <Bar yAxisId="left" dataKey="activities" name={t('training.timeOfDay.legendActivities')} fill={trainingPalette.secondaryFill} radius={[4, 4, 0, 0]} />
+                <Bar yAxisId="right" dataKey="distance" name={t('training.timeOfDay.legendDistance')} fill={trainingPalette.primaryFill} radius={[4, 4, 0, 0]} />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.secondary }} />
+                {t('training.timeOfDay.legendActivities')}
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
+                {t('training.timeOfDay.legendDistance')}
+              </div>
+            </div>
+          </>
+        ) : loadingTimeOfDay ? (
+          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.loading.timeOfDay')}</div>
+        ) : (
+          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.noData.timeOfDay')}</div>
+        )}
+      </CardContent>
+    </Card>
+  )
+
+  const renderMonthlyCard = () => (
+    <Card>
+      <CardHeader className="pb-3">
+        <div className="flex items-center gap-2">
+          <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M3 3v18h18"/>
+            <path d="m19 9-5 5-4-4-3 3"/>
+          </svg>
+          <CardTitle className="text-base">{t('training.monthly.title')}</CardTitle>
+        </div>
+        <CardDescription>{t('training.monthly.subtitle')}</CardDescription>
+      </CardHeader>
+      <CardContent className="pt-0">
+        {monthlyChartData.length > 0 ? (
+          <>
+            <ResponsiveContainer width="100%" height={220}>
+              <ComposedChart data={monthlyChartData}>
+                <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                <XAxis
+                  dataKey="month"
+                  stroke={chartColors.text}
+                  fontSize={10}
+                  angle={-40}
+                  textAnchor="end"
+                  height={52}
+                  interval={Math.max(0, Math.ceil(monthlyChartData.length / 8) - 1)}
+                />
+                <YAxis yAxisId="left" stroke={chartColors.text} fontSize={11} />
+                <YAxis yAxisId="right" orientation="right" stroke={chartColors.text} fontSize={11} />
+                <Tooltip
+                  contentStyle={{
+                    backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
+                    border: `1px solid ${chartColors.grid}`,
+                    borderRadius: '8px',
+                  }}
+                />
+                <Bar yAxisId="left" dataKey="distance" name={t('training.monthly.legendDistance')} fill={trainingPalette.primaryFill} opacity={0.82} radius={[4, 4, 0, 0]} />
+                <Line yAxisId="right" type="monotone" dataKey="hours" name={t('training.monthly.legendHours')} stroke={trainingPalette.muted} strokeWidth={2.25} dot={false} />
+              </ComposedChart>
+            </ResponsiveContainer>
+            <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
+                {t('training.monthly.legendDistance')}
+              </div>
+              <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
+                {t('training.monthly.legendHours')}
+              </div>
+            </div>
+          </>
+        ) : loadingMonthly ? (
+          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.loading.monthly')}</div>
+        ) : (
+          <div className="flex h-[220px] items-center justify-center text-muted-foreground">{t('training.noData.monthly')}</div>
+        )}
+      </CardContent>
+    </Card>
+  )
 
   return (
     <div className="space-y-5">
@@ -280,14 +548,13 @@ export function Training() {
             {t('training.subtitle')}
           </p>
         </div>
-        {/* Activity Type Toggle - Only Ride/Run */}
-        <div className="flex items-center gap-2 bg-muted/30 rounded-lg p-1.5">
+        <div className="flex items-center gap-2 rounded-lg bg-muted/30 p-1.5">
           <button
             onClick={() => setActivityType('Ride')}
-            className={`px-4 py-2 text-sm rounded-md transition-all font-medium flex items-center gap-2 cursor-pointer border ${
+            className={`flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all ${
               activityType === 'Ride'
-                ? 'bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg'
-                : 'hover:bg-secondary/50 border-transparent text-muted-foreground'
+                ? 'border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background text-orange-600 shadow-lg dark:text-orange-400'
+                : 'border-transparent text-muted-foreground hover:bg-secondary/50'
             }`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -300,10 +567,10 @@ export function Training() {
           </button>
           <button
             onClick={() => setActivityType('Run')}
-            className={`px-4 py-2 text-sm rounded-md transition-all font-medium flex items-center gap-2 cursor-pointer border ${
+            className={`flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all ${
               activityType === 'Run'
-                ? 'bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg'
-                : 'hover:bg-secondary/50 border-transparent text-muted-foreground'
+                ? 'border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background text-orange-600 shadow-lg dark:text-orange-400'
+                : 'border-transparent text-muted-foreground hover:bg-secondary/50'
             }`}
           >
             <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -315,132 +582,116 @@ export function Training() {
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-96">
+        <div className="flex h-96 items-center justify-center">
           <div className="text-center">
-            <div className="animate-spin w-8 h-8 border-2 border-primary border-t-transparent rounded-full mx-auto mb-2" />
+            <div className="mx-auto mb-2 h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
             <p className="text-muted-foreground">{t('training.loading.analytics')}</p>
           </div>
         </div>
       ) : (
-        <>
-          {/* Training Load Chart (CTL/ATL/TSB) - Cycling only */}
-          {activityType === 'Ride' && (
-            <>
-              {loadingTraining && (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <div className="text-muted-foreground">{t('training.loading.trainingLoad')}</div>
-                  </CardContent>
-                </Card>
-              )}
+        <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
+          <div className="min-w-0 flex-1 space-y-5">
+            {activityType === 'Ride' && (
+              <>
+                {loadingTraining && (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <div className="text-muted-foreground">{t('training.loading.trainingLoad')}</div>
+                    </CardContent>
+                  </Card>
+                )}
 
-              {!loadingTraining && ftpData?.ftp && trainingLoad && trainingLoad.dailyValues.length > 0 && (
-                <TrainingLoadChart
-                  data={trainingLoad.dailyValues}
-                  currentCTL={trainingLoad.current.ctl}
-                  currentATL={trainingLoad.current.atl}
-                  currentTSB={trainingLoad.current.tsb}
-                />
-              )}
+                {!loadingTraining && ftpData?.ftp && trainingLoad && trainingLoad.dailyValues.length > 0 && (
+                  <TrainingLoadChart
+                    data={trainingLoad.dailyValues}
+                    currentCTL={trainingLoad.current.ctl}
+                    currentATL={trainingLoad.current.atl}
+                    currentTSB={trainingLoad.current.tsb}
+                  />
+                )}
 
-              {!loadingTraining && ftpData && !ftpData.ftp && (
-                <Card>
-                  <CardContent className="py-8 text-center">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted-foreground opacity-50">
-                      <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+                {!loadingTraining && ftpData && !ftpData.ftp && (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted-foreground opacity-50">
+                        <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+                      </svg>
+                      <h3 className="mb-2 text-lg font-medium">{t('training.trainingLoad.requiredTitle')}</h3>
+                      <p className="text-muted-foreground">{t('training.trainingLoad.requiredBody')}</p>
+                    </CardContent>
+                  </Card>
+                )}
+              </>
+            )}
+
+            {isRunning && runningPerformanceSummary.sampleCount > 0 && (
+              <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
                     </svg>
-                    <h3 className="text-lg font-medium mb-2">{t('training.trainingLoad.requiredTitle')}</h3>
-                    <p className="text-muted-foreground mb-4">
-                      {t('training.trainingLoad.requiredBody')}
-                    </p>
-                  </CardContent>
-                </Card>
-              )}
-            </>
-          )}
+                    {t('training.runPerformance.title')}
+                  </CardTitle>
+                  <CardDescription>
+                    {t('training.runPerformance.subtitle', {
+                      count: runningPerformanceSummary.sampleCount,
+                      distance: runningPerformanceSummary.totalDistanceKm.toFixed(0),
+                    })}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="space-y-3 pt-0">
+                  <div className="grid gap-3 md:grid-cols-3">
+                    <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                      <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                        {t('training.runPerformance.cards.pace150')}
+                      </div>
+                      <div className="mt-2 text-3xl font-semibold tabular-nums text-orange-500">
+                        {formatPaceValue(runningPerformanceSummary.medianNormalizedPace150)}
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">{t('training.units.pace')}</div>
+                    </div>
+                    <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                      <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                        {t('training.runPerformance.cards.efficiency')}
+                      </div>
+                      <div className="mt-2 text-3xl font-semibold tabular-nums text-amber-400">
+                        {runningPerformanceSummary.medianEfficiency?.toFixed(2) ?? '—'}
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">{t('training.runPerformance.units.efficiency')}</div>
+                    </div>
+                    <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                      <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                        {t('training.runPerformance.cards.avgHr')}
+                      </div>
+                      <div className="mt-2 text-3xl font-semibold tabular-nums">
+                        {runningPerformanceSummary.avgHr ? t('activity.units.bpm', { value: runningPerformanceSummary.avgHr }) : '—'}
+                      </div>
+                      <div className="mt-1 text-sm text-muted-foreground">{t('training.runPerformance.cards.avgHrHint')}</div>
+                    </div>
+                  </div>
 
-          {isRunning && runningPerformanceSummary.sampleCount > 0 && (
-            <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
-                  </svg>
-                  {t('training.runPerformance.title')}
-                </CardTitle>
-                <CardDescription>
-                  {t('training.runPerformance.subtitle', {
-                    count: runningPerformanceSummary.sampleCount,
-                    distance: runningPerformanceSummary.totalDistanceKm.toFixed(0),
-                  })}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-3 pt-0">
-                <div className="grid gap-3 md:grid-cols-3">
-                  <div className="rounded-xl border border-border/60 bg-background/60 p-4">
-                    <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                      {t('training.runPerformance.cards.pace150')}
-                    </div>
-                    <div className="mt-2 text-3xl font-semibold tabular-nums text-orange-500">
-                      {formatPaceValue(runningPerformanceSummary.medianNormalizedPace150)}
-                    </div>
-                    <div className="mt-1 text-sm text-muted-foreground">{t('training.units.pace')}</div>
-                  </div>
-                  <div className="rounded-xl border border-border/60 bg-background/60 p-4">
-                    <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                      {t('training.runPerformance.cards.efficiency')}
-                    </div>
-                    <div className="mt-2 text-3xl font-semibold tabular-nums text-amber-400">
-                      {runningPerformanceSummary.medianEfficiency?.toFixed(2) ?? '—'}
-                    </div>
-                    <div className="mt-1 text-sm text-muted-foreground">{t('training.runPerformance.units.efficiency')}</div>
-                  </div>
-                  <div className="rounded-xl border border-border/60 bg-background/60 p-4">
-                    <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                      {t('training.runPerformance.cards.avgHr')}
-                    </div>
-                    <div className="mt-2 text-3xl font-semibold tabular-nums">
-                      {runningPerformanceSummary.avgHr ? t('activity.units.bpm', { value: runningPerformanceSummary.avgHr }) : '—'}
-                    </div>
-                    <div className="mt-1 text-sm text-muted-foreground">{t('training.runPerformance.cards.avgHrHint')}</div>
-                  </div>
-                </div>
-
-                {runningPerformanceTrendData.length > 1 && (
-                  <div className="rounded-xl border border-border/60 bg-background/40 p-3">
-                    <div className="mb-3">
-                      <div className="text-sm font-medium">{t('training.runPerformance.trendTitle')}</div>
-                      <div className="text-xs text-muted-foreground">{t('training.runPerformance.trendSubtitle')}</div>
-                    </div>
-                    <ResponsiveContainer width="100%" height={210}>
-                      <ComposedChart data={runningPerformanceTrendData}>
-                        <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                        <XAxis dataKey="label" stroke={chartColors.text} fontSize={11} />
-                        <YAxis
-                          stroke={chartColors.text}
-                          fontSize={11}
-                          reversed
-                          domain={['auto', 'auto']}
-                          tickFormatter={(value) => formatPaceValue(value)}
-                          label={{ value: t('training.runPerformance.axis'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
-                        />
-                        <Tooltip
-                          contentStyle={{
-                            backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-                            border: `1px solid ${chartColors.grid}`,
-                            borderRadius: '8px',
-                          }}
-                          formatter={(value: any, name?: string) => {
-                            if (name === t('training.runPerformance.tooltip.pace150')) {
-                              return [`${formatPaceValue(Number(value))} ${t('training.units.pace')}`, name]
-                            }
-                            if (name === t('training.runPerformance.tooltip.efficiency')) {
-                              return [Number(value).toFixed(2), name]
-                            }
-                            return [value, name]
-                          }}
-                          content={({ active, payload }) => {
-                            if (active && payload && payload.length) {
+                  {runningPerformanceTrendData.length > 1 && (
+                    <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                      <div className="mb-3">
+                        <div className="text-sm font-medium">{t('training.runPerformance.trendTitle')}</div>
+                        <div className="text-xs text-muted-foreground">{t('training.runPerformance.trendSubtitle')}</div>
+                      </div>
+                      <ResponsiveContainer width="100%" height={210}>
+                        <ComposedChart data={runningPerformanceTrendData}>
+                          <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                          <XAxis dataKey="label" stroke={chartColors.text} fontSize={11} />
+                          <YAxis
+                            stroke={chartColors.text}
+                            fontSize={11}
+                            reversed
+                            domain={['auto', 'auto']}
+                            tickFormatter={(value) => formatPaceValue(value)}
+                            label={{ value: t('training.runPerformance.axis'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
+                          />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.length) return null
                               const data = payload[0].payload
                               return (
                                 <div style={{
@@ -450,7 +701,7 @@ export function Training() {
                                   padding: '8px',
                                 }}>
                                   <p className="font-semibold">{data.label}</p>
-                                  <p className="text-sm mt-1">
+                                  <p className="mt-1 text-sm">
                                     {t('training.runPerformance.tooltip.pace150')}: <span className="font-medium">{formatPaceValue(data.pace150)} {t('training.units.pace')}</span>
                                   </p>
                                   <p className="text-sm">
@@ -459,595 +710,300 @@ export function Training() {
                                   <p className="text-sm">
                                     {t('training.runPerformance.tooltip.avgHr')}: <span className="font-medium">{data.avgHr ? t('activity.units.bpm', { value: data.avgHr }) : '—'}</span>
                                   </p>
-                                  <p className="text-sm text-muted-foreground">
-                                    {t('training.runPerformance.tooltip.runs', { count: data.sampleCount })}
-                                  </p>
+                                  <p className="text-sm text-muted-foreground">{t('training.runPerformance.tooltip.runs', { count: data.sampleCount })}</p>
                                 </div>
                               )
-                            }
-                            return null
-                          }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="pace150"
-                          stroke={colors.primary}
-                          strokeWidth={2.5}
-                          dot={{ fill: colors.primary, r: 3.5 }}
-                          activeDot={{ r: 5 }}
-                          name={t('training.runPerformance.tooltip.pace150')}
-                          isAnimationActive={false}
-                        />
-                      </ComposedChart>
-                    </ResponsiveContainer>
-                  </div>
-                )}
+                            }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="pace150"
+                            stroke={colors.primary}
+                            strokeWidth={2.5}
+                            dot={{ fill: colors.primary, r: 3.5 }}
+                            activeDot={{ r: 5 }}
+                            name={t('training.runPerformance.tooltip.pace150')}
+                            isAnimationActive={false}
+                          />
+                        </ComposedChart>
+                      </ResponsiveContainer>
+                    </div>
+                  )}
 
-                <div className="text-xs text-muted-foreground">
-                  {t('training.runPerformance.footnote')}
-                </div>
-              </CardContent>
-            </Card>
-          )}
+                  <div className="text-xs text-muted-foreground">{t('training.runPerformance.footnote')}</div>
+                </CardContent>
+              </Card>
+            )}
 
-          {/* All Running Activities Pace Scatter Plot - Only show when filtering by Run */}
-          {isRunning && runningActivities && runningActivities.activities.length > 0 && (
-            <Card>
-              <CardHeader>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <CardTitle className="flex items-center gap-2">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                        <circle cx="12" cy="12" r="10"/>
-                        <path d="M12 2a7 7 0 1 0 10 10"/>
-                      </svg>
-                      {t('training.pace.title')}
-                    </CardTitle>
-                    <CardDescription>
-                      {t('training.pace.subtitle', { count: runningActivities.total_activities })}
-                    </CardDescription>
-                  </div>
-                  <div className="flex items-center gap-1 bg-secondary rounded-lg p-1">
-                    <button
-                      onClick={() => setPaceTimePeriod(0)}
-                      className={`px-2 py-1 text-xs rounded-md transition-all ${
-                        paceTimePeriod === 0
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {t('training.pace.filters.all')}
-                    </button>
-                    <button
-                      onClick={() => setPaceTimePeriod(24)}
-                      className={`px-2 py-1 text-xs rounded-md transition-all ${
-                        paceTimePeriod === 24
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {t('training.pace.filters.twoYears')}
-                    </button>
-                    <button
-                      onClick={() => setPaceTimePeriod(12)}
-                      className={`px-2 py-1 text-xs rounded-md transition-all ${
-                        paceTimePeriod === 12
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {t('training.pace.filters.oneYear')}
-                    </button>
-                    <button
-                      onClick={() => setPaceTimePeriod(6)}
-                      className={`px-2 py-1 text-xs rounded-md transition-all ${
-                        paceTimePeriod === 6
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {t('training.pace.filters.sixMonths')}
-                    </button>
-                    <button
-                      onClick={() => setPaceTimePeriod(3)}
-                      className={`px-2 py-1 text-xs rounded-md transition-all ${
-                        paceTimePeriod === 3
-                          ? 'bg-primary text-primary-foreground shadow-sm'
-                          : 'text-muted-foreground hover:text-foreground'
-                      }`}
-                    >
-                      {t('training.pace.filters.threeMonths')}
-                    </button>
-                  </div>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <ResponsiveContainer width="100%" height={270}>
-                  <ComposedChart data={runningActivities.activities}>
-                    <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                    <XAxis
-                      dataKey="date"
-                      stroke={chartColors.text}
-                      fontSize={11}
-                      tickFormatter={(value) => formatMonthYear(value)}
-                    />
-                    <YAxis
-                      yAxisId="left"
-                      stroke={chartColors.text}
-                      fontSize={11}
-                      label={{ value: t('training.pace.axis'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
-                      reversed
-                      domain={['auto', 'auto']}
-                      tickFormatter={(value) => {
-                        const minutes = Math.floor(value)
-                        const seconds = Math.round((value - minutes) * 60)
-                        return `${minutes}:${seconds.toString().padStart(2, '0')}`
-                      }}
-                    />
-                    <Tooltip
-                      contentStyle={{
-                        backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-                        border: `1px solid ${chartColors.grid}`,
-                        borderRadius: '8px',
-                      }}
-                      formatter={(value: any, name?: string) => {
-                        if (name === paceLabel) {
-                          return [`${value} ${t('training.units.pace')}`, name]
+            {isRunning && runningPaceChartData.length > 0 && (
+              <Card className="border-border/70">
+                <CardHeader className="gap-4">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <circle cx="12" cy="12" r="10"/>
+                          <path d="M12 2a7 7 0 1 0 10 10"/>
+                        </svg>
+                        {t('training.pace.title')}
+                      </CardTitle>
+                      <CardDescription>{t('training.pace.subtitle', { count: runningActivities?.total_activities ?? runningPaceChartData.length })}</CardDescription>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1 rounded-lg bg-secondary p-1">
+                      {[0, 24, 12, 6, 3].map((value) => {
+                        const labels: Record<number, string> = {
+                          0: t('training.pace.filters.all'),
+                          24: t('training.pace.filters.twoYears'),
+                          12: t('training.pace.filters.oneYear'),
+                          6: t('training.pace.filters.sixMonths'),
+                          3: t('training.pace.filters.threeMonths'),
                         }
-                        if (name === distanceLabel) {
-                          return [`${value} ${t('records.units.km')}`, name]
-                        }
-                        return [value, name]
-                      }}
-                      labelFormatter={(label) => formatLongDate(label)}
-                      content={({ active, payload }) => {
-                        if (active && payload && payload.length) {
+                        return (
+                          <button
+                            key={value}
+                            onClick={() => setPaceTimePeriod(value)}
+                            className={`rounded-md px-2 py-1 text-xs transition-all ${
+                              paceTimePeriod === value
+                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                : 'text-muted-foreground hover:text-foreground'
+                            }`}
+                          >
+                            {labels[value]}
+                          </button>
+                        )
+                      })}
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 sm:grid-cols-3">
+                    <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{paceLabel}</div>
+                      <div className="mt-1 text-2xl font-semibold tabular-nums text-orange-500">{formatPaceValue(runningPaceSummary.averagePace)}</div>
+                    </div>
+                    <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{distanceLabel}</div>
+                      <div className="mt-1 text-2xl font-semibold tabular-nums">
+                        {runningPaceSummary.averageDistance ? `${runningPaceSummary.averageDistance.toFixed(1)} ${t('records.units.km')}` : '—'}
+                      </div>
+                    </div>
+                    <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                      <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{avgHrLabel}</div>
+                      <div className="mt-1 text-2xl font-semibold tabular-nums">
+                        {runningPerformanceSummary.avgHr ? t('activity.units.bpm', { value: runningPerformanceSummary.avgHr }) : '—'}
+                      </div>
+                    </div>
+                  </div>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <ResponsiveContainer width="100%" height={320}>
+                    <ComposedChart data={runningPaceChartData}>
+                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
+                      <XAxis
+                        dataKey="date"
+                        stroke={chartColors.text}
+                        fontSize={11}
+                        tickFormatter={(value) => formatMonthYear(value)}
+                        minTickGap={28}
+                      />
+                      <YAxis
+                        yAxisId="pace"
+                        stroke={chartColors.text}
+                        fontSize={11}
+                        reversed
+                        domain={['auto', 'auto']}
+                        tickFormatter={(value) => formatPaceValue(value)}
+                        label={{ value: t('training.pace.axis'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
+                      />
+                      <YAxis yAxisId="distance" hide domain={[0, 'dataMax + 2']} />
+                      <Tooltip
+                        content={({ active, payload }) => {
+                          if (!active || !payload?.length) return null
                           const data = payload[0].payload
                           return (
                             <div style={{
                               backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
                               border: `1px solid ${chartColors.grid}`,
                               borderRadius: '8px',
-                              padding: '8px'
+                              padding: '10px',
                             }}>
                               <p className="font-semibold">{data.name}</p>
                               <p className="text-sm text-muted-foreground">{formatLongDate(data.date)}</p>
-                              <p className="text-sm mt-1">{paceLabel}: <span className="font-medium">{data.avg_pace} {t('training.units.pace')}</span></p>
-                              <p className="text-sm">{distanceLabel}: <span className="font-medium">{data.distance_km.toFixed(2)} {t('records.units.km')}</span></p>
-                              {data.avg_hr && <p className="text-sm">{avgHrLabel}: <span className="font-medium">{t('activity.units.bpm', { value: data.avg_hr })}</span></p>}
+                              <div className="mt-2 space-y-1 text-sm">
+                                <p>{paceLabel}: <span className="font-medium">{data.avg_pace} {t('training.units.pace')}</span></p>
+                                <p>{rollingPaceLabel}: <span className="font-medium">{formatPaceValue(data.rolling_pace_decimal)} {t('training.units.pace')}</span></p>
+                                <p>{distanceLabel}: <span className="font-medium">{data.distance_km.toFixed(2)} {t('records.units.km')}</span></p>
+                                {data.avg_hr && <p>{avgHrLabel}: <span className="font-medium">{t('activity.units.bpm', { value: data.avg_hr })}</span></p>}
+                              </div>
                             </div>
                           )
-                        }
-                        return null
-                      }}
-                    />
-                    <Line
-                      yAxisId="left"
-                      type="monotone"
-                      dataKey="avg_pace_decimal"
-                      stroke={trainingPalette.primary}
-                      strokeWidth={0}
-                      dot={{ fill: trainingPalette.primary, r: 4 }}
-                      name={paceLabel}
-                      isAnimationActive={false}
-                    />
-                  </ComposedChart>
-                </ResponsiveContainer>
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Training Load (Last 30 Days) - Power-based activities only */}
-          {ftpData?.ftp && recentPowerMetrics && recentPowerMetrics.activities.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
-                  </svg>
-                  {t('training.trainingLoad.title', { days: 30 })}
-                </CardTitle>
-                <CardDescription>
-                  {t('training.trainingLoad.subtitle')}
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {/* Summary Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pb-4 border-b">
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">{t('training.trainingLoad.summary.activities')}</div>
-                      <div className="text-2xl font-bold">{recentPowerMetrics.activities.length}</div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">{t('training.trainingLoad.summary.tss')}</div>
-                      <div className="text-2xl font-bold">
-                        {recentPowerMetrics.activities
-                          .reduce((sum, a) => sum + (a.training_stress_score || 0), 0)
-                          .toFixed(0)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">{t('training.trainingLoad.summary.avgIf')}</div>
-                      <div className="text-2xl font-bold">
-                        {(recentPowerMetrics.activities
-                          .filter(a => a.intensity_factor)
-                          .reduce((sum, a) => sum + (a.intensity_factor || 0), 0) /
-                          recentPowerMetrics.activities.filter(a => a.intensity_factor).length
-                        ).toFixed(2)}
-                      </div>
-                    </div>
-                    <div>
-                      <div className="text-xs text-muted-foreground mb-1">{t('training.trainingLoad.summary.ftp')}</div>
-                      <div className="text-2xl font-bold">{t('activity.units.watt', { value: ftpData.ftp })}</div>
-                    </div>
-                  </div>
-
-                  {/* Activity List */}
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-muted-foreground">
-                          <th className="text-left py-2 px-2">{t('training.trainingLoad.table.date')}</th>
-                          <th className="text-left py-2 px-2">{t('training.trainingLoad.table.activity')}</th>
-                          <th className="text-right py-2 px-2">{t('training.trainingLoad.table.duration')}</th>
-                          <th className="text-right py-2 px-2">{t('training.trainingLoad.table.avgPower')}</th>
-                          <th className="text-right py-2 px-2">{t('training.trainingLoad.table.np')}</th>
-                          <th className="text-right py-2 px-2">{t('training.trainingLoad.table.if')}</th>
-                          <th className="text-right py-2 px-2">{t('training.trainingLoad.table.tss')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentPowerMetrics.activities
-                          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
-                          .map((activity) => {
-                            const durationStr = formatDurationShort(activity.duration_seconds)
-
-                            return (
-                              <tr key={activity.activity_id} className="border-b hover:bg-muted/50">
-                                <td className="py-2 px-2 text-muted-foreground">
-                                  {formatDayMonth(activity.date)}
-                                </td>
-                                <td className="py-2 px-2">
-                                  <Link
-                                    to={`/activity/${activity.activity_id}`}
-                                    className="hover:text-primary hover:underline"
-                                  >
-                                    {activity.name}
-                                  </Link>
-                                </td>
-                                <td className="py-2 px-2 text-right tabular-nums">{durationStr}</td>
-                                <td className="py-2 px-2 text-right tabular-nums">
-                                  {activity.average_power ? t('activity.units.watt', { value: activity.average_power }) : t('common.notAvailable')}
-                                </td>
-                                <td className="py-2 px-2 text-right tabular-nums font-medium">
-                                  {activity.normalized_power ? t('activity.units.watt', { value: activity.normalized_power }) : t('common.notAvailable')}
-                                </td>
-                                <td className="py-2 px-2 text-right tabular-nums">
-                                  {activity.intensity_factor ? (
-                                    <span className={
-                                      activity.intensity_factor >= 1.05 ? 'text-orange-500' :
-                                      activity.intensity_factor >= 0.95 ? 'text-yellow-500' :
-                                      'text-muted-foreground'
-                                    }>
-                                      {activity.intensity_factor.toFixed(2)}
-                                    </span>
-                                  ) : t('common.notAvailable')}
-                                </td>
-                                <td className="py-2 px-2 text-right tabular-nums font-medium">
-                                  {activity.training_stress_score ? (
-                                    <span className={
-                                      activity.training_stress_score >= 150 ? 'text-red-500' :
-                                      activity.training_stress_score >= 100 ? 'text-orange-500' :
-                                      activity.training_stress_score >= 50 ? 'text-yellow-500' :
-                                      'text-green-500'
-                                    }>
-                                      {activity.training_stress_score.toFixed(0)}
-                                    </span>
-                                  ) : t('common.notAvailable')}
-                                </td>
-                              </tr>
-                            )
-                          })}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
-          <div className="grid gap-5 xl:grid-cols-2">
-          {/* Heart Rate Zones - Only show when filtering by Run */}
-          {isRunning && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                  </svg>
-                  {t('training.hrZones.title')}
-                </CardTitle>
-                <CardDescription>
-                  {t('training.hrZones.subtitle', { months: monthsForPeriod })}
-                  {hrZones && hrZones.activities_analyzed > 0 && (
-                    <span className="ml-2">• {t('training.hrZones.activities', { count: hrZones.activities_analyzed })}</span>
-                  )}
-                </CardDescription>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {hrZoneData.length > 0 ? (
-                  <div className="space-y-3">
-                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-3">
-                      <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
-                        <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                          {t('training.hrZones.activities')}
-                        </div>
-                        <div className="mt-1 text-xl font-semibold tabular-nums">
-                          {hrZones?.activities_analyzed ?? 0}
-                        </div>
-                      </div>
-                      <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
-                        <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                          {t('training.hrZones.title')}
-                        </div>
-                        <div className="mt-1 text-xl font-semibold tabular-nums">
-                          {formatMinutes(hrZones?.total_minutes ?? 0)}
-                        </div>
-                      </div>
-                      {hrZoneData[0] && (
-                        <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
-                          <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
-                            {hrZoneData[0].name}
-                          </div>
-                          <div className="mt-1 text-xl font-semibold tabular-nums">
-                            {hrZoneData[0].percent}%
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                    <div className="grid gap-2 md:grid-cols-2">
-                      {hrZoneData.map((zone, index) => (
-                        <div key={zone.name} className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
-                          <div
-                            className="w-3 h-3 rounded-full"
-                            style={{ backgroundColor: zone.color || hrZoneColors[index]?.color }}
-                          />
-                          <div className="flex-1">
-                            <p className="text-sm font-medium">{zone.name}</p>
-                            <p className="text-xs text-muted-foreground">
-                              {zone.percent}% • {formatMinutes(zone.value)}
-                            </p>
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="h-[220px] flex items-center justify-center text-muted-foreground">
-                    {t('training.noData.hrZones')}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Weekday Distribution */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
-                  <line x1="16" y1="2" x2="16" y2="6"/>
-                  <line x1="8" y1="2" x2="8" y2="6"/>
-                  <line x1="3" y1="10" x2="21" y2="10"/>
-                </svg>
-                <CardTitle>{t('training.weekday.title')}</CardTitle>
-              </div>
-              <CardDescription>{t('training.weekday.subtitle')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {weekdayChartData.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <ComposedChart data={weekdayChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                      <XAxis dataKey="day" stroke={chartColors.text} fontSize={12} />
-                      <YAxis
-                        yAxisId="left"
-                        stroke={chartColors.text}
-                        fontSize={12}
-                        label={{ value: t('training.weekday.axisActivities'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text, fontSize: 11 } }}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        stroke={chartColors.text}
-                        fontSize={12}
-                        label={{ value: t('training.weekday.axisDistance'), angle: 90, position: 'insideRight', style: { fill: chartColors.text } }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-                          border: `1px solid ${chartColors.grid}`,
-                          borderRadius: '8px',
                         }}
                       />
-                      <Bar yAxisId="left" dataKey="activities" name={t('training.weekday.legendActivities')} fill={trainingPalette.mutedFill} radius={[4, 4, 0, 0]} />
-                      <Bar yAxisId="right" dataKey="distance" name={t('training.weekday.legendDistance')} fill={trainingPalette.primaryFill} radius={[4, 4, 0, 0]} />
+                      <Bar
+                        yAxisId="distance"
+                        dataKey="distance_km"
+                        fill={trainingPalette.mutedFill}
+                        opacity={0.18}
+                        radius={[4, 4, 0, 0]}
+                        maxBarSize={18}
+                        name={distanceLabel}
+                      />
+                      <Area
+                        yAxisId="pace"
+                        type="monotone"
+                        dataKey="avg_pace_decimal"
+                        stroke={trainingPalette.primary}
+                        fill={trainingPalette.primaryFill}
+                        fillOpacity={0.22}
+                        strokeWidth={2}
+                        isAnimationActive={false}
+                        name={paceLabel}
+                      />
+                      <Line
+                        yAxisId="pace"
+                        type="monotone"
+                        dataKey="rolling_pace_decimal"
+                        stroke={trainingPalette.secondary}
+                        strokeWidth={2.5}
+                        dot={false}
+                        isAnimationActive={false}
+                        name={rollingPaceLabel}
+                      />
                     </ComposedChart>
                   </ResponsiveContainer>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
-                      {t('training.weekday.legendActivities')}
-                    </div>
+                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
-                      {t('training.weekday.legendDistance')}
+                      {paceLabel}
                     </div>
-                  </div>
-                </>
-              ) : loadingWeekday ? (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  {t('training.loading.weekday')}
-                </div>
-              ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  {t('training.noData.weekday')}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Time of Day Distribution */}
-          <Card>
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="12" r="10"/>
-                  <polyline points="12 6 12 12 16 14"/>
-                </svg>
-                <CardTitle>{t('training.timeOfDay.title')}</CardTitle>
-              </div>
-              <CardDescription>{t('training.timeOfDay.subtitle')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {timeOfDayChartData.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <ComposedChart data={timeOfDayChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                      <XAxis dataKey="slot" stroke={chartColors.text} fontSize={12} />
-                      <YAxis
-                        yAxisId="left"
-                        stroke={chartColors.text}
-                        fontSize={12}
-                        label={{ value: t('training.timeOfDay.axisActivities'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text, fontSize: 11 } }}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        stroke={chartColors.text}
-                        fontSize={12}
-                        label={{ value: t('training.timeOfDay.axisDistance'), angle: 90, position: 'insideRight', style: { fill: chartColors.text } }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-                          border: `1px solid ${chartColors.grid}`,
-                          borderRadius: '8px',
-                        }}
-                        formatter={(value: number | undefined, name: string | undefined) => {
-                          if (!value || !name) return ['0', '']
-                          if (name === t('training.timeOfDay.legendDistance')) {
-                            return [`${value.toFixed(1)} ${t('records.units.km')}`, name]
-                          }
-                          return [value.toFixed(0), name]
-                        }}
-                      />
-                      <Bar yAxisId="left" dataKey="activities" name={t('training.timeOfDay.legendActivities')} fill={trainingPalette.secondaryFill} radius={[4, 4, 0, 0]} />
-                      <Bar yAxisId="right" dataKey="distance" name={t('training.timeOfDay.legendDistance')} fill={trainingPalette.primaryFill} radius={[4, 4, 0, 0]} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
                     <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.secondary }} />
-                      {t('training.timeOfDay.legendActivities')}
-                    </div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
-                      {t('training.timeOfDay.legendDistance')}
-                    </div>
-                  </div>
-                </>
-              ) : loadingTimeOfDay ? (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  {t('training.loading.timeOfDay')}
-                </div>
-              ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  {t('training.noData.timeOfDay')}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Monthly Comparison */}
-          <Card className="xl:col-span-2">
-            <CardHeader>
-              <div className="flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 3v18h18"/>
-                  <path d="m19 9-5 5-4-4-3 3"/>
-                </svg>
-                <CardTitle>{t('training.monthly.title')}</CardTitle>
-              </div>
-              <CardDescription>{t('training.monthly.subtitle')}</CardDescription>
-            </CardHeader>
-            <CardContent>
-              {monthlyChartData.length > 0 ? (
-                <>
-                  <ResponsiveContainer width="100%" height={220}>
-                    <ComposedChart data={monthlyChartData}>
-                      <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
-                      <XAxis
-                        dataKey="month"
-                        stroke={chartColors.text}
-                        fontSize={10}
-                        angle={-45}
-                        textAnchor="end"
-                        height={60}
-                        interval={Math.ceil(monthlyChartData.length / 12)}
-                      />
-                      <YAxis
-                        yAxisId="left"
-                        stroke={chartColors.text}
-                        fontSize={12}
-                        label={{ value: t('training.monthly.axisDistance'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
-                      />
-                      <YAxis
-                        yAxisId="right"
-                        orientation="right"
-                        stroke={chartColors.text}
-                        fontSize={12}
-                        label={{ value: t('training.monthly.axisHours'), angle: 90, position: 'insideRight', style: { fill: chartColors.text } }}
-                      />
-                      <Tooltip
-                        contentStyle={{
-                          backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-                          border: `1px solid ${chartColors.grid}`,
-                          borderRadius: '8px',
-                        }}
-                      />
-                      <Bar yAxisId="left" dataKey="distance" name={t('training.monthly.legendDistance')} fill={trainingPalette.primaryFill} opacity={0.82} radius={[4, 4, 0, 0]} />
-                      <Line yAxisId="right" type="monotone" dataKey="hours" name={t('training.monthly.legendHours')} stroke={trainingPalette.muted} strokeWidth={2.25} dot={false} />
-                    </ComposedChart>
-                  </ResponsiveContainer>
-                  <div className="mt-3 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
-                      <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
-                      {t('training.monthly.legendDistance')}
+                      {rollingPaceLabel}
                     </div>
                     <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
-                      {t('training.monthly.legendHours')}
+                      {distanceLabel}
                     </div>
                   </div>
-                </>
-              ) : loadingMonthly ? (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  {t('training.loading.monthly')}
-                </div>
-              ) : (
-                <div className="h-[250px] flex items-center justify-center text-muted-foreground">
-                  {t('training.noData.monthly')}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+                </CardContent>
+              </Card>
+            )}
+
+            {ftpData?.ftp && recentPowerMetrics && recentPowerMetrics.activities.length > 0 && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+                    </svg>
+                    {t('training.trainingLoad.title', { days: 30 })}
+                  </CardTitle>
+                  <CardDescription>{t('training.trainingLoad.subtitle')}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4 border-b pb-4 md:grid-cols-4">
+                      <div>
+                        <div className="mb-1 text-xs text-muted-foreground">{t('training.trainingLoad.summary.activities')}</div>
+                        <div className="text-2xl font-bold">{recentPowerMetrics.activities.length}</div>
+                      </div>
+                      <div>
+                        <div className="mb-1 text-xs text-muted-foreground">{t('training.trainingLoad.summary.tss')}</div>
+                        <div className="text-2xl font-bold">
+                          {recentPowerMetrics.activities.reduce((sum, a) => sum + (a.training_stress_score || 0), 0).toFixed(0)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mb-1 text-xs text-muted-foreground">{t('training.trainingLoad.summary.avgIf')}</div>
+                        <div className="text-2xl font-bold">
+                          {(recentPowerMetrics.activities
+                            .filter(a => a.intensity_factor)
+                            .reduce((sum, a) => sum + (a.intensity_factor || 0), 0) /
+                            recentPowerMetrics.activities.filter(a => a.intensity_factor).length
+                          ).toFixed(2)}
+                        </div>
+                      </div>
+                      <div>
+                        <div className="mb-1 text-xs text-muted-foreground">{t('training.trainingLoad.summary.ftp')}</div>
+                        <div className="text-2xl font-bold">{t('activity.units.watt', { value: ftpData.ftp })}</div>
+                      </div>
+                    </div>
+
+                    <div className="overflow-x-auto">
+                      <table className="w-full text-sm">
+                        <thead>
+                          <tr className="border-b text-muted-foreground">
+                            <th className="px-2 py-2 text-left">{t('training.trainingLoad.table.date')}</th>
+                            <th className="px-2 py-2 text-left">{t('training.trainingLoad.table.activity')}</th>
+                            <th className="px-2 py-2 text-right">{t('training.trainingLoad.table.duration')}</th>
+                            <th className="px-2 py-2 text-right">{t('training.trainingLoad.table.avgPower')}</th>
+                            <th className="px-2 py-2 text-right">{t('training.trainingLoad.table.np')}</th>
+                            <th className="px-2 py-2 text-right">{t('training.trainingLoad.table.if')}</th>
+                            <th className="px-2 py-2 text-right">{t('training.trainingLoad.table.tss')}</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {recentPowerMetrics.activities
+                            .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+                            .map((activity) => {
+                              const durationStr = formatDurationShort(activity.duration_seconds)
+
+                              return (
+                                <tr key={activity.activity_id} className="border-b hover:bg-muted/50">
+                                  <td className="px-2 py-2 text-muted-foreground">{formatDayMonth(activity.date)}</td>
+                                  <td className="px-2 py-2">
+                                    <Link to={`/activity/${activity.activity_id}`} className="hover:text-primary hover:underline">
+                                      {activity.name}
+                                    </Link>
+                                  </td>
+                                  <td className="px-2 py-2 text-right tabular-nums">{durationStr}</td>
+                                  <td className="px-2 py-2 text-right tabular-nums">
+                                    {activity.average_power ? t('activity.units.watt', { value: activity.average_power }) : t('common.notAvailable')}
+                                  </td>
+                                  <td className="px-2 py-2 text-right tabular-nums font-medium">
+                                    {activity.normalized_power ? t('activity.units.watt', { value: activity.normalized_power }) : t('common.notAvailable')}
+                                  </td>
+                                  <td className="px-2 py-2 text-right tabular-nums">
+                                    {activity.intensity_factor ? (
+                                      <span className={
+                                        activity.intensity_factor >= 1.05 ? 'text-orange-500' :
+                                        activity.intensity_factor >= 0.95 ? 'text-yellow-500' :
+                                        'text-muted-foreground'
+                                      }>
+                                        {activity.intensity_factor.toFixed(2)}
+                                      </span>
+                                    ) : t('common.notAvailable')}
+                                  </td>
+                                  <td className="px-2 py-2 text-right tabular-nums font-medium">
+                                    {activity.training_stress_score ? (
+                                      <span className={
+                                        activity.training_stress_score >= 150 ? 'text-red-500' :
+                                        activity.training_stress_score >= 100 ? 'text-orange-500' :
+                                        activity.training_stress_score >= 50 ? 'text-yellow-500' :
+                                        'text-green-500'
+                                      }>
+                                        {activity.training_stress_score.toFixed(0)}
+                                      </span>
+                                    ) : t('common.notAvailable')}
+                                  </td>
+                                </tr>
+                              )
+                            })}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </div>
-        </>
+
+          <div className="space-y-5 xl:sticky xl:top-20 xl:w-[24rem] xl:flex-shrink-0">
+            {isRunning && renderHeartRateZonesCard()}
+            {renderWeekdayCard()}
+            {renderTimeOfDayCard()}
+            {renderMonthlyCard()}
+          </div>
+        </div>
       )}
     </div>
   )
