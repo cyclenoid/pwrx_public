@@ -313,6 +313,7 @@ export function Training() {
   const rollingPaceLabel = `${t('training.pace.tooltip.pace')} Trend`
   const sidebarCardClass = 'border-border/60 bg-card/95 shadow-sm'
   const sidebarLegendClass = 'inline-flex items-center gap-2 rounded-full border border-border/40 bg-muted/10 px-2.5 py-0.5 text-[11px] text-muted-foreground'
+  const paceMetricTileClass = 'rounded-xl border border-border/50 bg-background/70 px-4 py-3 shadow-sm'
 
   const renderHeartRateZonesCard = () => (
     <Card className={sidebarCardClass}>
@@ -740,20 +741,20 @@ export function Training() {
             )}
 
             {isRunning && runningPaceChartData.length > 0 && (
-              <Card className="border-border/70">
-                <CardHeader className="gap-4">
+              <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.05] via-transparent to-transparent shadow-lg shadow-orange-500/5">
+                <CardHeader className="pb-3">
                   <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
                     <div>
-                      <CardTitle className="flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <CardTitle className="flex items-center gap-2 text-base">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-orange-500">
                           <circle cx="12" cy="12" r="10"/>
                           <path d="M12 2a7 7 0 1 0 10 10"/>
                         </svg>
                         {t('training.pace.title')}
                       </CardTitle>
-                      <CardDescription>{t('training.pace.subtitle', { count: runningActivities?.total_activities ?? runningPaceChartData.length })}</CardDescription>
+                      <CardDescription className="mt-1 text-xs">{t('training.pace.subtitle', { count: runningActivities?.total_activities ?? runningPaceChartData.length })}</CardDescription>
                     </div>
-                    <div className="flex flex-wrap items-center gap-1 rounded-lg bg-secondary p-1">
+                    <div className="flex flex-wrap items-center gap-1 rounded-full bg-secondary/70 p-1">
                       {[0, 24, 12, 6, 3].map((value) => {
                         const labels: Record<number, string> = {
                           0: t('training.pace.filters.all'),
@@ -766,9 +767,9 @@ export function Training() {
                           <button
                             key={value}
                             onClick={() => setPaceTimePeriod(value)}
-                            className={`rounded-md px-2 py-1 text-xs transition-all ${
+                            className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
                               paceTimePeriod === value
-                                ? 'bg-primary text-primary-foreground shadow-sm'
+                                ? 'bg-background text-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground'
                             }`}
                           >
@@ -779,44 +780,49 @@ export function Training() {
                     </div>
                   </div>
 
-                  <div className="grid gap-3 sm:grid-cols-3">
-                    <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                  <div className="grid gap-2 sm:grid-cols-3">
+                    <div className={paceMetricTileClass}>
                       <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{paceLabel}</div>
-                      <div className="mt-1 text-2xl font-semibold tabular-nums text-orange-500">{formatPaceValue(runningPaceSummary.averagePace)}</div>
+                      <div className="mt-1 text-xl font-semibold tabular-nums text-orange-500">{formatPaceValue(runningPaceSummary.averagePace)}</div>
                     </div>
-                    <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                    <div className={paceMetricTileClass}>
                       <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{distanceLabel}</div>
-                      <div className="mt-1 text-2xl font-semibold tabular-nums">
+                      <div className="mt-1 text-xl font-semibold tabular-nums">
                         {runningPaceSummary.averageDistance ? `${runningPaceSummary.averageDistance.toFixed(1)} ${t('records.units.km')}` : '—'}
                       </div>
                     </div>
-                    <div className="rounded-xl border border-border/60 bg-muted/10 px-4 py-3">
+                    <div className={paceMetricTileClass}>
                       <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{avgHrLabel}</div>
-                      <div className="mt-1 text-2xl font-semibold tabular-nums">
+                      <div className="mt-1 text-xl font-semibold tabular-nums">
                         {runningPerformanceSummary.avgHr ? t('activity.units.bpm', { value: runningPerformanceSummary.avgHr }) : '—'}
                       </div>
                     </div>
                   </div>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <ResponsiveContainer width="100%" height={320}>
+                  <ResponsiveContainer width="100%" height={300}>
                     <ComposedChart data={runningPaceChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} vertical={false} />
                       <XAxis
                         dataKey="date"
                         stroke={chartColors.text}
-                        fontSize={11}
+                        fontSize={10}
                         tickFormatter={(value) => formatMonthYear(value)}
                         minTickGap={28}
+                        tickLine={false}
+                        axisLine={false}
                       />
                       <YAxis
                         yAxisId="pace"
                         stroke={chartColors.text}
-                        fontSize={11}
+                        fontSize={10}
                         reversed
                         domain={['auto', 'auto']}
                         tickFormatter={(value) => formatPaceValue(value)}
                         label={{ value: t('training.pace.axis'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
+                        tickLine={false}
+                        axisLine={false}
+                        width={34}
                       />
                       <YAxis yAxisId="distance" hide domain={[0, 'dataMax + 2']} />
                       <Tooltip
@@ -874,16 +880,16 @@ export function Training() {
                       />
                     </ComposedChart>
                   </ResponsiveContainer>
-                  <div className="mt-4 flex flex-wrap gap-2 text-xs text-muted-foreground">
-                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                  <div className="mt-3 flex flex-wrap gap-1.5">
+                    <div className={sidebarLegendClass}>
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.primary }} />
                       {paceLabel}
                     </div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                    <div className={sidebarLegendClass}>
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.secondary }} />
                       {rollingPaceLabel}
                     </div>
-                    <div className="inline-flex items-center gap-2 rounded-full border border-border/50 bg-muted/10 px-3 py-1">
+                    <div className={sidebarLegendClass}>
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
                       {distanceLabel}
                     </div>
