@@ -52,9 +52,12 @@ export function Training() {
   // Get theme-aware chart colors
   const colors = getChartColors(resolvedTheme === 'dark' ? 'dark' : 'light')
   const hrZoneColors = getHeartRateZoneColors()
+  const isRunning = activityType === 'Run'
 
   // Fixed time period: last 12 months for patterns and efficiency metrics
   const monthsForPeriod = 12
+  const sidebarPeriodMonths = isRunning ? paceTimePeriod : monthsForPeriod
+  const sidebarPeriodParam: number | 'all' = isRunning && paceTimePeriod === 0 ? 'all' : sidebarPeriodMonths
 
   // Fetch FTP to enable TSS calculations
   const { data: ftpData } = useQuery({
@@ -82,31 +85,30 @@ export function Training() {
   })
 
   const { data: hrZones, isLoading: loadingZones } = useQuery({
-    queryKey: ['hr-zones', activityType],
-    queryFn: () => getHeartRateZones({ type: activityType || undefined, months: monthsForPeriod }),
+    queryKey: ['hr-zones', activityType, sidebarPeriodParam],
+    queryFn: () => getHeartRateZones({ type: activityType || undefined, months: sidebarPeriodParam }),
     staleTime: 5 * 60 * 1000,
   })
 
   const { data: weekdayData, isLoading: loadingWeekday } = useQuery({
-    queryKey: ['weekday-distribution', activityType],
-    queryFn: () => getWeekdayDistribution({ type: activityType || undefined, months: monthsForPeriod }),
+    queryKey: ['weekday-distribution', activityType, sidebarPeriodParam],
+    queryFn: () => getWeekdayDistribution({ type: activityType || undefined, months: sidebarPeriodParam }),
     staleTime: 5 * 60 * 1000,
   })
 
   const { data: monthlyData, isLoading: loadingMonthly } = useQuery({
-    queryKey: ['monthly-comparison', activityType],
-    queryFn: () => getMonthlyComparison({ type: activityType || undefined, months: monthsForPeriod }),
+    queryKey: ['monthly-comparison', activityType, sidebarPeriodParam],
+    queryFn: () => getMonthlyComparison({ type: activityType || undefined, months: sidebarPeriodParam }),
     staleTime: 5 * 60 * 1000,
   })
 
   const { data: timeOfDayData, isLoading: loadingTimeOfDay } = useQuery({
-    queryKey: ['time-of-day', activityType],
-    queryFn: () => getTimeOfDayDistribution({ type: activityType || undefined, months: monthsForPeriod }),
+    queryKey: ['time-of-day', activityType, sidebarPeriodParam],
+    queryFn: () => getTimeOfDayDistribution({ type: activityType || undefined, months: sidebarPeriodParam }),
     staleTime: 5 * 60 * 1000,
   })
 
   // Fetch all running activities for pace scatter plot (only when activityType is 'Run') - uses separate paceTimePeriod
-  const isRunning = activityType === 'Run'
   const paceMonthsForPeriod = paceTimePeriod === 0 ? undefined : paceTimePeriod
   const { data: runningActivities } = useQuery({
     queryKey: ['running-activities', paceTimePeriod],

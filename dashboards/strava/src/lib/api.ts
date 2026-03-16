@@ -783,7 +783,7 @@ export const getFitnessTrend = async (params?: {
 
 export const getHeartRateZones = async (params?: {
   type?: string
-  months?: number
+  months?: number | 'all'
 }): Promise<HeartRateZonesResponse> => {
   const { data } = await api.get<HeartRateZonesResponse>('/analytics/heart-rate-zones', { params })
   return data
@@ -810,7 +810,7 @@ export interface WeekdayDistribution {
 
 export const getWeekdayDistribution = async (params?: {
   type?: string
-  months?: number
+  months?: number | 'all'
 }): Promise<WeekdayDistribution[]> => {
   const { data } = await api.get<WeekdayDistribution[]>('/analytics/weekday-distribution', { params })
   return data
@@ -831,7 +831,7 @@ export interface MonthlyComparison {
 
 export const getMonthlyComparison = async (params?: {
   type?: string
-  months?: number
+  months?: number | 'all'
 }): Promise<MonthlyComparison[]> => {
   const { data } = await api.get<MonthlyComparison[]>('/analytics/monthly-comparison', { params })
   return data
@@ -848,7 +848,7 @@ export interface TimeOfDayDistribution {
 
 export const getTimeOfDayDistribution = async (params?: {
   type?: string
-  months?: number
+  months?: number | 'all'
 }): Promise<TimeOfDayDistribution[]> => {
   const { data } = await api.get<TimeOfDayDistribution[]>('/analytics/time-of-day', { params })
   return data
