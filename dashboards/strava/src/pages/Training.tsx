@@ -8,7 +8,7 @@ import { getChartColors, getHeartRateZoneColors } from '../lib/chartTheme'
 import { buildRunningPerformanceSamples, summarizeRunningPerformance } from '../lib/runningMetrics'
 import {
   Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
-  ResponsiveContainer, PieChart, Pie, Cell, ComposedChart
+  ResponsiveContainer, ComposedChart
 } from 'recharts'
 import { TrainingLoadChart } from '../components/charts/TrainingLoadChart'
 import { useTranslation } from 'react-i18next'
@@ -272,7 +272,7 @@ export function Training() {
   const avgHrLabel = t('training.pace.tooltip.avgHr')
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
         <div>
           <h2 className="text-3xl font-bold tracking-tight">{t('training.title')}</h2>
@@ -362,7 +362,7 @@ export function Training() {
           {/* Heart Rate Zones - Only show when filtering by Run */}
           {isRunning && (
             <Card>
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
@@ -376,10 +376,10 @@ export function Training() {
                   )}
                 </CardDescription>
               </CardHeader>
-              <CardContent>
+              <CardContent className="pt-0">
                 {hrZoneData.length > 0 ? (
-                  <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                  <div className="space-y-3">
+                    <div className="grid grid-cols-2 gap-3 lg:grid-cols-4">
                       <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
                         <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
                           {t('training.hrZones.activities')}
@@ -396,35 +396,18 @@ export function Training() {
                           {formatMinutes(hrZones?.total_minutes ?? 0)}
                         </div>
                       </div>
+                      {hrZoneData[0] && (
+                        <div className="rounded-xl border border-border/50 bg-muted/10 px-3 py-2">
+                          <div className="text-[11px] text-muted-foreground uppercase tracking-[0.16em]">
+                            {hrZoneData[0].name}
+                          </div>
+                          <div className="mt-1 text-xl font-semibold tabular-nums">
+                            {hrZoneData[0].percent}%
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    <div className="rounded-xl border border-border/50 bg-muted/10 p-3">
-                      <ResponsiveContainer width="100%" height={220}>
-                      <PieChart>
-                        <Pie
-                          data={hrZoneData}
-                          cx="50%"
-                          cy="50%"
-                          innerRadius={54}
-                          outerRadius={82}
-                          paddingAngle={2}
-                          dataKey="value"
-                        >
-                          {hrZoneData.map((entry, index) => (
-                            <Cell key={`cell-${index}`} fill={entry.color || hrZoneColors[index]?.color} />
-                          ))}
-                        </Pie>
-                        <Tooltip
-                          formatter={(value) => formatMinutes(Number(value))}
-                          contentStyle={{
-                            backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
-                            border: `1px solid ${chartColors.grid}`,
-                            borderRadius: '8px',
-                          }}
-                        />
-                      </PieChart>
-                      </ResponsiveContainer>
-                    </div>
-                    <div className="grid gap-2 sm:grid-cols-2">
+                    <div className="grid gap-2 md:grid-cols-2 xl:grid-cols-3">
                       {hrZoneData.map((zone, index) => (
                         <div key={zone.name} className="flex items-center gap-2 rounded-lg border border-border/50 bg-muted/10 px-3 py-2">
                           <div
@@ -452,7 +435,7 @@ export function Training() {
 
           {isRunning && runningPerformanceSummary.sampleCount > 0 && (
             <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
-              <CardHeader>
+              <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2">
                   <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                     <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
@@ -466,7 +449,7 @@ export function Training() {
                   })}
                 </CardDescription>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="space-y-3 pt-0">
                 <div className="grid gap-3 md:grid-cols-3">
                   <div className="rounded-xl border border-border/60 bg-background/60 p-4">
                     <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
@@ -503,7 +486,7 @@ export function Training() {
                       <div className="text-sm font-medium">{t('training.runPerformance.trendTitle')}</div>
                       <div className="text-xs text-muted-foreground">{t('training.runPerformance.trendSubtitle')}</div>
                     </div>
-                    <ResponsiveContainer width="100%" height={230}>
+                    <ResponsiveContainer width="100%" height={210}>
                       <ComposedChart data={runningPerformanceTrendData}>
                         <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                         <XAxis dataKey="label" stroke={chartColors.text} fontSize={11} />
@@ -653,7 +636,7 @@ export function Training() {
                 </div>
               </CardHeader>
               <CardContent>
-                <ResponsiveContainer width="100%" height={300}>
+                <ResponsiveContainer width="100%" height={270}>
                   <ComposedChart data={runningActivities.activities}>
                     <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                     <XAxis
@@ -865,7 +848,7 @@ export function Training() {
             <CardContent>
               {weekdayChartData.length > 0 ? (
                 <>
-                  <ResponsiveContainer width="100%" height={250}>
+                  <ResponsiveContainer width="100%" height={220}>
                     <ComposedChart data={weekdayChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                       <XAxis dataKey="day" stroke={chartColors.text} fontSize={12} />
@@ -931,7 +914,7 @@ export function Training() {
             <CardContent>
               {timeOfDayChartData.length > 0 ? (
                 <>
-                  <ResponsiveContainer width="100%" height={250}>
+                  <ResponsiveContainer width="100%" height={220}>
                     <ComposedChart data={timeOfDayChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                       <XAxis dataKey="slot" stroke={chartColors.text} fontSize={12} />
@@ -1004,7 +987,7 @@ export function Training() {
             <CardContent>
               {monthlyChartData.length > 0 ? (
                 <>
-                  <ResponsiveContainer width="100%" height={250}>
+                  <ResponsiveContainer width="100%" height={220}>
                     <ComposedChart data={monthlyChartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
                       <XAxis
