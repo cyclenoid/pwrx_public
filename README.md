@@ -156,39 +156,6 @@ docker compose exec strava-tracker npm run db:check
 ## Data & Storage
 Exports, logs, and photos are stored in `DATA_HUB_DATA_DIR` (default: `./data`).
 
-## Workshop App (Optional, dedicated DB on shared PostgreSQL)
-The bike workshop app can run on the same PostgreSQL server, but should use its own database and app user.
-
-1. Set optional variables in `.env`:
-```env
-WORKSHOP_APP_PATH=../workshop
-WORKSHOP_APP_PORT=8096
-WORKSHOP_DB_NAME=workshop
-WORKSHOP_DB_USER=workshop_app
-WORKSHOP_DB_PASSWORD=...
-WORKSHOP_DB_SCHEMA=
-```
-
-2. Start the overlay service:
-```bash
-docker compose -f docker-compose.yml -f docker-compose.workshop.yml up -d workshop-app
-```
-
-3. Open:
-```text
-Workshop App: http://localhost:8096
-```
-
-The service uses the same PostgreSQL server, but not the same application database.
-Recommended runtime:
-- DB: `workshop`
-- User: `workshop_app`
-- Schema: `public` (leave `WORKSHOP_DB_SCHEMA` empty)
-
-Optional reminder channels for workshop appointments:
-- SMTP: `WORKSHOP_SMTP_*`
-- Telegram Bot: `WORKSHOP_TELEGRAM_BOT_TOKEN`, `WORKSHOP_TELEGRAM_CHAT_ID`
-
 ## Activity File Import
 - Quickstart: `docs/IMPORT_QUICKSTART.md`
 - Provider guide (Zwift/Wahoo/Garmin/Apple Health): `docs/IMPORT_PROVIDER_GUIDE.md`
