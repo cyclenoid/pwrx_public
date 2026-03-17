@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { useSearchParams } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   getSyncLogs,
   getTechStats,
@@ -23,6 +23,7 @@ import { useTranslation } from 'react-i18next'
 import { useToast } from '../hooks/useToast'
 import { Toaster } from '../components/ui/toast'
 import { useCapabilities } from '../hooks/useCapabilities'
+import { FEATURE_LOG_LATEST_ENTRY, getFeatureLogText } from '../lib/featureLog'
 import {
   Activity,
   AlertTriangle,
@@ -39,6 +40,7 @@ import {
   Map,
   Monitor,
   FileUp,
+  ScrollText,
   Settings as SettingsIcon,
   Target,
   User
@@ -72,6 +74,7 @@ export default function Settings() {
   const lastSyncLog = syncLogs[0]
   const isSyncRunning = syncLogs.some((log: SyncLog) => log.status === 'running')
   const dateLocale = i18n.language?.startsWith('de') ? 'de-DE' : 'en-US'
+  const latestFeatureLogText = getFeatureLogText(FEATURE_LOG_LATEST_ENTRY, i18n.language)
   const formatDate = (value: string | number) => new Intl.DateTimeFormat(dateLocale).format(new Date(value))
   const formatDateTime = (value: string | number) => new Intl.DateTimeFormat(dateLocale, {
     day: '2-digit',
@@ -1564,6 +1567,26 @@ export default function Settings() {
                     {t('tech.lastUpdated', { value: formatDateTime(tech.timestamp) })}
                   </div>
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                    <Card>
+                      <CardHeader className="pb-3">
+                        <CardTitle className="text-base flex items-center gap-2">
+                          <ScrollText className="h-4 w-4" /> {t('tech.sections.featureLog')}
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent className="space-y-3">
+                        {renderSystemLine(t('tech.labels.appVersion'), appVersionLabel || t('common.notAvailable'))}
+                        {renderSystemLine(t('tech.labels.latestUpdate'), latestFeatureLogText.title)}
+                        {renderSystemLine(t('tech.labels.latestUpdateDate'), formatDate(FEATURE_LOG_LATEST_ENTRY.date))}
+                        <p className="text-sm text-muted-foreground">{latestFeatureLogText.summary}</p>
+                        <Link
+                          to="/feature-log"
+                          className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary/60"
+                        >
+                          {t('tech.featureLog.open')}
+                        </Link>
+                      </CardContent>
+                    </Card>
+
                     <Card>
                       <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center gap-2">

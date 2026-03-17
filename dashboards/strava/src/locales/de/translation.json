@@ -140,6 +140,11 @@
       "openTraining": "Training",
       "compareWindow": "vs. 6 Wochen davor"
     },
+    "versionCard": {
+      "title": "Version & Updates",
+      "featureLog": "Feature-Log",
+      "openLog": "Öffnen"
+    },
     "quickLinks": {
       "analytics": "Analytics"
     },
@@ -1460,6 +1465,19 @@
       "types": "{{count}} Typen"
     }
   },
+  "featureLog": {
+    "badge": "Feature-Verlauf",
+    "title": "Feature-Log",
+    "subtitle": "Kuratiertes Änderungsprotokoll der letzten Produktverbesserungen. Es zeigt die relevanten Funktionsänderungen statt roher Commits.",
+    "backToTech": "Zurück zu Tech",
+    "latestTitle": "Aktueller Schwerpunkt",
+    "runtimeTitle": "Laufender Stand",
+    "runtimeVersion": "API-Version",
+    "runtimeCommit": "Git-Commit",
+    "runtimeHint": "Frontend-Feinschliffe können zwischen zwei Releases sichtbar sein. Der hier angezeigte Runtime-Stand kommt aus der laufenden API.",
+    "lastUpdated": "Zuletzt aktualisiert",
+    "openFromDashboard": "Vom Dashboard öffnen"
+  },
   "tech": {
     "loading": "lade Systemdiagnose...",
     "errorPrefix": "ERROR",
@@ -1467,6 +1485,7 @@
     "lastUpdated": "Zuletzt aktualisiert: {{value}}",
     "sections": {
       "system": "SYSTEM",
+      "featureLog": "FEATURE-LOG",
       "database": "DATENBANK",
       "activities": "AKTIVITÄTEN",
       "segments": "SEGMENTE",
@@ -1487,6 +1506,8 @@
       "heap": "Speicher (Heap)",
       "rss": "Speicher (RSS)",
       "appVersion": "App-Version",
+      "latestUpdate": "Letztes Update",
+      "latestUpdateDate": "Update-Datum",
       "gitCommit": "Git-Commit",
       "gitRef": "Git-Ref",
       "gitRepo": "Repository",
@@ -1525,6 +1546,9 @@
       "photosDownloaded": "Lokal geladen",
       "photosPending": "Download ausstehend",
       "photosLocal": "Lokale Dateien"
+    },
+    "featureLog": {
+      "open": "Feature-Log öffnen"
     },
     "sync": {
       "lastRun": "Letzter Lauf:",

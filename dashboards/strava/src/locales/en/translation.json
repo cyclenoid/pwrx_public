@@ -140,6 +140,11 @@
       "openTraining": "Training",
       "compareWindow": "vs previous 6 weeks"
     },
+    "versionCard": {
+      "title": "Version & updates",
+      "featureLog": "Feature log",
+      "openLog": "Open"
+    },
     "quickLinks": {
       "analytics": "Analytics"
     },
@@ -1460,6 +1465,19 @@
       "types": "{{count}} types"
     }
   },
+  "featureLog": {
+    "badge": "Feature history",
+    "title": "Feature log",
+    "subtitle": "Curated change history for recent product improvements. It focuses on relevant feature changes instead of raw commits.",
+    "backToTech": "Back to tech",
+    "latestTitle": "Current focus",
+    "runtimeTitle": "Runtime status",
+    "runtimeVersion": "API version",
+    "runtimeCommit": "Git commit",
+    "runtimeHint": "Small frontend refinements may appear between two releases. The runtime status shown here comes from the running API.",
+    "lastUpdated": "Last updated",
+    "openFromDashboard": "Open from dashboard"
+  },
   "tech": {
     "loading": "loading system diagnostics...",
     "errorPrefix": "ERROR",
@@ -1467,6 +1485,7 @@
     "lastUpdated": "Last updated: {{value}}",
     "sections": {
       "system": "SYSTEM",
+      "featureLog": "FEATURE LOG",
       "database": "DATABASE",
       "activities": "ACTIVITIES",
       "segments": "SEGMENTS",
@@ -1487,6 +1506,8 @@
       "heap": "Memory (Heap)",
       "rss": "Memory (RSS)",
       "appVersion": "App Version",
+      "latestUpdate": "Latest update",
+      "latestUpdateDate": "Update date",
       "gitCommit": "Git Commit",
       "gitRef": "Git Ref",
       "gitRepo": "Repository",
@@ -1525,6 +1546,9 @@
       "photosDownloaded": "Downloaded Locally",
       "photosPending": "Pending Download",
       "photosLocal": "Local Files"
+    },
+    "featureLog": {
+      "open": "Open feature log"
     },
     "sync": {
       "lastRun": "Last run:",
