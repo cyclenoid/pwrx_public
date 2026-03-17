@@ -747,6 +747,7 @@ export interface HeartRateZonesResponse {
   zones: HRZone[]
   total_minutes: number
   activities_analyzed: number
+  max_hr_used?: number
 }
 
 export interface EfficiencyMonth {
