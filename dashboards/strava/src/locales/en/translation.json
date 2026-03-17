@@ -136,7 +136,9 @@
       "efficiencyUnit": "m/min/bpm",
       "avgHr": "Avg HR",
       "distance": "Distance",
-      "footnote": "Compared against the previous 6 weeks. Only runs with heart rate, enough distance and enough duration are included."
+      "footnote": "Compared against the previous 6 weeks. Only runs with heart rate, enough distance and enough duration are included.",
+      "openTraining": "Training",
+      "compareWindow": "vs previous 6 weeks"
     },
     "quickLinks": {
       "analytics": "Analytics"
