@@ -839,6 +839,12 @@
         "avgHr": "Ø HF",
         "rides": "{{count}} Fahrten"
       },
+      "status": {
+        "good": "Gut",
+        "solid": "Solide",
+        "watch": "Prüfen",
+        "noData": "N/A"
+      },
       "footnote": "Einbezogen werden nur Fahrten mit Herzfrequenz und Leistung sowie mindestens 30 Minuten Dauer. Cardiac Drift nutzt Fahrten ab 45 Minuten, Durability Fahrten ab 60 Minuten."
     },
     "trainingLoad": {
