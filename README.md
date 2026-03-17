@@ -1,6 +1,6 @@
 # PWRX - Power Explorer for Training Data
 
-Self-hosted Strava hub with PostgreSQL (schema separation) and a React dashboard.
+Self-hosted training analytics app with PostgreSQL, file import, and a React dashboard.
 
 ## Deployment model
 
@@ -13,7 +13,7 @@ PWRX is intended to run as a standalone app from this repository.
 ## Requirements
 - Docker + Docker Compose
 - PostgreSQL
-- Optional, private-only: Strava connector access by separate arrangement
+- Optional, private-only: additional connector access by separate arrangement
 
 German version: `README.de.md`
 
@@ -52,21 +52,17 @@ Set in `.env`:
 ```env
 ADAPTER_FILE_ENABLED=true
 ADAPTER_STRAVA_ENABLED=false
-STRAVA_CLIENT_ID=
-STRAVA_CLIENT_SECRET=
-STRAVA_REFRESH_TOKEN=
-ADAPTER_STRAVA_PACKAGE=
-ADAPTER_STRAVA_MODULE=
-PWRX_SSH_DIR=
 ```
+
+Everything else in `.env.example` related to Strava/private adapters is optional and only relevant for selected private operators.
 
 Then restart backend + dashboard:
 ```bash
 docker compose up -d --force-recreate strava-tracker strava-dashboard
 ```
 
-## Private Strava Connector (Not Part of the Public Offering)
-The public repository does not officially ship or support a Strava connector for end users.
+## Private Connector Path (Not Part of the Public Offering)
+The public repository does not officially ship or support provider API connector setup for normal end users.
 
 Reason:
 - Strava API access is subject to Strava's developer review and athlete-capacity restrictions.
@@ -77,12 +73,12 @@ Official Strava sources:
 - https://developers.strava.com/docs/rate-limits/
 - https://developers.strava.com/docs/getting-started/
 
-If you enable:
+If you explicitly enable the private connector path:
 ```env
 ADAPTER_STRAVA_ENABLED=true
 ```
 
-you are explicitly entering a private maintainer/operator setup that requires:
+you are entering a private maintainer/operator setup that requires:
 - private adapter access
 - Strava credentials
 - a host SSH directory containing `pwrx_adapter_key`
@@ -117,7 +113,7 @@ Important technical rule:
 - this is intentional
 
 ## First Sync
-On first start, PWRX runs an initial file-import/sync initialization. In private Strava operator setups, a Strava-backed initial sync can take time depending on data size and Strava rate limits.
+On first start, PWRX runs an initial import/sync initialization. In private connector operator setups, an API-backed initial sync can take time depending on data size and rate limits.
 
 ## Sync (Auto + Manual)
 - Auto sync runs daily at the configured time.
@@ -205,7 +201,7 @@ Optional reminder channels for workshop appointments:
 - Standard Docker install exposes the corresponding host path `./data/imports/watch` and shows it in the UI as copy target.
 - Optional: set `WATCH_FOLDER_SMB_PATH` in `.env` to show a network share path in the UI (for example `\\\\unraid\\pwrx-import`).
 
-## Private Strava Adapter in CI
+## Private Adapter Validation in CI
 Public backend checks now run without the private adapter.
 
 Optional private-adapter access validation in CI can still use repository secret:
@@ -232,10 +228,10 @@ ssh-keygen -y -f ~/.ssh/pwrx_adapter_key
 
 ## FAQ
 **What do the photo sync and download numbers mean?**  
-Photo sync = metadata from Strava (URLs/captions). Downloads = local files saved to disk. Both are per-run counts.
+Photo sync = metadata from the connected source (for example URLs/captions). Downloads = local files saved to disk. Both are per-run counts.
 
 **Why is the first sync slow?**  
-Large histories and Strava rate limits can slow down the initial import. It will continue in the background.
+Large histories and provider rate limits can slow down the initial import. It will continue in the background.
 
 **Why are segments still pending?**  
 Segments are filled in chunks during backfill. If you hit rate limits, run manual sync again later.

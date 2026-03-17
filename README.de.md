@@ -1,6 +1,6 @@
 # PWRX - Power Explorer for Training Data
 
-Selbst gehosteter Strava-Hub mit PostgreSQL (Schema-Trennung) und React-Dashboard.
+Selbst gehostete Trainingsanalyse-App mit PostgreSQL, Datei-Import und React-Dashboard.
 
 ## Deployment-Modell
 
@@ -13,7 +13,7 @@ PWRX soll als eigenstaendige App direkt aus diesem Repository deploybar sein.
 ## Voraussetzungen
 - Docker + Docker Compose
 - PostgreSQL
-- Optional, nur privat: Strava-Connector-Zugang per separater Vereinbarung
+- Optional, nur privat: zusaetzlicher Connector-Zugang per separater Vereinbarung
 
 ## Quick Start (Docker)
 1. `.env.example` nach `.env` kopieren
@@ -49,21 +49,17 @@ In `.env` setzen:
 ```env
 ADAPTER_FILE_ENABLED=true
 ADAPTER_STRAVA_ENABLED=false
-STRAVA_CLIENT_ID=
-STRAVA_CLIENT_SECRET=
-STRAVA_REFRESH_TOKEN=
-ADAPTER_STRAVA_PACKAGE=
-ADAPTER_STRAVA_MODULE=
-PWRX_SSH_DIR=
 ```
+
+Alles Weitere aus `.env.example`, das Strava/private Adapter betrifft, ist optional und nur fuer ausgewaehlte private Betreiber relevant.
 
 Dann Backend + Dashboard neu starten:
 ```bash
 docker compose up -d --force-recreate strava-tracker strava-dashboard
 ```
 
-## Privater Strava-Connector (nicht Teil des oeffentlichen Angebots)
-Das Public-Repository liefert keinen offiziell unterstuetzten Strava-Connector fuer Endanwender aus.
+## Privater Connector-Pfad (nicht Teil des oeffentlichen Angebots)
+Das Public-Repository liefert keine offiziell unterstuetzte API-Connector-Einrichtung fuer normale Endanwender aus.
 
 Grund:
 - der Strava-API-Zugang unterliegt Strava-Review und Athlete-Capacity-Beschraenkungen
@@ -74,12 +70,12 @@ Offizielle Strava-Quellen:
 - https://developers.strava.com/docs/rate-limits/
 - https://developers.strava.com/docs/getting-started/
 
-Wenn du setzt:
+Wenn du den privaten Connector-Pfad explizit aktivierst:
 ```env
 ADAPTER_STRAVA_ENABLED=true
 ```
 
-dann nutzt du explizit ein privates Maintainer-/Operator-Setup. Dafuer brauchst du:
+dann nutzt du ein privates Maintainer-/Operator-Setup. Dafuer brauchst du:
 - privaten Adapter-Zugang
 - Strava-Credentials
 - ein Host-SSH-Verzeichnis mit `pwrx_adapter_key`
@@ -115,7 +111,7 @@ Wichtige technische Regel:
 - das ist beabsichtigt
 
 ## Erster Sync
-Beim ersten Start laeuft eine Initialisierung fuer Datei-Import/Synchronisation. In privaten Strava-Operator-Setups kann ein Strava-basierter Initial-Sync je nach Datenmenge und Strava-Rate-Limits dauern.
+Beim ersten Start laeuft eine Initialisierung fuer Import/Synchronisation. In privaten Connector-Operator-Setups kann ein API-basierter Initial-Sync je nach Datenmenge und Rate-Limits dauern.
 
 ## Sync (Auto + Manuell)
 - Auto-Sync laeuft taeglich zur gewaehlten Uhrzeit.
@@ -198,7 +194,7 @@ Optionale Erinnerungs-Kanaele fuer Werkstatttermine:
 - Deployment-Runbook (Public-Repo -> Unraid + Strava-Override): `docs/DEPLOYMENT_RUNBOOK.md`
 - PowerShell-Smoketest-Script: `scripts/docker-release-smoke.ps1`
 
-## Privater Strava-Adapter in CI
+## Private Adapter-Validierung in CI
 Die oeffentlichen Backend-Checks laufen jetzt ohne privaten Adapter.
 
 Fuer eine optionale Validierung des privaten Adapter-Zugriffs in CI kann weiter dieses Repository-Secret genutzt werden:
@@ -225,10 +221,10 @@ ssh-keygen -y -f ~/.ssh/pwrx_adapter_key
 
 ## FAQ
 **Was bedeuten Foto-Sync und Downloads?**  
-Foto-Sync = Metadaten von Strava (URLs/Caption). Downloads = lokal gespeicherte Dateien. Die Zahlen sind pro Lauf.
+Foto-Sync = Metadaten aus der verbundenen Quelle (z. B. URLs/Caption). Downloads = lokal gespeicherte Dateien. Die Zahlen sind pro Lauf.
 
 **Warum dauert der erste Sync so lange?**  
-Große Historien und Strava-Rate-Limits verlangsamen den Import. Er laeuft im Hintergrund weiter.
+Große Historien und Provider-Rate-Limits verlangsamen den Import. Er laeuft im Hintergrund weiter.
 
 **Warum bleiben Segmente offen?**  
 Segmente werden in Paketen nachgeladen. Bei Rate-Limits einfach spaeter erneut syncen.
