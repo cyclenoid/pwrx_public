@@ -1563,30 +1563,29 @@ export default function Settings() {
 
               return (
                 <>
-                  <div className="text-xs text-muted-foreground">
-                    {t('tech.lastUpdated', { value: formatDateTime(tech.timestamp) })}
+                  <div className="flex flex-col gap-3 rounded-xl border border-border/60 bg-card/95 p-4 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                    <div className="space-y-1">
+                      <div className="flex items-center gap-2 text-sm font-semibold">
+                        <ScrollText className="h-4 w-4" /> {t('tech.sections.featureLog')}
+                      </div>
+                      <div className="text-sm text-muted-foreground">{latestFeatureLogText.title}</div>
+                      <div className="text-xs text-muted-foreground">
+                        {t('tech.lastUpdated', { value: formatDateTime(tech.timestamp) })}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-full border border-border/50 bg-background/70 px-2.5 py-1 text-xs font-medium text-muted-foreground">
+                        {appVersionLabel || t('common.notAvailable')}
+                      </div>
+                      <Link
+                        to="/feature-log"
+                        className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary/60"
+                      >
+                        {t('tech.featureLog.open')}
+                      </Link>
+                    </div>
                   </div>
                   <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                    <Card>
-                      <CardHeader className="pb-3">
-                        <CardTitle className="text-base flex items-center gap-2">
-                          <ScrollText className="h-4 w-4" /> {t('tech.sections.featureLog')}
-                        </CardTitle>
-                      </CardHeader>
-                      <CardContent className="space-y-3">
-                        {renderSystemLine(t('tech.labels.appVersion'), appVersionLabel || t('common.notAvailable'))}
-                        {renderSystemLine(t('tech.labels.latestUpdate'), latestFeatureLogText.title)}
-                        {renderSystemLine(t('tech.labels.latestUpdateDate'), formatDate(FEATURE_LOG_LATEST_ENTRY.date))}
-                        <p className="text-sm text-muted-foreground">{latestFeatureLogText.summary}</p>
-                        <Link
-                          to="/feature-log"
-                          className="inline-flex items-center gap-2 rounded-lg border border-border/60 bg-card/80 px-3 py-2 text-sm font-medium transition-colors hover:bg-secondary/60"
-                        >
-                          {t('tech.featureLog.open')}
-                        </Link>
-                      </CardContent>
-                    </Card>
-
                     <Card>
                       <CardHeader className="pb-3">
                       <CardTitle className="text-base flex items-center gap-2">

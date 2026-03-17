@@ -24,7 +24,7 @@ import { useToast } from '../hooks/useToast'
 import { Toaster } from '../components/ui/toast'
 import { useTranslation } from 'react-i18next'
 import { useCapabilities } from '../hooks/useCapabilities'
-import { FEATURE_LOG_LATEST_ENTRY, getFeatureLogText } from '../lib/featureLog'
+import { FEATURE_LOG_LATEST_ENTRY } from '../lib/featureLog'
 
 // Components
 import { ActivityCard, ActivityCardSkeleton } from '../components/activities/ActivityCard'
@@ -106,7 +106,6 @@ export function Dashboard() {
   const supportsSync = capabilities.supportsSync
   const currentYear = new Date().getFullYear()
   const appVersionLabel = capabilitiesData?.version?.label || capabilitiesData?.version?.backend || null
-  const latestFeatureLogText = getFeatureLogText(FEATURE_LOG_LATEST_ENTRY, i18n.language)
 
   const formatMonthYear = (date: Date) => {
     try {
@@ -1277,28 +1276,15 @@ export function Dashboard() {
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <CardTitle className="text-sm font-semibold">{t('dashboard.versionCard.title')}</CardTitle>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
-                    {latestFeatureLogText.title}
-                  </div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">{t('dashboard.versionCard.featureLog')}</div>
                 </div>
                 <div className="rounded-full border border-border/50 bg-background/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
                   {appVersionLabel || FEATURE_LOG_LATEST_ENTRY.tag || t('common.notAvailable')}
                 </div>
               </div>
             </CardHeader>
-            <CardContent className="space-y-2.5">
-              <p className="text-xs leading-relaxed text-muted-foreground">
-                {latestFeatureLogText.summary}
-              </p>
-              <div className="space-y-1.5">
-                {latestFeatureLogText.bullets.slice(0, 2).map((bullet) => (
-                  <div key={bullet} className="flex gap-2 text-[11px] text-muted-foreground">
-                    <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
-                    <span>{bullet}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-2 text-[11px] text-muted-foreground">
+            <CardContent>
+              <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
                 <span>{t('dashboard.versionCard.featureLog')}</span>
                 <span className="font-medium text-foreground">{t('dashboard.versionCard.openLog')}</span>
               </div>
