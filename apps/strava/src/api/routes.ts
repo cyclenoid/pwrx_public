@@ -6624,6 +6624,7 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
 
     // Import power calculation functions
     const { calculatePowerMetrics } = require('../utils/powerCalculations');
+    const { calculateCyclingEnduranceMetrics } = require('../utils/cyclingInsights');
 
     // Calculate metrics for each activity
     const results = [];
@@ -6631,6 +6632,8 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
     for (const activity of activitiesResult.rows) {
       const streams = await db.getActivityStreams(activity.strava_activity_id);
       const wattsStream = streams.find(s => s.stream_type === 'watts');
+      const hrStream = streams.find(s => s.stream_type === 'heartrate');
+      const timeStream = streams.find(s => s.stream_type === 'time');
 
       if (wattsStream && wattsStream.data) {
         const metrics = calculatePowerMetrics(
@@ -6638,6 +6641,11 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
           activity.moving_time,
           ftp
         );
+        const enduranceMetrics = calculateCyclingEnduranceMetrics({
+          watts: wattsStream.data,
+          heartrate: hrStream?.data,
+          time: timeStream?.data,
+        });
 
         results.push({
           activity_id: activity.strava_activity_id,
@@ -6651,6 +6659,8 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
           normalized_power: metrics.normalized_power,
           intensity_factor: metrics.intensity_factor,
           training_stress_score: metrics.training_stress_score,
+          decoupling_pct: enduranceMetrics.decouplingPct,
+          durability_pct: enduranceMetrics.durabilityPct,
         });
       }
     }

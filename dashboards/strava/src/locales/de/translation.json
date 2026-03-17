@@ -821,7 +821,11 @@
         "power150": "Leistung @150 bpm",
         "efficiency": "Effizienz",
         "avgHr": "Typische Ø HF",
-        "avgHrHint": "Median der verwertbaren Fahrten"
+        "avgHrHint": "Median der verwertbaren Fahrten",
+        "decoupling": "Cardiac Drift",
+        "decouplingHint": "{{count}} Fahrten • niedriger ist besser",
+        "durability": "Durability",
+        "durabilityHint": "{{count}} Fahrten • höher ist besser"
       },
       "units": {
         "power": "Watt",
@@ -835,7 +839,7 @@
         "avgHr": "Ø HF",
         "rides": "{{count}} Fahrten"
       },
-      "footnote": "Einbezogen werden nur Fahrten mit Herzfrequenz und Leistung sowie mindestens 30 Minuten Dauer."
+      "footnote": "Einbezogen werden nur Fahrten mit Herzfrequenz und Leistung sowie mindestens 30 Minuten Dauer. Cardiac Drift nutzt Fahrten ab 45 Minuten, Durability Fahrten ab 60 Minuten."
     },
     "trainingLoad": {
       "requiredTitle": "FTP erforderlich für TSS-Analyse",

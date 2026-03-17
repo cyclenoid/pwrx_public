@@ -206,6 +206,8 @@ export interface BulkPowerMetrics {
     normalized_power: number | null
     intensity_factor: number | null
     training_stress_score: number | null
+    decoupling_pct: number | null
+    durability_pct: number | null
   }>
 }
 
