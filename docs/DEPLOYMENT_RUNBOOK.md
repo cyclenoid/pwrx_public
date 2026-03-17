@@ -8,6 +8,8 @@ This runbook defines the standard deployment process for PWRX.
 - External users do not need a separate `data-hub` repository.
 - Shared-host or multi-app setups are optional operator-specific variants.
 - The Unraid folder name `/mnt/user/appdata/data-hub` is historical only and not part of the product contract.
+- Official public baseline is file import / public-core.
+- Strava connector enablement on Unraid is a private operator override, not a public product promise.
 
 ## Scope
 
@@ -86,7 +88,7 @@ Important:
 - `git reset --hard origin/main` discards tracked local code/config changes in this folder.
 - Keep local secrets/runtime config in `.env` and mounted data directories, not in tracked files.
 
-## Unraid-only difference: Strava connector enabled
+## Unraid-only difference: private Strava connector enabled
 
 Public baseline can stay public-core style, but on Unraid keep:
 
@@ -98,6 +100,12 @@ STRAVA_REFRESH_TOKEN=...
 ```
 
 This is the only intended runtime difference on Unraid.
+
+Important product rule:
+
+- public docs must not position Strava API enablement as a normal end-user setup
+- if Strava is enabled on Unraid, that is a private maintainer/operator variant
+- private adapter access and credentials must stay out of the public support baseline
 
 Important operator rule on Unraid:
 
@@ -136,7 +144,8 @@ curl -s http://127.0.0.1:3001/api/capabilities
   - no Strava connector required
 - Private/Strava mode:
   - `ADAPTER_STRAVA_ENABLED=true`
-  - requires Strava credentials and adapter access setup
+  - requires private adapter access, private credentials, and SSH key setup
+  - not part of the official public user path
 
 ## Troubleshooting
 

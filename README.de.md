@@ -12,7 +12,8 @@ PWRX soll als eigenstaendige App direkt aus diesem Repository deploybar sein.
 
 ## Voraussetzungen
 - Docker + Docker Compose
-- Strava API App + Refresh Token
+- PostgreSQL
+- Optional, nur privat: Strava-Connector-Zugang per separater Vereinbarung
 
 ## Quick Start (Docker)
 1. `.env.example` nach `.env` kopieren
@@ -21,7 +22,6 @@ cp .env.example .env
 ```
 
 2. Pflichtwerte in `.env` setzen
-- `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`
 - `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
 - Optional: `DATA_HUB_DATA_DIR` (Default: `./data`)
 Hinweis: Das Postgres-Passwort wird nur beim ersten Initialisieren des DB-Volumes gesetzt. Wenn du es spaeter aenderst, musst du das Passwort in Postgres aktualisieren oder das Volume zuruecksetzen.
@@ -38,8 +38,12 @@ API Health: http://localhost:3001/api/health
 pgAdmin: http://localhost:5050
 ```
 
-## Public-Core Testmodus (ohne Strava API)
-Diesen Modus nutzen, um die App wie ein oeffentlicher User nur mit Datei-Import zu testen.
+## Public-Core Modus (offizielle Public-Basis)
+Das ist die offizielle Public-Basis dieses Repositories.
+
+- Datei-Import funktioniert ohne Strava-API-Zugang
+- kein privater Adapter-Zugang noetig
+- kein SSH-Deploy-Key noetig
 
 In `.env` setzen:
 ```env
@@ -48,6 +52,8 @@ ADAPTER_STRAVA_ENABLED=false
 STRAVA_CLIENT_ID=
 STRAVA_CLIENT_SECRET=
 STRAVA_REFRESH_TOKEN=
+ADAPTER_STRAVA_MODULE=
+PWRX_SSH_DIR=
 ```
 
 Dann Backend + Dashboard neu starten:
@@ -55,10 +61,42 @@ Dann Backend + Dashboard neu starten:
 docker compose up -d --force-recreate strava-tracker strava-dashboard
 ```
 
-In diesem Modus sind keine privaten Adapter-Deploy-Keys noetig (`PWRX_ADAPTER_DEPLOY_KEY` / `PWRX_SSH_DIR`).
+## Privater Strava-Connector (nicht Teil des oeffentlichen Angebots)
+Das Public-Repository liefert keinen offiziell unterstuetzten Strava-Connector fuer Endanwender aus.
+
+Grund:
+- der Strava-API-Zugang unterliegt Strava-Review und Athlete-Capacity-Beschraenkungen
+- neue Apps starten im Single-Athlete-Modus, bis Strava sie freigibt
+- deshalb darf die Public-Doku Strava-API-Aktivierung nicht als normalen Standardfall darstellen
+
+Offizielle Strava-Quellen:
+- https://developers.strava.com/docs/rate-limits/
+- https://developers.strava.com/docs/getting-started/
+
+Wenn du setzt:
+```env
+ADAPTER_STRAVA_ENABLED=true
+```
+
+dann nutzt du explizit ein privates Maintainer-/Operator-Setup. Dafuer brauchst du:
+- privaten Adapter-Zugang
+- Strava-Credentials
+- ein Host-SSH-Verzeichnis mit `pwrx_adapter_deploy`
+
+Wenn dieser Key fehlt, scheitert der Backend-Start mit:
+```text
+Missing /root/.ssh/pwrx_adapter_deploy for private adapter install
+```
+
+Wichtig:
+- `PWRX_SSH_DIR` muss ein Host-Pfad sein, nicht der Container-Pfad `/root/.ssh`
+- Beispiel Windows: `C:/Users/<du>/.ssh`
+- Beispiel Linux: `/home/<du>/.ssh`
+
+Dieser private Connector-Pfad ist nur fuer Maintainer gedacht und nicht Teil des offiziellen Public-Supports.
 
 ## Erster Sync
-Beim ersten Start laeuft automatisch ein Initial-Sync (Default: letzte 180 Tage). Das kann je nach Datenmenge und Strava-Rate-Limits dauern.
+Beim ersten Start laeuft eine Initialisierung fuer Datei-Import/Synchronisation. In privaten Strava-Operator-Setups kann ein Strava-basierter Initial-Sync je nach Datenmenge und Strava-Rate-Limits dauern.
 
 ## Sync (Auto + Manuell)
 - Auto-Sync laeuft taeglich zur gewaehlten Uhrzeit.
