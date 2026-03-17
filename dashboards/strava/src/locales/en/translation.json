@@ -753,7 +753,8 @@
       "trainingLoad": "Loading training load data...",
       "weekday": "Loading weekday data...",
       "timeOfDay": "Loading time of day data...",
-      "monthly": "Loading monthly data..."
+      "monthly": "Loading monthly data...",
+      "updating": "Updating..."
     },
     "noData": {
       "hrZones": "No heart rate data available",
