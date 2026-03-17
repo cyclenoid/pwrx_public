@@ -1,20 +1,11 @@
 #!/usr/bin/env tsx
 
-/**
- * Strava Tracker CLI
- *
- * Commands:
- *   sync              - Sync all activities from Strava
- *   sync --recent     - Sync only recent activities (last 7 days)
- *   stats             - Show database statistics
- *   help              - Show this help message
- */
-
-import StravaCollector from './services/collector';
 import CSVExporter from './services/csvExporter';
+import DatabaseService from './services/database';
+import { adapterRegistry } from './services/adapters/registry';
 
 const COMMANDS = {
-  sync: 'Sync all activities from Strava to database',
+  sync: 'Sync all activities from the private Strava adapter',
   'sync --recent': 'Sync only recent activities (last 7 days)',
   'sync --no-streams': 'Sync activities without GPS/heartrate streams',
   'sync --segments': 'Include segment efforts when syncing all activities',
@@ -29,59 +20,94 @@ const COMMANDS = {
   help: 'Show this help message',
 };
 
+const createSyncClient = () => {
+  const syncClient = adapterRegistry.createSyncClient();
+  if (syncClient) return syncClient;
+
+  throw new Error(
+    'Strava sync adapter unavailable. Install the private adapter and enable ADAPTER_STRAVA_ENABLED=true.'
+  );
+};
+
+async function showStats(): Promise<void> {
+  const db = new DatabaseService();
+  try {
+    const stats = await db.getStats();
+    console.log('📊 Database Statistics:\n');
+    console.log(`   Total activities: ${stats.total_activities}`);
+    console.log(`   Total distance: ${stats.total_distance_km} km`);
+    console.log('\n   By type:');
+    for (const row of stats.by_type || []) {
+      console.log(`   - ${row.type}: ${row.count} activities, ${row.total_distance_km} km`);
+    }
+  } finally {
+    await db.close();
+  }
+}
+
 async function main() {
   const args = process.argv.slice(2);
   const command = args[0];
   const flags = args.slice(1);
 
-  const collector = new StravaCollector();
+  let syncClient: ReturnType<typeof adapterRegistry.createSyncClient> | null = null;
 
   try {
     switch (command) {
-      case 'sync':
+      case 'sync': {
+        syncClient = createSyncClient();
         if (flags.includes('--recent')) {
-          const days = parseInt(flags.find(f => f.startsWith('--days='))?.split('=')[1] || '7');
+          const days = parseInt(flags.find(f => f.startsWith('--days='))?.split('=')[1] || '7', 10);
           const includeStreams = !flags.includes('--no-streams');
           const includeSegments = !flags.includes('--no-segments');
-          await collector.syncRecentActivities(days, includeStreams, includeSegments);
+          await syncClient.syncRecentActivities(days, includeStreams, includeSegments);
         } else {
           const includeStreams = !flags.includes('--no-streams');
           const includeSegments = flags.includes('--segments');
-          await collector.syncActivities(includeStreams, includeSegments);
+          await syncClient.syncRecentActivities(3650, includeStreams, includeSegments);
         }
         break;
+      }
 
-      case 'backfill':
-        const backfillLimit = parseInt(flags.find(f => f.startsWith('--limit='))?.split('=')[1] || '200');
-        await collector.backfillStreams(backfillLimit);
+      case 'backfill': {
+        syncClient = createSyncClient();
+        const backfillLimit = parseInt(flags.find(f => f.startsWith('--limit='))?.split('=')[1] || '200', 10);
+        await syncClient.backfillStreams(backfillLimit);
         break;
+      }
 
-      case 'backfill-segments':
-        const segmentLimit = parseInt(flags.find(f => f.startsWith('--limit='))?.split('=')[1] || '200');
-        {
-          const result = await collector.backfillSegments(segmentLimit);
-          console.log(`✅ Segment backfill summary: activities=${result.processed}, efforts=${result.efforts}, errors=${result.errors}${result.rateLimited ? ' (rate limit reached)' : ''}`);
-        }
+      case 'backfill-segments': {
+        syncClient = createSyncClient();
+        const segmentLimit = parseInt(flags.find(f => f.startsWith('--limit='))?.split('=')[1] || '200', 10);
+        const result = await syncClient.backfillSegments(segmentLimit);
+        console.log(
+          `✅ Segment backfill summary: activities=${result.processed}, efforts=${result.efforts}, errors=${result.errors}${result.rateLimited ? ' (rate limit reached)' : ''}`
+        );
         break;
+      }
 
-      case 'download-photos':
-        const photoLimit = parseInt(flags.find(f => f.startsWith('--limit='))?.split('=')[1] || '100');
-        await collector.downloadPhotos(photoLimit);
+      case 'download-photos': {
+        syncClient = createSyncClient();
+        const photoLimit = parseInt(flags.find(f => f.startsWith('--limit='))?.split('=')[1] || '100', 10);
+        await syncClient.downloadPhotos(photoLimit);
         break;
+      }
 
-      case 'export':
+      case 'export': {
         const exporter = new CSVExporter();
         await exporter.exportAll();
         await exporter.close();
         break;
+      }
 
       case 'stats':
-        await collector.showStats();
+        await showStats();
         break;
 
       case 'help':
       case '--help':
       case '-h':
+      case undefined:
         showHelp();
         break;
 
@@ -91,19 +117,21 @@ async function main() {
         process.exit(1);
     }
 
-    await collector.close();
     process.exit(0);
-
   } catch (error: any) {
     console.error(`\n❌ Error: ${error.message}`);
-    await collector.close();
     process.exit(1);
+  } finally {
+    if (syncClient) {
+      await syncClient.close();
+    }
   }
 }
 
 function showHelp() {
-  console.log('🏃 Strava Tracker CLI\n');
+  console.log('🏃 PWRX Private Strava CLI\n');
   console.log('Usage: npm run collect <command> [options]\n');
+  console.log('Note: sync-related commands require the private Strava adapter.\n');
   console.log('Commands:');
 
   Object.entries(COMMANDS).forEach(([cmd, desc]) => {
@@ -111,11 +139,11 @@ function showHelp() {
   });
 
   console.log('\nExamples:');
-  console.log('   npm run collect sync                  # Sync all activities');
+  console.log('   npm run collect sync                  # Sync activities using the private adapter');
   console.log('   npm run collect sync --recent         # Sync last 7 days');
   console.log('   npm run collect sync --recent --days=14  # Sync last 14 days');
   console.log('   npm run collect sync --no-streams     # Sync without GPS data');
-  console.log('   npm run collect sync --segments       # Include segment efforts (full sync)');
+  console.log('   npm run collect sync --segments       # Include segment efforts');
   console.log('   npm run collect backfill              # Backfill streams (200 activities)');
   console.log('   npm run collect backfill --limit=100  # Backfill 100 activities');
   console.log('   npm run collect backfill-segments     # Backfill segments (200 activities)');
