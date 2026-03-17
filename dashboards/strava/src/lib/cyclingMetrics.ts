@@ -43,17 +43,6 @@ const median = (values: number[]): number | null => {
 
 export const buildCyclingPerformanceSamples = (activities: CyclingPerformanceSource[]): CyclingPerformanceSample[] => {
   return activities
-    .filter((activity) =>
-      !!activity.date &&
-      Number.isFinite(activity.durationSec) &&
-      activity.durationSec >= 30 * 60 &&
-      Number.isFinite(activity.avgHr) &&
-      Number(activity.avgHr) >= 80 &&
-      Number(activity.avgHr) <= 200 &&
-      Number.isFinite(activity.avgPower) &&
-      Number(activity.avgPower) >= 80 &&
-      Number(activity.avgPower) <= 450,
-    )
     .map((activity) => {
       const avgHr = Number(activity.avgHr)
       const avgPower = Number(activity.avgPower)
@@ -69,6 +58,17 @@ export const buildCyclingPerformanceSamples = (activities: CyclingPerformanceSou
         durabilityPct: Number.isFinite(activity.durabilityPct) ? Number(activity.durabilityPct) : null,
       }
     })
+    .filter((activity) =>
+      !!activity.date &&
+      Number.isFinite(activity.durationSec) &&
+      activity.durationSec >= 30 * 60 &&
+      Number.isFinite(activity.avgHr) &&
+      activity.avgHr >= 80 &&
+      activity.avgHr <= 200 &&
+      Number.isFinite(activity.avgPower) &&
+      activity.avgPower >= 80 &&
+      activity.avgPower <= 450,
+    )
 }
 
 export const summarizeCyclingPerformance = (samples: CyclingPerformanceSample[]): CyclingPerformanceSummary => {
