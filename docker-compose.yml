@@ -91,6 +91,7 @@ services:
       NODE_ENV: production
       ADAPTER_FILE_ENABLED: ${ADAPTER_FILE_ENABLED:-true}
       ADAPTER_STRAVA_ENABLED: ${ADAPTER_STRAVA_ENABLED:-false}
+      ADAPTER_STRAVA_PACKAGE: ${ADAPTER_STRAVA_PACKAGE-}
       ADAPTER_STRAVA_MODULE: ${ADAPTER_STRAVA_MODULE-}
     volumes:
       - ./apps/strava:/app
@@ -123,7 +124,7 @@ services:
         chmod 600 /tmp/pwrx_adapter_deploy &&
         export GIT_SSH_COMMAND="ssh -i /tmp/pwrx_adapter_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes" &&
         git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/" &&
-        npm pkg set dependencies.@cyclenoid/pwrx-adapter-strava="$${ADAPTER_STRAVA_MODULE:-@cyclenoid/pwrx-adapter-strava}" >/dev/null &&
+        npm pkg set dependencies.@cyclenoid/pwrx-adapter-strava="$${ADAPTER_STRAVA_PACKAGE:-@cyclenoid/pwrx-adapter-strava}" >/dev/null &&
         npm install --package-lock-only --ignore-scripts --no-audit --no-fund;
       fi &&
       npm ci --production=false &&

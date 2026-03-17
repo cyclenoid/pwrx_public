@@ -29,7 +29,7 @@ You can expect:
 For this project in particular:
 - Protect `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`.
 - Protect database credentials (`POSTGRES_USER`, `POSTGRES_PASSWORD`).
-- Protect CI secret `PWRX_ADAPTER_DEPLOY_KEY` (private SSH key for private adapter dependency access).
+- Protect CI secret `PWRX_ADAPTER_DEPLOY_KEY` (private SSH key for optional private-adapter access checks).
 - Use distinct credentials for development and production.
 
 ## Recommended Hardening

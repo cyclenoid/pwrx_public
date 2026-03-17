@@ -69,6 +69,7 @@ Use private adapter package:
 ADAPTER_FILE_ENABLED=true
 ADAPTER_STRAVA_ENABLED=true
 ADAPTER_STRAVA_MODULE=@cyclenoid/pwrx-adapter-strava
+ADAPTER_STRAVA_PACKAGE=git+ssh://git@github.com/cyclenoid/pwrx-adapter-strava.git
 ```
 
 ## 4) Setup (Clean Docker Test Environment)

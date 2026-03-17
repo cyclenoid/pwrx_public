@@ -43,11 +43,25 @@ jobs:
           fi
 
       - name: Install dependencies
+        run: npm ci
+
+      - name: Lint backend
+        run: npm run lint
+
+      - name: Build backend
+        run: npm run build
+
+      - name: Run parser smoke tests
+        run: npm run test:import:parsers
+
+      - name: Run import tests
+        run: npm run test:import
+
+      - name: Optional private adapter access check
         if: steps.adapter_key.outputs.available == 'true'
         env:
           PWRX_ADAPTER_DEPLOY_KEY: ${{ secrets.PWRX_ADAPTER_DEPLOY_KEY }}
         run: |
-          echo "Using deploy key for adapter dependency access."
           mkdir -p ~/.ssh
           printf '%s\n' "$PWRX_ADAPTER_DEPLOY_KEY" > ~/.ssh/pwrx_adapter_key
           chmod 600 ~/.ssh/pwrx_adapter_key
@@ -56,24 +70,8 @@ jobs:
           git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/"
           git config --global url."ssh://git@ssh.github.com:443/".insteadOf "git@github.com:"
           export GIT_SSH_COMMAND="ssh -i ~/.ssh/pwrx_adapter_key -o IdentitiesOnly=yes -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes"
-          npm ci
+          git ls-remote ssh://git@ssh.github.com:443/cyclenoid/pwrx-adapter-strava.git HEAD
           rm -f ~/.ssh/pwrx_adapter_key
-
-      - name: Lint backend
-        if: steps.adapter_key.outputs.available == 'true'
-        run: npm run lint
-
-      - name: Build backend
-        if: steps.adapter_key.outputs.available == 'true'
-        run: npm run build
-
-      - name: Run parser smoke tests
-        if: steps.adapter_key.outputs.available == 'true'
-        run: npm run test:import:parsers
-
-      - name: Run import tests
-        if: steps.adapter_key.outputs.available == 'true'
-        run: npm run test:import
 
   frontend:
     name: Frontend Lint and Build
