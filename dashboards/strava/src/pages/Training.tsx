@@ -468,6 +468,8 @@ export function Training() {
   const paceMetricTileClass = 'rounded-xl border border-border/50 bg-background/70 px-4 py-3 shadow-sm'
   const cyclingDecouplingStatus = getCyclingMetricStatus('decoupling', cyclingPerformanceSummary.medianDecouplingPct)
   const cyclingDurabilityStatus = getCyclingMetricStatus('durability', cyclingPerformanceSummary.medianDurabilityPct)
+  const showCyclingPerformanceLoading =
+    activityType === 'Ride' && fetchingCyclingPowerMetrics && cyclingPerformanceSummary.sampleCount === 0
 
   const renderHeartRateZonesCard = () => (
     <Card className={sidebarCardClass}>
@@ -753,6 +755,37 @@ export function Training() {
           <div className="min-w-0 flex-1 space-y-5">
             {activityType === 'Ride' && (
               <>
+                {showCyclingPerformanceLoading && (
+                  <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
+                    <CardHeader className="pb-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+                            </svg>
+                            {t('training.cyclingPerformance.title')}
+                          </CardTitle>
+                          <CardDescription>{t('training.loading.analytics')}</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-2 rounded-full bg-secondary/70 px-3 py-1 text-xs font-medium text-muted-foreground">
+                          <span className="h-3 w-3 animate-spin rounded-full border-2 border-current border-t-transparent" />
+                          {t('training.loading.updating')}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
+                      {[0, 1, 2, 3, 4].map((index) => (
+                        <div key={index} className="rounded-xl border border-border/60 bg-background/40 p-4">
+                          <div className="h-3 w-24 rounded bg-muted/60" />
+                          <div className="mt-3 h-8 w-20 rounded bg-muted/50" />
+                          <div className="mt-2 h-3 w-16 rounded bg-muted/40" />
+                        </div>
+                      ))}
+                    </CardContent>
+                  </Card>
+                )}
+
                 {cyclingPerformanceSummary.sampleCount > 0 && (
                   <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
                     <CardHeader className="pb-3">

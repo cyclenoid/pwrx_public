@@ -386,6 +386,15 @@ interface HeatmapCache {
 }
 const heatmapCache: Map<string, HeatmapCache> = new Map();
 const HEATMAP_CACHE_TTL = 24 * 60 * 60 * 1000; // 24 hours in ms
+type BulkPowerMetricsCache = {
+  data: any;
+  timestamp: number;
+};
+const bulkPowerMetricsCache = new Map<string, BulkPowerMetricsCache>();
+const BULK_POWER_METRICS_CACHE_TTL_MS = Math.max(
+  60 * 1000,
+  Number(process.env.BULK_POWER_METRICS_CACHE_TTL_MS || (10 * 60 * 1000))
+);
 const HEATMAP_MAX_POINTS_PER_ACTIVITY = Math.max(
   200,
   Number(process.env.HEATMAP_MAX_POINTS_PER_ACTIVITY || 600)
@@ -6585,6 +6594,22 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
   try {
     const { startDate, endDate, type } = req.query;
 
+    const ftpResult = await db.query("SELECT value FROM strava.user_settings WHERE key = 'ftp'");
+    const ftp = ftpResult.rows.length > 0 && ftpResult.rows[0].value
+      ? parseFloat(ftpResult.rows[0].value)
+      : null;
+    const cacheKey = JSON.stringify({
+      startDate: startDate || 'all',
+      endDate: endDate || 'all',
+      type: type || 'all',
+      ftp: ftp ?? 'none',
+    });
+    const cached = bulkPowerMetricsCache.get(cacheKey);
+    if (cached && (Date.now() - cached.timestamp) < BULK_POWER_METRICS_CACHE_TTL_MS) {
+      res.json(cached.data);
+      return;
+    }
+
     // Build activity query
     let activityQuery = `
       SELECT a.strava_activity_id, a.name, a.start_date, a.moving_time, a.distance, a.average_heartrate, a.average_watts, a.type
@@ -6623,20 +6648,22 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
     const activitiesResult = await db.query(activityQuery, params);
 
     if (activitiesResult.rows.length === 0) {
-      res.json({
+      const emptyPayload = {
         start_date: startDate || 'all',
         end_date: endDate || 'all',
         type: type || 'all',
+        ftp: ftp,
+        total_activities: 0,
+        activities_with_power: 0,
         activities: [],
+      };
+      bulkPowerMetricsCache.set(cacheKey, {
+        data: emptyPayload,
+        timestamp: Date.now(),
       });
+      res.json(emptyPayload);
       return;
     }
-
-    // Get FTP
-    const ftpResult = await db.query("SELECT value FROM strava.user_settings WHERE key = 'ftp'");
-    const ftp = ftpResult.rows.length > 0 && ftpResult.rows[0].value
-      ? parseFloat(ftpResult.rows[0].value)
-      : null;
 
     // Import power calculation functions
     const { calculatePowerMetrics } = require('../utils/powerCalculations');
@@ -6681,7 +6708,7 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
       }
     }
 
-    res.json({
+    const payload = {
       start_date: startDate || 'all',
       end_date: endDate || 'all',
       type: type || 'all',
@@ -6689,7 +6716,14 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
       total_activities: activitiesResult.rows.length,
       activities_with_power: results.length,
       activities: results,
+    };
+
+    bulkPowerMetricsCache.set(cacheKey, {
+      data: payload,
+      timestamp: Date.now(),
     });
+
+    res.json(payload);
   } catch (error: any) {
     console.error('Error calculating bulk power metrics:', error);
     res.status(500).json({ error: 'Failed to calculate bulk power metrics' });
