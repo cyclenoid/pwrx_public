@@ -86,6 +86,8 @@ you are explicitly entering a private maintainer/operator setup that requires:
 - Strava credentials
 - a host SSH directory containing `pwrx_adapter_deploy`
 
+In this private mode, the Docker runtime injects the private adapter package during container startup. The public `package.json` intentionally does not depend on it by default.
+
 If that key is missing, backend startup will fail with:
 ```text
 Missing /root/.ssh/pwrx_adapter_deploy for private adapter install
