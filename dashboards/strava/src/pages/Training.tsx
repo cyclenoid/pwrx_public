@@ -332,14 +332,14 @@ export function Training() {
 
   const renderHeartRateZonesCard = () => (
     <Card className={sidebarCardClass}>
-      <CardHeader className="space-y-1 pb-1.5">
+      <CardHeader className="space-y-1 pb-1">
         <CardTitle className="flex items-center gap-2 text-sm font-semibold">
           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
           </svg>
           {t('training.hrZones.title')}
         </CardTitle>
-        <CardDescription className="text-[11px] leading-relaxed">
+        <CardDescription className="text-[10px] leading-relaxed">
           {t('training.hrZones.activities', { count: hrZones?.activities_analyzed ?? 0 })}
           <span className="mx-1.5">•</span>
           {formatMinutes(hrZones?.total_minutes ?? 0)}
@@ -347,43 +347,37 @@ export function Training() {
       </CardHeader>
       <CardContent className="pt-0">
         {hrZoneData.length > 0 ? (
-          <div className="space-y-1.5">
-            <div className="flex flex-wrap gap-1.5">
-              {hrZoneData.slice(0, 2).map((zone, index) => (
-                <div key={zone.name} className={sidebarLegendClass}>
-                  <span className="h-2 w-2 rounded-full" style={{ backgroundColor: zone.color || hrZoneColors[index]?.color }} />
-                  {zone.name} {zone.percent}%
-                </div>
-              ))}
-            </div>
-            <div className="space-y-1">
+          <div className="space-y-2">
+            <div className="space-y-2">
               {hrZoneData.map((zone, index) => (
-                <div key={zone.name} className="rounded-lg border border-border/40 bg-muted/10 px-2.5 py-2">
+                <div key={zone.name} className="space-y-1">
+                  <div className="flex items-center justify-between gap-3 text-[11px]">
+                    <div className="min-w-0 flex items-center gap-2">
+                      <div className="h-2 w-2 shrink-0 rounded-full" style={{ backgroundColor: zone.color || hrZoneColors[index]?.color }} />
+                      <p className="truncate font-medium text-foreground">{zone.name}</p>
+                    </div>
+                    <p className="shrink-0 tabular-nums text-muted-foreground">{zone.percent}%</p>
+                  </div>
                   <div className="flex items-center gap-2">
-                    <div className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: zone.color || hrZoneColors[index]?.color }} />
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center justify-between gap-3 text-xs">
-                        <p className="truncate font-medium text-foreground">{zone.name}</p>
-                        <p className="shrink-0 tabular-nums text-muted-foreground">{zone.percent}%</p>
-                      </div>
+                    <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-secondary/60">
+                      <div
+                        className="h-full rounded-full"
+                        style={{
+                          width: `${Math.max(zone.percent, 2)}%`,
+                          backgroundColor: zone.color || hrZoneColors[index]?.color,
+                        }}
+                      />
+                    </div>
+                    <div className="w-14 shrink-0 text-right text-[10px] tabular-nums text-muted-foreground">
+                      {formatMinutes(zone.value)}
                     </div>
                   </div>
-                  <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-secondary/60">
-                    <div
-                      className="h-full rounded-full"
-                      style={{
-                        width: `${Math.max(zone.percent, 2)}%`,
-                        backgroundColor: zone.color || hrZoneColors[index]?.color,
-                      }}
-                    />
-                  </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">{formatMinutes(zone.value)}</div>
                 </div>
               ))}
             </div>
           </div>
         ) : (
-          <div className="flex h-[140px] items-center justify-center text-muted-foreground">
+          <div className="flex h-[112px] items-center justify-center text-muted-foreground">
             {t('training.noData.hrZones')}
           </div>
         )}
@@ -1030,7 +1024,7 @@ export function Training() {
           </div>
 
           <div className="space-y-4 xl:sticky xl:top-20 xl:w-[22rem] xl:flex-shrink-0">
-            {isRunning && renderHeartRateZonesCard()}
+            {renderHeartRateZonesCard()}
             {renderWeekdayCard()}
             {renderTimeOfDayCard()}
             {renderMonthlyCard()}
