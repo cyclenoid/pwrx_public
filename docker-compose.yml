@@ -112,7 +112,6 @@ services:
       cp -a /app /tmp/pwrx-app &&
       rm -f /tmp/pwrx-app/.env &&
       cd /tmp/pwrx-app &&
-      PRIVATE_STRAVA_MODULE="${ADAPTER_STRAVA_MODULE:-@cyclenoid/pwrx-adapter-strava}" &&
       if [ "${ADAPTER_STRAVA_ENABLED:-false}" = "false" ] || [ "${ADAPTER_STRAVA_ENABLED:-false}" = "0" ] || [ "${ADAPTER_STRAVA_ENABLED:-false}" = "no" ]; then
         echo "Strava adapter disabled: skip private adapter dependency";
       else
@@ -124,7 +123,7 @@ services:
         chmod 600 /tmp/pwrx_adapter_deploy &&
         export GIT_SSH_COMMAND="ssh -i /tmp/pwrx_adapter_deploy -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes" &&
         git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/" &&
-        npm pkg set dependencies.@cyclenoid/pwrx-adapter-strava="$PRIVATE_STRAVA_MODULE" >/dev/null &&
+        npm pkg set dependencies.@cyclenoid/pwrx-adapter-strava="$${ADAPTER_STRAVA_MODULE:-@cyclenoid/pwrx-adapter-strava}" >/dev/null &&
         npm install --package-lock-only --ignore-scripts --no-audit --no-fund;
       fi &&
       npm ci --production=false &&
