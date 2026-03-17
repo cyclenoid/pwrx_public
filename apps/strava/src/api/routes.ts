@@ -4536,41 +4536,56 @@ router.get('/analytics/heart-rate-zones', async (req: Request, res: Response) =>
       }
     }
 
+    const settingsResult = await db.query(`
+      SELECT key, value FROM strava.user_settings
+      WHERE key IN ('max_heartrate', 'resting_heartrate')
+    `);
+    const settings = Object.fromEntries(settingsResult.rows.map((row: any) => [row.key, row.value]));
+
     // Get activities with heartrate data and their streams
-    // Note: stream_type column is empty, so we identify HR streams by their data pattern
-    // HR data is an array of numbers typically between 40-220
     const activitiesResult = await db.query(`
       SELECT
         a.strava_activity_id,
         a.moving_time,
         a.average_heartrate,
+        a.max_heartrate,
         (
           SELECT s.data
-          FROM activity_streams s
+          FROM strava.activity_streams s
           WHERE s.activity_id = a.strava_activity_id
-            AND jsonb_typeof(s.data) = 'array'
-            AND jsonb_array_length(s.data) > 0
-            AND jsonb_typeof(s.data->0) = 'number'
-            AND (s.data->>0)::numeric BETWEEN 40 AND 220
+            AND (
+              s.stream_type = 'heartrate'
+              OR (
+                COALESCE(s.stream_type, '') = ''
+                AND jsonb_typeof(s.data) = 'array'
+                AND jsonb_array_length(s.data) > 0
+                AND jsonb_typeof(s.data->0) = 'number'
+                AND (s.data->>0)::numeric BETWEEN 40 AND 220
+              )
+            )
+          ORDER BY CASE WHEN s.stream_type = 'heartrate' THEN 0 ELSE 1 END
           LIMIT 1
         ) as heartrate_data
-      FROM activities a
+      FROM strava.activities a
       WHERE 1=1
         AND a.average_heartrate IS NOT NULL
         ${dateFilter}
         ${typeFilter}
     `, params);
 
-    // Define HR zones (using standard zones based on max HR estimate)
-    // Zone 1: 50-60% (Recovery), Zone 2: 60-70% (Endurance), Zone 3: 70-80% (Tempo)
-    // Zone 4: 80-90% (Threshold), Zone 5: 90-100% (VO2max)
-    // Using absolute values for simplicity (can be made configurable)
+    const configuredMaxHr = parseFloat(settings.max_heartrate || '0');
+    const observedMaxHr = activitiesResult.rows.reduce((max: number, activity: any) => {
+      const value = Number(activity.max_heartrate);
+      return Number.isFinite(value) && value > max ? value : max;
+    }, 0);
+    const maxHr = configuredMaxHr > 0 ? configuredMaxHr : observedMaxHr > 0 ? observedMaxHr : 190;
+
     const zones = {
-      zone1: { name: 'Recovery', min: 0, max: 120, minutes: 0, color: '#94a3b8' },
-      zone2: { name: 'Endurance', min: 120, max: 140, minutes: 0, color: '#22c55e' },
-      zone3: { name: 'Tempo', min: 140, max: 160, minutes: 0, color: '#eab308' },
-      zone4: { name: 'Threshold', min: 160, max: 175, minutes: 0, color: '#f97316' },
-      zone5: { name: 'VO2max', min: 175, max: 300, minutes: 0, color: '#ef4444' },
+      zone1: { name: 'Recovery', min: 0, max: Math.round(maxHr * 0.60), minutes: 0, color: '#94a3b8' },
+      zone2: { name: 'Endurance', min: Math.round(maxHr * 0.60), max: Math.round(maxHr * 0.70), minutes: 0, color: '#22c55e' },
+      zone3: { name: 'Tempo', min: Math.round(maxHr * 0.70), max: Math.round(maxHr * 0.80), minutes: 0, color: '#eab308' },
+      zone4: { name: 'Threshold', min: Math.round(maxHr * 0.80), max: Math.round(maxHr * 0.90), minutes: 0, color: '#f97316' },
+      zone5: { name: 'VO2max', min: Math.round(maxHr * 0.90), max: Math.round(maxHr * 1.10), minutes: 0, color: '#ef4444' },
     };
 
     let totalDataPoints = 0;
@@ -4614,7 +4629,8 @@ router.get('/analytics/heart-rate-zones', async (req: Request, res: Response) =>
         percentage: totalMinutes > 0 ? Math.round((zone.minutes / totalMinutes) * 100) : 0
       })),
       total_minutes: totalMinutes,
-      activities_analyzed: activitiesWithStreams
+      activities_analyzed: activitiesWithStreams,
+      max_hr_used: maxHr,
     });
   } catch (error: any) {
     console.error('Error fetching HR zones:', error);

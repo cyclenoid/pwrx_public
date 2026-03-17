@@ -752,35 +752,6 @@ export function Training() {
           <div className="min-w-0 flex-1 space-y-5">
             {activityType === 'Ride' && (
               <>
-                {loadingTraining && (
-                  <Card>
-                    <CardContent className="py-8 text-center">
-                      <div className="text-muted-foreground">{t('training.loading.trainingLoad')}</div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {!loadingTraining && ftpData?.ftp && trainingLoad && trainingLoad.dailyValues.length > 0 && (
-                  <TrainingLoadChart
-                    data={trainingLoad.dailyValues}
-                    currentCTL={trainingLoad.current.ctl}
-                    currentATL={trainingLoad.current.atl}
-                    currentTSB={trainingLoad.current.tsb}
-                  />
-                )}
-
-                {!loadingTraining && ftpData && !ftpData.ftp && (
-                  <Card>
-                    <CardContent className="py-8 text-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted-foreground opacity-50">
-                        <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
-                      </svg>
-                      <h3 className="mb-2 text-lg font-medium">{t('training.trainingLoad.requiredTitle')}</h3>
-                      <p className="text-muted-foreground">{t('training.trainingLoad.requiredBody')}</p>
-                    </CardContent>
-                  </Card>
-                )}
-
                 {cyclingPerformanceSummary.sampleCount > 0 && (
                   <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
                     <CardHeader className="pb-3">
@@ -966,6 +937,36 @@ export function Training() {
                     </CardContent>
                   </Card>
                 )}
+
+                {loadingTraining && (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <div className="text-muted-foreground">{t('training.loading.trainingLoad')}</div>
+                    </CardContent>
+                  </Card>
+                )}
+
+                {!loadingTraining && ftpData?.ftp && trainingLoad && trainingLoad.dailyValues.length > 0 && (
+                  <TrainingLoadChart
+                    data={trainingLoad.dailyValues}
+                    currentCTL={trainingLoad.current.ctl}
+                    currentATL={trainingLoad.current.atl}
+                    currentTSB={trainingLoad.current.tsb}
+                  />
+                )}
+
+                {!loadingTraining && ftpData && !ftpData.ftp && (
+                  <Card>
+                    <CardContent className="py-8 text-center">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted-foreground opacity-50">
+                        <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+                      </svg>
+                      <h3 className="mb-2 text-lg font-medium">{t('training.trainingLoad.requiredTitle')}</h3>
+                      <p className="text-muted-foreground">{t('training.trainingLoad.requiredBody')}</p>
+                    </CardContent>
+                  </Card>
+                )}
+
               </>
             )}
 
