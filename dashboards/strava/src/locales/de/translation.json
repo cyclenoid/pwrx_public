@@ -839,6 +839,10 @@
         "avgHr": "Ø HF",
         "rides": "{{count}} Fahrten"
       },
+      "descriptions": {
+        "decoupling": "Vergleicht Watt pro Herzschlag zwischen erster und zweiter Hälfte. Niedriger bedeutet stabilere Aerobic Efficiency.",
+        "durability": "Vergleicht die Leistung im letzten Drittel mit dem ersten Drittel. Höher bedeutet, dass du die Leistung später im Ride besser hältst."
+      },
       "status": {
         "good": "Gut",
         "solid": "Solide",

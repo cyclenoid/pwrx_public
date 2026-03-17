@@ -847,8 +847,19 @@ export function Training() {
                         </div>
                         <div className="rounded-xl border border-border/60 bg-background/60 p-4">
                           <div className="flex items-start justify-between gap-3">
-                            <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                              {t('training.cyclingPerformance.cards.decoupling')}
+                            <div className="flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                              <span>{t('training.cyclingPerformance.cards.decoupling')}</span>
+                              <span
+                                className="inline-flex cursor-help text-muted-foreground/80"
+                                title={t('training.cyclingPerformance.descriptions.decoupling')}
+                                aria-label={t('training.cyclingPerformance.descriptions.decoupling')}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <path d="M12 16v-4" />
+                                  <path d="M12 8h.01" />
+                                </svg>
+                              </span>
                             </div>
                             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${cyclingDecouplingStatus.badgeClassName}`}>
                               {cyclingDecouplingStatus.label}
@@ -865,8 +876,19 @@ export function Training() {
                         </div>
                         <div className="rounded-xl border border-border/60 bg-background/60 p-4">
                           <div className="flex items-start justify-between gap-3">
-                            <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                              {t('training.cyclingPerformance.cards.durability')}
+                            <div className="flex items-center gap-1 text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                              <span>{t('training.cyclingPerformance.cards.durability')}</span>
+                              <span
+                                className="inline-flex cursor-help text-muted-foreground/80"
+                                title={t('training.cyclingPerformance.descriptions.durability')}
+                                aria-label={t('training.cyclingPerformance.descriptions.durability')}
+                              >
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <circle cx="12" cy="12" r="10" />
+                                  <path d="M12 16v-4" />
+                                  <path d="M12 8h.01" />
+                                </svg>
+                              </span>
                             </div>
                             <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${cyclingDurabilityStatus.badgeClassName}`}>
                               {cyclingDurabilityStatus.label}

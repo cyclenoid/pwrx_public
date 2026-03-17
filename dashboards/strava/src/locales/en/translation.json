@@ -839,6 +839,10 @@
         "avgHr": "Avg HR",
         "rides": "{{count}} rides"
       },
+      "descriptions": {
+        "decoupling": "Compares watts per heartbeat between the first and second half. Lower means steadier aerobic efficiency.",
+        "durability": "Compares power in the final third against the first third. Higher means you hold power better late in the ride."
+      },
       "status": {
         "good": "Good",
         "solid": "Solid",
