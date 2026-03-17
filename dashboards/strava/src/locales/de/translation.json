@@ -813,6 +813,30 @@
       },
       "footnote": "Einbezogen werden nur Läufe mit Herzfrequenz, mindestens 3 km Distanz und mindestens 15 Minuten Dauer."
     },
+    "cyclingPerformance": {
+      "title": "Leistung vs. Puls",
+      "subtitle": "{{count}} verwertbare Fahrten • {{distance}} km im gewählten Zeitraum",
+      "axis": "Leistung @150 bpm",
+      "cards": {
+        "power150": "Leistung @150 bpm",
+        "efficiency": "Effizienz",
+        "avgHr": "Typische Ø HF",
+        "avgHrHint": "Median der verwertbaren Fahrten"
+      },
+      "units": {
+        "power": "Watt",
+        "efficiency": "W pro bpm"
+      },
+      "trendTitle": "Trend der normalisierten Leistung",
+      "trendSubtitle": "Monatliche Medianwerte. Höher ist besser.",
+      "tooltip": {
+        "power150": "Leistung @150 bpm",
+        "efficiency": "Effizienz",
+        "avgHr": "Ø HF",
+        "rides": "{{count}} Fahrten"
+      },
+      "footnote": "Einbezogen werden nur Fahrten mit Herzfrequenz und Leistung sowie mindestens 30 Minuten Dauer."
+    },
     "trainingLoad": {
       "requiredTitle": "FTP erforderlich für TSS-Analyse",
       "requiredBody": "Setze dein FTP auf der Power-Seite, um Training Stress Score (TSS) mit CTL, ATL und TSB zu sehen.",
