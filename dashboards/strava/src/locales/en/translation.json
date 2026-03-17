@@ -482,7 +482,13 @@
     "photos": {
       "title": "Photos ({{count}})",
       "photoAlt": "Activity photo",
-      "primary": "Primary"
+      "primary": "Primary",
+      "lightboxLabel": "Photo viewer",
+      "close": "Close",
+      "previous": "Previous photo",
+      "next": "Next photo",
+      "position": "Image {{current}} of {{total}}",
+      "openOriginal": "Open original"
     },
     "segments": {
       "title": "Segments",
