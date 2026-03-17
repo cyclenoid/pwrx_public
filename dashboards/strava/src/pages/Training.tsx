@@ -256,6 +256,8 @@ export function Training() {
         distanceKm: (activity.distance_m || 0) / 1000,
         avgHr: activity.average_heartrate,
         avgPower: activity.average_power,
+        decouplingPct: activity.decoupling_pct,
+        durabilityPct: activity.durability_pct,
       })),
     )
   }, [cyclingPowerMetrics])
@@ -388,6 +390,11 @@ export function Training() {
   const formatPowerValue = (power: number | null) => {
     if (!power || !Number.isFinite(power)) return '—'
     return Math.round(power).toString()
+  }
+
+  const formatPercentValue = (value: number | null, decimals = 1) => {
+    if (value === null || !Number.isFinite(value)) return '—'
+    return `${value.toFixed(decimals)}%`
   }
 
   const timeRangeLabels: Record<number, string> = {
@@ -756,7 +763,7 @@ export function Training() {
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-3 pt-0">
-                      <div className="grid gap-3 md:grid-cols-3">
+                      <div className="grid gap-3 md:grid-cols-3 xl:grid-cols-5">
                         <div className="rounded-xl border border-border/60 bg-background/60 p-4">
                           <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
                             {t('training.cyclingPerformance.cards.power150')}
@@ -783,6 +790,32 @@ export function Training() {
                             {cyclingPerformanceSummary.avgHr ? t('activity.units.bpm', { value: cyclingPerformanceSummary.avgHr }) : '—'}
                           </div>
                           <div className="mt-1 text-sm text-muted-foreground">{t('training.cyclingPerformance.cards.avgHrHint')}</div>
+                        </div>
+                        <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                          <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                            {t('training.cyclingPerformance.cards.decoupling')}
+                          </div>
+                          <div className="mt-2 text-3xl font-semibold tabular-nums text-sky-300">
+                            {formatPercentValue(cyclingPerformanceSummary.medianDecouplingPct)}
+                          </div>
+                          <div className="mt-1 text-sm text-muted-foreground">
+                            {t('training.cyclingPerformance.cards.decouplingHint', {
+                              count: cyclingPerformanceSummary.decouplingSampleCount,
+                            })}
+                          </div>
+                        </div>
+                        <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                          <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                            {t('training.cyclingPerformance.cards.durability')}
+                          </div>
+                          <div className="mt-2 text-3xl font-semibold tabular-nums text-emerald-300">
+                            {formatPercentValue(cyclingPerformanceSummary.medianDurabilityPct)}
+                          </div>
+                          <div className="mt-1 text-sm text-muted-foreground">
+                            {t('training.cyclingPerformance.cards.durabilityHint', {
+                              count: cyclingPerformanceSummary.durabilitySampleCount,
+                            })}
+                          </div>
                         </div>
                       </div>
 

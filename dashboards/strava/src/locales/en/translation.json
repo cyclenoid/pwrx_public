@@ -821,7 +821,11 @@
         "power150": "Power @150 bpm",
         "efficiency": "Efficiency",
         "avgHr": "Typical avg HR",
-        "avgHrHint": "Median of usable rides"
+        "avgHrHint": "Median of usable rides",
+        "decoupling": "Cardiac drift",
+        "decouplingHint": "{{count}} rides • lower is better",
+        "durability": "Durability",
+        "durabilityHint": "{{count}} rides • higher is better"
       },
       "units": {
         "power": "W",
@@ -835,7 +839,7 @@
         "avgHr": "Avg HR",
         "rides": "{{count}} rides"
       },
-      "footnote": "Only rides with heart rate, power, and at least 30 minutes moving time are included."
+      "footnote": "Only rides with heart rate, power, and at least 30 minutes moving time are included. Cardiac drift uses rides of 45 minutes or more, durability uses rides of 60 minutes or more."
     },
     "trainingLoad": {
       "requiredTitle": "FTP Required for TSS Analysis",

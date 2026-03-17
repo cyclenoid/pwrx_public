@@ -4,6 +4,8 @@ export interface CyclingPerformanceSource {
   distanceKm: number
   avgHr: number | null
   avgPower: number | null
+  decouplingPct?: number | null
+  durabilityPct?: number | null
 }
 
 export interface CyclingPerformanceSample {
@@ -14,6 +16,8 @@ export interface CyclingPerformanceSample {
   avgPower: number
   normalizedPower150: number
   efficiency: number
+  decouplingPct: number | null
+  durabilityPct: number | null
 }
 
 export interface CyclingPerformanceSummary {
@@ -22,6 +26,10 @@ export interface CyclingPerformanceSummary {
   medianNormalizedPower150: number | null
   medianEfficiency: number | null
   avgHr: number | null
+  medianDecouplingPct: number | null
+  medianDurabilityPct: number | null
+  decouplingSampleCount: number
+  durabilitySampleCount: number
 }
 
 const median = (values: number[]): number | null => {
@@ -57,6 +65,8 @@ export const buildCyclingPerformanceSamples = (activities: CyclingPerformanceSou
         avgPower,
         normalizedPower150: Number((avgPower * (150 / avgHr)).toFixed(2)),
         efficiency: Number((avgPower / avgHr).toFixed(3)),
+        decouplingPct: Number.isFinite(activity.decouplingPct) ? Number(activity.decouplingPct) : null,
+        durabilityPct: Number.isFinite(activity.durabilityPct) ? Number(activity.durabilityPct) : null,
       }
     })
 }
@@ -69,8 +79,19 @@ export const summarizeCyclingPerformance = (samples: CyclingPerformanceSample[])
       medianNormalizedPower150: null,
       medianEfficiency: null,
       avgHr: null,
+      medianDecouplingPct: null,
+      medianDurabilityPct: null,
+      decouplingSampleCount: 0,
+      durabilitySampleCount: 0,
     }
   }
+
+  const decouplingValues = samples
+    .map((sample) => sample.decouplingPct)
+    .filter((value): value is number => value !== null && Number.isFinite(value))
+  const durabilityValues = samples
+    .map((sample) => sample.durabilityPct)
+    .filter((value): value is number => value !== null && Number.isFinite(value))
 
   return {
     sampleCount: samples.length,
@@ -78,5 +99,9 @@ export const summarizeCyclingPerformance = (samples: CyclingPerformanceSample[])
     medianNormalizedPower150: median(samples.map((sample) => sample.normalizedPower150)),
     medianEfficiency: median(samples.map((sample) => sample.efficiency)),
     avgHr: Math.round(samples.reduce((sum, sample) => sum + sample.avgHr, 0) / samples.length),
+    medianDecouplingPct: median(decouplingValues),
+    medianDurabilityPct: median(durabilityValues),
+    decouplingSampleCount: decouplingValues.length,
+    durabilitySampleCount: durabilityValues.length,
   }
 }
