@@ -124,6 +124,12 @@ curl -s http://127.0.0.1:3001/api/health
 curl -s http://127.0.0.1:3001/api/capabilities
 ```
 
+Optional local helper from the workstation:
+
+```powershell
+pwsh ./scripts/unraid-private-strava-smoke.ps1
+```
+
 Expected:
 
 - `health.status = ok`
