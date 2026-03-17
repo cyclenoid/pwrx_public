@@ -91,7 +91,7 @@ services:
       NODE_ENV: production
       ADAPTER_FILE_ENABLED: ${ADAPTER_FILE_ENABLED:-true}
       ADAPTER_STRAVA_ENABLED: ${ADAPTER_STRAVA_ENABLED:-false}
-      ADAPTER_STRAVA_MODULE: ${ADAPTER_STRAVA_MODULE:-@your-org/pwrx-adapter-strava}
+      ADAPTER_STRAVA_MODULE: ${ADAPTER_STRAVA_MODULE-}
     volumes:
       - ./apps/strava:/app
       - ./.git:/app/.git:ro  # enable backend version/commit display from repo metadata
@@ -112,10 +112,9 @@ services:
       cp -a /app /tmp/pwrx-app &&
       rm -f /tmp/pwrx-app/.env &&
       cd /tmp/pwrx-app &&
+      PRIVATE_STRAVA_MODULE="${ADAPTER_STRAVA_MODULE:-@your-org/pwrx-adapter-strava}" &&
       if [ "${ADAPTER_STRAVA_ENABLED:-false}" = "false" ] || [ "${ADAPTER_STRAVA_ENABLED:-false}" = "0" ] || [ "${ADAPTER_STRAVA_ENABLED:-false}" = "no" ]; then
         echo "Strava adapter disabled: skip private adapter dependency";
-        npm pkg delete dependencies.@your-org/pwrx-adapter-strava >/dev/null;
-        npm install --package-lock-only --ignore-scripts --no-audit --no-fund;
       else
         if [ ! -f /root/.ssh/pwrx_adapter_key ]; then
           echo "Missing /root/.ssh/pwrx_adapter_key for private adapter install" >&2;
@@ -124,7 +123,9 @@ services:
         cp /root/.ssh/pwrx_adapter_key /tmp/pwrx_adapter_key &&
         chmod 600 /tmp/pwrx_adapter_key &&
         export GIT_SSH_COMMAND="ssh -i /tmp/pwrx_adapter_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes" &&
-        git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/";
+        git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/" &&
+        npm pkg set dependencies.@your-org/pwrx-adapter-strava="$PRIVATE_STRAVA_MODULE" >/dev/null &&
+        npm install --package-lock-only --ignore-scripts --no-audit --no-fund;
       fi &&
       npm ci --production=false &&
       npm run build &&

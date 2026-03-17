@@ -83,6 +83,8 @@ dann nutzt du explizit ein privates Maintainer-/Operator-Setup. Dafuer brauchst 
 - Strava-Credentials
 - ein Host-SSH-Verzeichnis mit `pwrx_adapter_key`
 
+In diesem privaten Modus injiziert der Docker-Laufzeitpfad das private Adapter-Paket erst beim Containerstart. Das Public-`package.json` haengt absichtlich nicht standardmaessig davon ab.
+
 Wenn dieser Key fehlt, scheitert der Backend-Start mit:
 ```text
 Missing /root/.ssh/pwrx_adapter_key for private adapter install
