@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { useQuery } from '@tanstack/react-query'
+import { keepPreviousData, useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { getTrainingLoadPMC, getHeartRateZones, getWeekdayDistribution, getMonthlyComparison, getTimeOfDayDistribution, getFTP, getRunningActivities, getBulkPowerMetrics } from '../lib/api'
@@ -226,7 +226,7 @@ export function Training() {
   }, [])
 
   // Fetch power metrics for the selected analysis window
-  const { data: cyclingPowerMetrics } = useQuery({
+  const { data: cyclingPowerMetrics, isFetching: fetchingCyclingPowerMetrics } = useQuery({
     queryKey: ['cycling-power-metrics', activityType, analysisStartDate],
     queryFn: () => getBulkPowerMetrics({
       startDate: analysisStartDate,
@@ -234,6 +234,7 @@ export function Training() {
     }),
     staleTime: 5 * 60 * 1000,
     enabled: activityType === 'Ride',
+    placeholderData: keepPreviousData,
   })
 
   // Separate 30-day power window for the existing TSS/IF table
@@ -784,6 +785,11 @@ export function Training() {
                               {timeRangeLabels[value]}
                             </button>
                           ))}
+                          {fetchingCyclingPowerMetrics && (
+                            <span className="px-2 py-1 text-[11px] font-medium text-muted-foreground">
+                              {t('training.loading.updating')}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </CardHeader>
