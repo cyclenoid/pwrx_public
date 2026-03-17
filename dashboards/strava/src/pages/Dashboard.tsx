@@ -1272,19 +1272,18 @@ export function Dashboard() {
           aria-label={t('dashboard.versionCard.openLog')}
         >
           <Card className="border-border/60 bg-card/95 shadow-sm transition-colors hover:border-border hover:bg-card">
-            <CardHeader className="pb-2">
+            <CardHeader className="pb-3">
               <div className="flex items-start justify-between gap-3">
                 <div className="min-w-0">
                   <CardTitle className="text-sm font-semibold">{t('dashboard.versionCard.title')}</CardTitle>
-                  <div className="mt-1 text-[11px] text-muted-foreground">{t('dashboard.versionCard.featureLog')}</div>
                 </div>
-                <div className="rounded-full border border-border/50 bg-background/70 px-2 py-0.5 text-[11px] font-medium text-muted-foreground">
+                <div className="text-lg font-semibold tabular-nums text-foreground">
                   {appVersionLabel || FEATURE_LOG_LATEST_ENTRY.tag || t('common.notAvailable')}
                 </div>
               </div>
             </CardHeader>
             <CardContent>
-              <div className="flex items-center justify-between gap-3 text-[11px] text-muted-foreground">
+              <div className="flex items-center justify-between gap-3 border-t border-border/50 pt-3 text-[11px] text-muted-foreground">
                 <span>{t('dashboard.versionCard.featureLog')}</span>
                 <span className="font-medium text-foreground">{t('dashboard.versionCard.openLog')}</span>
               </div>
