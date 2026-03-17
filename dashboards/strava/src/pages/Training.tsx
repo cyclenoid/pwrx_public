@@ -1,6 +1,6 @@
-import { useState, useMemo } from 'react'
+import { useEffect, useState, useMemo } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { getTrainingLoadPMC, getHeartRateZones, getWeekdayDistribution, getMonthlyComparison, getTimeOfDayDistribution, getFTP, getRunningActivities, getBulkPowerMetrics } from '../lib/api'
 import { useTheme } from '../components/ThemeProvider'
@@ -16,8 +16,21 @@ import { useTranslation } from 'react-i18next'
 export function Training() {
   const { t, i18n } = useTranslation()
   const { resolvedTheme } = useTheme()
-  const [activityType, setActivityType] = useState<string>('Ride') // 'Ride' or 'Run' - no 'All' option
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedActivityType = searchParams.get('type') === 'Run' ? 'Run' : 'Ride'
+  const [activityType, setActivityType] = useState<string>(requestedActivityType) // 'Ride' or 'Run' - no 'All' option
   const [paceTimePeriod, setPaceTimePeriod] = useState<number>(0) // 0 = All Time for pace charts
+
+  useEffect(() => {
+    setActivityType(current => current === requestedActivityType ? current : requestedActivityType)
+  }, [requestedActivityType])
+
+  const updateActivityType = (nextType: 'Ride' | 'Run') => {
+    setActivityType(nextType)
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('type', nextType)
+    setSearchParams(nextParams, { replace: true })
+  }
 
   const dateLocale = i18n.language?.startsWith('de') ? 'de-DE' : 'en-US'
   const formatMonthYear = (value: string) => {
@@ -564,7 +577,7 @@ export function Training() {
         </div>
         <div className="flex items-center gap-2 rounded-lg bg-muted/30 p-1.5">
           <button
-            onClick={() => setActivityType('Ride')}
+            onClick={() => updateActivityType('Ride')}
             className={`flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all ${
               activityType === 'Ride'
                 ? 'border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background text-orange-600 shadow-lg dark:text-orange-400'
@@ -580,7 +593,7 @@ export function Training() {
             {t('training.activityTypes.ride')}
           </button>
           <button
-            onClick={() => setActivityType('Run')}
+            onClick={() => updateActivityType('Run')}
             className={`flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all ${
               activityType === 'Run'
                 ? 'border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background text-orange-600 shadow-lg dark:text-orange-400'

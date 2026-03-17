@@ -136,7 +136,9 @@
       "efficiencyUnit": "m/min/bpm",
       "avgHr": "Ø HF",
       "distance": "Distanz",
-      "footnote": "Verglichen wird mit den 6 Wochen davor. Berücksichtigt werden nur Läufe mit HF sowie ausreichend Distanz und Dauer."
+      "footnote": "Verglichen wird mit den 6 Wochen davor. Berücksichtigt werden nur Läufe mit HF sowie ausreichend Distanz und Dauer.",
+      "openTraining": "Training",
+      "compareWindow": "vs. 6 Wochen davor"
     },
     "quickLinks": {
       "analytics": "Analytics"
