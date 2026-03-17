@@ -55,6 +55,7 @@ ADAPTER_STRAVA_ENABLED=false
 STRAVA_CLIENT_ID=
 STRAVA_CLIENT_SECRET=
 STRAVA_REFRESH_TOKEN=
+ADAPTER_STRAVA_PACKAGE=
 ADAPTER_STRAVA_MODULE=
 PWRX_SSH_DIR=
 ```
@@ -87,6 +88,17 @@ you are explicitly entering a private maintainer/operator setup that requires:
 - a host SSH directory containing `pwrx_adapter_key`
 
 In this private mode, the Docker runtime injects the private adapter package during container startup. The public `package.json` intentionally does not depend on it by default.
+
+Recommended private settings:
+```env
+ADAPTER_STRAVA_PACKAGE=git+ssh://git@github.com/your-org/pwrx-adapter-strava.git
+ADAPTER_STRAVA_MODULE=@your-org/pwrx-adapter-strava
+```
+
+Important:
+- `ADAPTER_STRAVA_PACKAGE` is the install source used by Docker/npm
+- `ADAPTER_STRAVA_MODULE` is the runtime module id used by Node
+- keep those separate; a Git URL is not a valid `require()` module id
 
 If that key is missing, backend startup will fail with:
 ```text
@@ -189,7 +201,9 @@ Optional reminder channels for workshop appointments:
 - Optional: set `WATCH_FOLDER_SMB_PATH` in `.env` to show a network share path in the UI (for example `\\\\unraid\\pwrx-import`).
 
 ## Private Strava Adapter in CI
-If backend dependencies include the private package `@your-org/pwrx-adapter-strava`, the backend CI job needs repository secret:
+Public backend checks now run without the private adapter.
+
+Optional private-adapter access validation in CI can still use repository secret:
 - `PWRX_ADAPTER_KEY`
 
 Secret value:
@@ -199,7 +213,7 @@ Secret value:
   - base64 lines
   - `-----END OPENSSH PRIVATE KEY-----`
 
-Without this secret, `npm ci` in `apps/strava` will fail in GitHub Actions.
+Without this secret, public backend lint/build/tests still run. Only the optional private-adapter access check is skipped.
 
 For local Docker tests with the private adapter on Windows/Linux:
 - set `PWRX_SSH_DIR` in `.env` (for example `C:/Users/<you>/.ssh` on Windows)

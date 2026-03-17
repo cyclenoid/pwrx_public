@@ -52,6 +52,7 @@ ADAPTER_STRAVA_ENABLED=false
 STRAVA_CLIENT_ID=
 STRAVA_CLIENT_SECRET=
 STRAVA_REFRESH_TOKEN=
+ADAPTER_STRAVA_PACKAGE=
 ADAPTER_STRAVA_MODULE=
 PWRX_SSH_DIR=
 ```
@@ -84,6 +85,17 @@ dann nutzt du explizit ein privates Maintainer-/Operator-Setup. Dafuer brauchst 
 - ein Host-SSH-Verzeichnis mit `pwrx_adapter_key`
 
 In diesem privaten Modus injiziert der Docker-Laufzeitpfad das private Adapter-Paket erst beim Containerstart. Das Public-`package.json` haengt absichtlich nicht standardmaessig davon ab.
+
+Empfohlene private Einstellungen:
+```env
+ADAPTER_STRAVA_PACKAGE=git+ssh://git@github.com/your-org/pwrx-adapter-strava.git
+ADAPTER_STRAVA_MODULE=@your-org/pwrx-adapter-strava
+```
+
+Wichtig:
+- `ADAPTER_STRAVA_PACKAGE` ist die Installationsquelle fuer Docker/npm
+- `ADAPTER_STRAVA_MODULE` ist die Runtime-Modul-ID fuer Node
+- diese beiden Dinge muessen getrennt bleiben; eine Git-URL ist keine gueltige `require()`-Modul-ID
 
 Wenn dieser Key fehlt, scheitert der Backend-Start mit:
 ```text
@@ -182,7 +194,9 @@ Optionale Erinnerungs-Kanaele fuer Werkstatttermine:
 - PowerShell-Smoketest-Script: `scripts/docker-release-smoke.ps1`
 
 ## Privater Strava-Adapter in CI
-Wenn das Backend das private Paket `@your-org/pwrx-adapter-strava` nutzt, braucht der Backend-CI-Job ein Repository-Secret:
+Die oeffentlichen Backend-Checks laufen jetzt ohne privaten Adapter.
+
+Fuer eine optionale Validierung des privaten Adapter-Zugriffs in CI kann weiter dieses Repository-Secret genutzt werden:
 - `PWRX_ADAPTER_KEY`
 
 Wert des Secrets:
@@ -192,7 +206,7 @@ Wert des Secrets:
   - Base64-Zeilen
   - `-----END OPENSSH PRIVATE KEY-----`
 
-Ohne dieses Secret scheitert `npm ci` in `apps/strava` in GitHub Actions.
+Ohne dieses Secret laufen die oeffentlichen Backend-Lint-/Build-/Test-Schritte weiter. Uebersprungen wird dann nur der optionale private Adapter-Zugriffstest.
 
 Fuer lokale Docker-Tests mit privatem Adapter unter Windows/Linux:
 - `PWRX_SSH_DIR` in `.env` setzen (z. B. `C:/Users/<du>/.ssh` unter Windows)
