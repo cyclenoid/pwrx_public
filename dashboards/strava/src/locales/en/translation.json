@@ -813,6 +813,30 @@
       },
       "footnote": "Only runs with heart rate, at least 3 km distance and at least 15 minutes moving time are included."
     },
+    "cyclingPerformance": {
+      "title": "Power vs heart rate",
+      "subtitle": "{{count}} usable rides • {{distance}} km in the selected range",
+      "axis": "Power @150 bpm",
+      "cards": {
+        "power150": "Power @150 bpm",
+        "efficiency": "Efficiency",
+        "avgHr": "Typical avg HR",
+        "avgHrHint": "Median of usable rides"
+      },
+      "units": {
+        "power": "W",
+        "efficiency": "W per bpm"
+      },
+      "trendTitle": "Normalized power trend",
+      "trendSubtitle": "Monthly medians. Higher is better.",
+      "tooltip": {
+        "power150": "Power @150 bpm",
+        "efficiency": "Efficiency",
+        "avgHr": "Avg HR",
+        "rides": "{{count}} rides"
+      },
+      "footnote": "Only rides with heart rate, power, and at least 30 minutes moving time are included."
+    },
     "trainingLoad": {
       "requiredTitle": "FTP Required for TSS Analysis",
       "requiredBody": "Set your FTP on the Power page to see Training Stress Score (TSS) analysis with CTL, ATL, and TSB.",

@@ -4526,8 +4526,14 @@ router.get('/analytics/heart-rate-zones', async (req: Request, res: Response) =>
     }
 
     if (type) {
-      typeFilter = `AND a.type = $${params.length + 1}`;
-      params.push(type);
+      if (type === 'Ride') {
+        typeFilter = "AND a.type IN ('Ride', 'VirtualRide', 'GravelRide', 'EBikeRide', 'MountainBikeRide')";
+      } else if (type === 'Run') {
+        typeFilter = "AND a.type IN ('Run', 'VirtualRun', 'TrailRun')";
+      } else {
+        typeFilter = `AND a.type = $${params.length + 1}`;
+        params.push(type);
+      }
     }
 
     // Get activities with heartrate data and their streams
@@ -6565,7 +6571,7 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
 
     // Build activity query
     let activityQuery = `
-      SELECT a.strava_activity_id, a.name, a.start_date, a.moving_time, a.average_watts, a.type
+      SELECT a.strava_activity_id, a.name, a.start_date, a.moving_time, a.distance, a.average_heartrate, a.average_watts, a.type
       FROM strava.activities a
       WHERE a.average_watts IS NOT NULL AND a.average_watts > 0
     `;
@@ -6585,9 +6591,15 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
     }
 
     if (type && type !== 'all') {
-      paramCount++;
-      activityQuery += ` AND a.type = $${paramCount}`;
-      params.push(type);
+      if (type === 'Ride') {
+        activityQuery += ` AND a.type IN ('Ride', 'VirtualRide', 'GravelRide', 'EBikeRide', 'MountainBikeRide')`;
+      } else if (type === 'Run') {
+        activityQuery += ` AND a.type IN ('Run', 'VirtualRun', 'TrailRun')`;
+      } else {
+        paramCount++;
+        activityQuery += ` AND a.type = $${paramCount}`;
+        params.push(type);
+      }
     }
 
     activityQuery += ' ORDER BY a.start_date ASC';
@@ -6633,6 +6645,8 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
           date: activity.start_date,
           type: activity.type,
           duration_seconds: activity.moving_time,
+          distance_m: activity.distance,
+          average_heartrate: activity.average_heartrate,
           average_power: metrics.average_power,
           normalized_power: metrics.normalized_power,
           intensity_factor: metrics.intensity_factor,

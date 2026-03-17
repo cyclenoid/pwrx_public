@@ -6,6 +6,7 @@ import { getTrainingLoadPMC, getHeartRateZones, getWeekdayDistribution, getMonth
 import { useTheme } from '../components/ThemeProvider'
 import { getChartColors, getHeartRateZoneColors } from '../lib/chartTheme'
 import { buildRunningPerformanceSamples, summarizeRunningPerformance } from '../lib/runningMetrics'
+import { buildCyclingPerformanceSamples, summarizeCyclingPerformance } from '../lib/cyclingMetrics'
 import {
   Area, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ComposedChart
@@ -19,7 +20,7 @@ export function Training() {
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedActivityType = searchParams.get('type') === 'Run' ? 'Run' : 'Ride'
   const [activityType, setActivityType] = useState<string>(requestedActivityType) // 'Ride' or 'Run' - no 'All' option
-  const [paceTimePeriod, setPaceTimePeriod] = useState<number>(0) // 0 = All Time for pace charts
+  const [analysisTimePeriod, setAnalysisTimePeriod] = useState<number>(0) // 0 = All Time
 
   useEffect(() => {
     setActivityType(current => current === requestedActivityType ? current : requestedActivityType)
@@ -67,10 +68,7 @@ export function Training() {
   const hrZoneColors = getHeartRateZoneColors()
   const isRunning = activityType === 'Run'
 
-  // Fixed time period: last 12 months for patterns and efficiency metrics
-  const monthsForPeriod = 12
-  const sidebarPeriodMonths = isRunning ? paceTimePeriod : monthsForPeriod
-  const sidebarPeriodParam: number | 'all' = isRunning && paceTimePeriod === 0 ? 'all' : sidebarPeriodMonths
+  const sidebarPeriodParam: number | 'all' = analysisTimePeriod === 0 ? 'all' : analysisTimePeriod
 
   // Fetch FTP to enable TSS calculations
   const { data: ftpData } = useQuery({
@@ -121,14 +119,21 @@ export function Training() {
     staleTime: 5 * 60 * 1000,
   })
 
-  // Fetch all running activities for pace scatter plot (only when activityType is 'Run') - uses separate paceTimePeriod
-  const paceMonthsForPeriod = paceTimePeriod === 0 ? undefined : paceTimePeriod
+  // Fetch all running activities for pace chart and running-performance insights
+  const paceMonthsForPeriod = analysisTimePeriod === 0 ? undefined : analysisTimePeriod
   const { data: runningActivities } = useQuery({
-    queryKey: ['running-activities', paceTimePeriod],
+    queryKey: ['running-activities', analysisTimePeriod],
     queryFn: () => getRunningActivities({ months: paceMonthsForPeriod }),
     enabled: isRunning,
     staleTime: 5 * 60 * 1000,
   })
+
+  const analysisStartDate = useMemo(() => {
+    if (analysisTimePeriod === 0) return undefined
+    const start = new Date()
+    start.setMonth(start.getMonth() - analysisTimePeriod)
+    return start.toISOString().split('T')[0]
+  }, [analysisTimePeriod])
 
   const runningPerformanceSamples = useMemo(() => {
     if (!runningActivities) return []
@@ -214,18 +219,77 @@ export function Training() {
     }
   }, [runningPaceChartData])
 
-  // Fetch training load data (power metrics) - filter by activity type
-  const thirtyDaysAgo = new Date()
-  thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
-  const { data: recentPowerMetrics } = useQuery({
-    queryKey: ['bulk-power-metrics', activityType],
+  const thirtyDaysAgo = useMemo(() => {
+    const date = new Date()
+    date.setDate(date.getDate() - 30)
+    return date.toISOString().split('T')[0]
+  }, [])
+
+  // Fetch power metrics for the selected analysis window
+  const { data: cyclingPowerMetrics } = useQuery({
+    queryKey: ['cycling-power-metrics', activityType, analysisStartDate],
     queryFn: () => getBulkPowerMetrics({
-      startDate: thirtyDaysAgo.toISOString().split('T')[0],
+      startDate: analysisStartDate,
       type: activityType || undefined,
     }),
     staleTime: 5 * 60 * 1000,
-    enabled: !!ftpData?.ftp, // Only fetch if FTP is set
+    enabled: activityType === 'Ride',
   })
+
+  // Separate 30-day power window for the existing TSS/IF table
+  const { data: recentPowerMetrics } = useQuery({
+    queryKey: ['bulk-power-metrics', activityType, thirtyDaysAgo],
+    queryFn: () => getBulkPowerMetrics({
+      startDate: thirtyDaysAgo,
+      type: activityType || undefined,
+    }),
+    staleTime: 5 * 60 * 1000,
+    enabled: activityType === 'Ride',
+  })
+
+  const cyclingPerformanceSamples = useMemo(() => {
+    if (!cyclingPowerMetrics?.activities?.length) return []
+    return buildCyclingPerformanceSamples(
+      cyclingPowerMetrics.activities.map((activity) => ({
+        date: activity.date,
+        durationSec: activity.duration_seconds,
+        distanceKm: (activity.distance_m || 0) / 1000,
+        avgHr: activity.average_heartrate,
+        avgPower: activity.average_power,
+      })),
+    )
+  }, [cyclingPowerMetrics])
+
+  const cyclingPerformanceSummary = useMemo(
+    () => summarizeCyclingPerformance(cyclingPerformanceSamples),
+    [cyclingPerformanceSamples],
+  )
+
+  const cyclingPerformanceTrendData = useMemo(() => {
+    const grouped = new Map<string, typeof cyclingPerformanceSamples>()
+
+    cyclingPerformanceSamples.forEach((sample) => {
+      const monthKey = sample.date.slice(0, 7)
+      const bucket = grouped.get(monthKey) ?? []
+      bucket.push(sample)
+      grouped.set(monthKey, bucket)
+    })
+
+    return Array.from(grouped.entries())
+      .sort(([a], [b]) => a.localeCompare(b))
+      .map(([month, samples]) => {
+        const summary = summarizeCyclingPerformance(samples)
+        return {
+          month,
+          label: formatMonthYear(`${month}-01`),
+          power150: summary.medianNormalizedPower150,
+          efficiency: summary.medianEfficiency,
+          avgHr: summary.avgHr,
+          sampleCount: summary.sampleCount,
+        }
+      })
+      .filter((item) => item.power150 !== null)
+  }, [cyclingPerformanceSamples, dateLocale])
 
   // Legacy chartColors for backward compatibility
   const chartColors = {
@@ -321,7 +385,20 @@ export function Training() {
     return `${normalizedMinutes}:${normalizedSeconds.toString().padStart(2, '0')}`
   }
 
-  const isLoading = loadingTraining || loadingZones || loadingWeekday || loadingMonthly
+  const formatPowerValue = (power: number | null) => {
+    if (!power || !Number.isFinite(power)) return '—'
+    return Math.round(power).toString()
+  }
+
+  const timeRangeLabels: Record<number, string> = {
+    0: t('training.pace.filters.all'),
+    24: t('training.pace.filters.twoYears'),
+    12: t('training.pace.filters.oneYear'),
+    6: t('training.pace.filters.sixMonths'),
+    3: t('training.pace.filters.threeMonths'),
+  }
+
+  const isLoading = loadingTraining || loadingZones || loadingWeekday || loadingMonthly || loadingTimeOfDay
   const paceLabel = t('training.pace.tooltip.pace')
   const distanceLabel = t('training.pace.tooltip.distance')
   const avgHrLabel = t('training.pace.tooltip.avgHr')
@@ -642,6 +719,134 @@ export function Training() {
                     </CardContent>
                   </Card>
                 )}
+
+                {cyclingPerformanceSummary.sampleCount > 0 && (
+                  <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
+                    <CardHeader className="pb-3">
+                      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                        <div>
+                          <CardTitle className="flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                              <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+                            </svg>
+                            {t('training.cyclingPerformance.title')}
+                          </CardTitle>
+                          <CardDescription>
+                            {t('training.cyclingPerformance.subtitle', {
+                              count: cyclingPerformanceSummary.sampleCount,
+                              distance: cyclingPerformanceSummary.totalDistanceKm.toFixed(0),
+                            })}
+                          </CardDescription>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-1 rounded-full bg-secondary/70 p-1">
+                          {[0, 24, 12, 6, 3].map((value) => (
+                            <button
+                              key={value}
+                              onClick={() => setAnalysisTimePeriod(value)}
+                              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                                analysisTimePeriod === value
+                                  ? 'bg-background text-foreground shadow-sm'
+                                  : 'text-muted-foreground hover:text-foreground'
+                              }`}
+                            >
+                              {timeRangeLabels[value]}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent className="space-y-3 pt-0">
+                      <div className="grid gap-3 md:grid-cols-3">
+                        <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                          <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                            {t('training.cyclingPerformance.cards.power150')}
+                          </div>
+                          <div className="mt-2 text-3xl font-semibold tabular-nums text-orange-500">
+                            {formatPowerValue(cyclingPerformanceSummary.medianNormalizedPower150)}
+                          </div>
+                          <div className="mt-1 text-sm text-muted-foreground">{t('training.cyclingPerformance.units.power')}</div>
+                        </div>
+                        <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                          <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                            {t('training.cyclingPerformance.cards.efficiency')}
+                          </div>
+                          <div className="mt-2 text-3xl font-semibold tabular-nums text-amber-400">
+                            {cyclingPerformanceSummary.medianEfficiency?.toFixed(2) ?? '—'}
+                          </div>
+                          <div className="mt-1 text-sm text-muted-foreground">{t('training.cyclingPerformance.units.efficiency')}</div>
+                        </div>
+                        <div className="rounded-xl border border-border/60 bg-background/60 p-4">
+                          <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                            {t('training.cyclingPerformance.cards.avgHr')}
+                          </div>
+                          <div className="mt-2 text-3xl font-semibold tabular-nums">
+                            {cyclingPerformanceSummary.avgHr ? t('activity.units.bpm', { value: cyclingPerformanceSummary.avgHr }) : '—'}
+                          </div>
+                          <div className="mt-1 text-sm text-muted-foreground">{t('training.cyclingPerformance.cards.avgHrHint')}</div>
+                        </div>
+                      </div>
+
+                      {cyclingPerformanceTrendData.length > 1 && (
+                        <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                          <div className="mb-3">
+                            <div className="text-sm font-medium">{t('training.cyclingPerformance.trendTitle')}</div>
+                            <div className="text-xs text-muted-foreground">{t('training.cyclingPerformance.trendSubtitle')}</div>
+                          </div>
+                          <ResponsiveContainer width="100%" height={210}>
+                            <ComposedChart data={cyclingPerformanceTrendData}>
+                              <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} />
+                              <XAxis dataKey="label" stroke={chartColors.text} fontSize={11} />
+                              <YAxis
+                                stroke={chartColors.text}
+                                fontSize={11}
+                                domain={['auto', 'auto']}
+                                label={{ value: t('training.cyclingPerformance.axis'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
+                              />
+                              <Tooltip
+                                content={({ active, payload }) => {
+                                  if (!active || !payload?.length) return null
+                                  const data = payload[0].payload
+                                  return (
+                                    <div style={{
+                                      backgroundColor: resolvedTheme === 'dark' ? '#1f2937' : '#ffffff',
+                                      border: `1px solid ${chartColors.grid}`,
+                                      borderRadius: '8px',
+                                      padding: '8px',
+                                    }}>
+                                      <p className="font-semibold">{data.label}</p>
+                                      <p className="mt-1 text-sm">
+                                        {t('training.cyclingPerformance.tooltip.power150')}: <span className="font-medium">{formatPowerValue(data.power150)} {t('training.cyclingPerformance.units.power')}</span>
+                                      </p>
+                                      <p className="text-sm">
+                                        {t('training.cyclingPerformance.tooltip.efficiency')}: <span className="font-medium">{data.efficiency?.toFixed(2)} {t('training.cyclingPerformance.units.efficiency')}</span>
+                                      </p>
+                                      <p className="text-sm">
+                                        {t('training.cyclingPerformance.tooltip.avgHr')}: <span className="font-medium">{data.avgHr ? t('activity.units.bpm', { value: data.avgHr }) : '—'}</span>
+                                      </p>
+                                      <p className="text-sm text-muted-foreground">{t('training.cyclingPerformance.tooltip.rides', { count: data.sampleCount })}</p>
+                                    </div>
+                                  )
+                                }}
+                              />
+                              <Line
+                                type="monotone"
+                                dataKey="power150"
+                                stroke={colors.primary}
+                                strokeWidth={2.5}
+                                dot={{ fill: colors.primary, r: 3.5 }}
+                                activeDot={{ r: 5 }}
+                                name={t('training.cyclingPerformance.tooltip.power150')}
+                                isAnimationActive={false}
+                              />
+                            </ComposedChart>
+                          </ResponsiveContainer>
+                        </div>
+                      )}
+
+                      <div className="text-xs text-muted-foreground">{t('training.cyclingPerformance.footnote')}</div>
+                    </CardContent>
+                  </Card>
+                )}
               </>
             )}
 
@@ -772,24 +977,17 @@ export function Training() {
                     </div>
                     <div className="flex flex-wrap items-center gap-1 rounded-full bg-secondary/70 p-1">
                       {[0, 24, 12, 6, 3].map((value) => {
-                        const labels: Record<number, string> = {
-                          0: t('training.pace.filters.all'),
-                          24: t('training.pace.filters.twoYears'),
-                          12: t('training.pace.filters.oneYear'),
-                          6: t('training.pace.filters.sixMonths'),
-                          3: t('training.pace.filters.threeMonths'),
-                        }
                         return (
                           <button
                             key={value}
-                            onClick={() => setPaceTimePeriod(value)}
+                            onClick={() => setAnalysisTimePeriod(value)}
                             className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                              paceTimePeriod === value
+                              analysisTimePeriod === value
                                 ? 'bg-background text-foreground shadow-sm'
                                 : 'text-muted-foreground hover:text-foreground'
                             }`}
                           >
-                            {labels[value]}
+                            {timeRangeLabels[value]}
                           </button>
                         )
                       })}

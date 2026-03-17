@@ -48,11 +48,9 @@ export async function getTrainingLoad(params: TrainingLoadParams): Promise<Train
   if (activityType) {
     // Include both real and virtual versions of the activity type
     if (activityType === 'Ride') {
-      query += ` AND (type = $3 OR type = 'VirtualRide')`
-      queryParams.push(activityType)
+      query += ` AND type IN ('Ride', 'VirtualRide', 'GravelRide', 'EBikeRide', 'MountainBikeRide')`
     } else if (activityType === 'Run') {
-      query += ` AND (type = $3 OR type = 'VirtualRun')`
-      queryParams.push(activityType)
+      query += ` AND type IN ('Run', 'VirtualRun', 'TrailRun')`
     } else {
       query += ` AND type = $3`
       queryParams.push(activityType)

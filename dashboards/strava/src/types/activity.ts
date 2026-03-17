@@ -200,6 +200,8 @@ export interface BulkPowerMetrics {
     date: string
     type: string
     duration_seconds: number
+    distance_m: number | null
+    average_heartrate: number | null
     average_power: number | null
     normalized_power: number | null
     intensity_factor: number | null
