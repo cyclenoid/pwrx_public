@@ -109,6 +109,11 @@ Wichtig:
 
 Dieser private Connector-Pfad ist nur fuer Maintainer gedacht und nicht Teil des offiziellen Public-Supports.
 
+Wichtige technische Regel:
+- der Public-Core faellt nicht mehr auf lokale Strava-Module zurueck
+- wenn der private Adapter nicht installiert oder geladen werden kann, bleibt Strava deaktiviert
+- das ist beabsichtigt
+
 ## Erster Sync
 Beim ersten Start laeuft eine Initialisierung fuer Datei-Import/Synchronisation. In privaten Strava-Operator-Setups kann ein Strava-basierter Initial-Sync je nach Datenmenge und Strava-Rate-Limits dauern.
 

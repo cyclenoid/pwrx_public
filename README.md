@@ -111,6 +111,11 @@ Important:
 - example Linux host path: `/home/<you>/.ssh`
 This private connector path is maintainer-only and not part of the official public support contract.
 
+Important technical rule:
+- public-core no longer falls back to local Strava modules
+- if the private adapter cannot be installed or loaded, Strava stays disabled
+- this is intentional
+
 ## First Sync
 On first start, PWRX runs an initial file-import/sync initialization. In private Strava operator setups, a Strava-backed initial sync can take time depending on data size and Strava rate limits.
 
