@@ -195,6 +195,7 @@ export function ActivityDetail() {
   const [activePowerIndex, setActivePowerIndex] = useState<number | null>(null)
   const [selectedSegmentEffortId, setSelectedSegmentEffortId] = useState<number | null>(null)
   const [activityGearId, setActivityGearId] = useState('')
+  const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null)
 
   const dateLocale = i18n.language?.startsWith('de') ? 'de-DE' : 'en-US'
   const notAvailable = t('common.notAvailable')
@@ -259,6 +260,53 @@ export function ActivityDetail() {
     queryFn: () => getActivityKmSplits(Number(id)),
     enabled: !!activity && (activity.type === 'Run' || activity.type === 'TrailRun' || activity.type === 'VirtualRun'),
   })
+
+  const selectedPhoto = selectedPhotoIndex !== null && activity?.photos
+    ? activity.photos[selectedPhotoIndex] ?? null
+    : null
+
+  const closePhotoLightbox = useCallback(() => {
+    setSelectedPhotoIndex(null)
+  }, [])
+
+  const showPrevPhoto = useCallback(() => {
+    if (!activity?.photos?.length || selectedPhotoIndex === null) return
+    setSelectedPhotoIndex((selectedPhotoIndex - 1 + activity.photos.length) % activity.photos.length)
+  }, [activity?.photos, selectedPhotoIndex])
+
+  const showNextPhoto = useCallback(() => {
+    if (!activity?.photos?.length || selectedPhotoIndex === null) return
+    setSelectedPhotoIndex((selectedPhotoIndex + 1) % activity.photos.length)
+  }, [activity?.photos, selectedPhotoIndex])
+
+  useEffect(() => {
+    if (selectedPhotoIndex === null) return
+
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+
+    const handleKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        closePhotoLightbox()
+        return
+      }
+      if (event.key === 'ArrowLeft') {
+        event.preventDefault()
+        showPrevPhoto()
+        return
+      }
+      if (event.key === 'ArrowRight') {
+        event.preventDefault()
+        showNextPhoto()
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => {
+      document.body.style.overflow = previousOverflow
+      window.removeEventListener('keydown', handleKeyDown)
+    }
+  }, [closePhotoLightbox, selectedPhotoIndex, showNextPhoto, showPrevPhoto])
 
   const { data: vamData } = useQuery({
     queryKey: ['activity-vam', id],
@@ -1351,12 +1399,11 @@ export function ActivityDetail() {
               </CardHeader>
               <CardContent>
                 <div className="grid grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-2">
-                  {activity.photos.map((photo) => (
-                    <a
+                  {activity.photos.map((photo, index) => (
+                    <button
                       key={photo.unique_id}
-                      href={photo.url_large || photo.url_medium || photo.url_small}
-                      target="_blank"
-                      rel="noopener noreferrer"
+                      type="button"
+                      onClick={() => setSelectedPhotoIndex(index)}
                       className="relative aspect-square overflow-hidden rounded-lg group"
                     >
                       <img
@@ -1369,11 +1416,101 @@ export function ActivityDetail() {
                           {t('activityDetail.photos.primary')}
                         </span>
                       )}
-                    </a>
+                    </button>
                   ))}
                 </div>
               </CardContent>
             </Card>
+          )}
+
+          {selectedPhoto && (
+            <div
+              className="fixed inset-0 z-[100] flex items-center justify-center bg-black/85 p-4 backdrop-blur-sm"
+              onClick={closePhotoLightbox}
+              role="dialog"
+              aria-modal="true"
+              aria-label={t('activityDetail.photos.lightboxLabel')}
+            >
+              <button
+                type="button"
+                className="absolute right-4 top-4 inline-flex h-10 w-10 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white transition-colors hover:bg-black/60"
+                onClick={(event) => {
+                  event.stopPropagation()
+                  closePhotoLightbox()
+                }}
+                aria-label={t('activityDetail.photos.close')}
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+
+              {activity.photos && activity.photos.length > 1 && (
+                <>
+                  <button
+                    type="button"
+                    className="absolute left-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white transition-colors hover:bg-black/60"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      showPrevPhoto()
+                    }}
+                    aria-label={t('activityDetail.photos.previous')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="m15 18-6-6 6-6" />
+                    </svg>
+                  </button>
+                  <button
+                    type="button"
+                    className="absolute right-4 top-1/2 inline-flex h-11 w-11 -translate-y-1/2 items-center justify-center rounded-full border border-white/15 bg-black/40 text-white transition-colors hover:bg-black/60"
+                    onClick={(event) => {
+                      event.stopPropagation()
+                      showNextPhoto()
+                    }}
+                    aria-label={t('activityDetail.photos.next')}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="m9 18 6-6-6-6" />
+                    </svg>
+                  </button>
+                </>
+              )}
+
+              <div
+                className="relative flex max-h-[90vh] w-full max-w-6xl flex-col items-center gap-3"
+                onClick={(event) => event.stopPropagation()}
+              >
+                <img
+                  src={selectedPhoto.url_large || selectedPhoto.url_medium || selectedPhoto.url_small}
+                  alt={selectedPhoto.caption || t('activityDetail.photos.photoAlt')}
+                  className="max-h-[80vh] w-auto max-w-full rounded-xl object-contain shadow-2xl"
+                />
+                <div className="flex w-full max-w-3xl items-center justify-between gap-4 rounded-xl border border-white/10 bg-black/45 px-4 py-3 text-sm text-white/90">
+                  <div className="min-w-0">
+                    <div className="truncate font-medium">
+                      {selectedPhoto.caption || t('activityDetail.photos.photoAlt')}
+                    </div>
+                    {activity.photos && activity.photos.length > 1 && (
+                      <div className="mt-1 text-xs text-white/65">
+                        {t('activityDetail.photos.position', {
+                          current: (selectedPhotoIndex ?? 0) + 1,
+                          total: activity.photos.length,
+                        })}
+                      </div>
+                    )}
+                  </div>
+                  <a
+                    href={selectedPhoto.url_large || selectedPhoto.url_medium || selectedPhoto.url_small}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="shrink-0 text-xs font-medium text-white/80 underline underline-offset-4 hover:text-white"
+                  >
+                    {t('activityDetail.photos.openOriginal')}
+                  </a>
+                </div>
+              </div>
+            </div>
           )}
 
           {/* Map */}
