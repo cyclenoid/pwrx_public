@@ -397,6 +397,58 @@ export function Training() {
     return `${value.toFixed(decimals)}%`
   }
 
+  const getCyclingMetricStatus = (metric: 'decoupling' | 'durability', value: number | null) => {
+    if (value === null || !Number.isFinite(value)) {
+      return {
+        label: t('training.cyclingPerformance.status.noData'),
+        badgeClassName: 'border-border/50 bg-background/60 text-muted-foreground',
+        valueClassName: 'text-muted-foreground',
+      }
+    }
+
+    if (metric === 'decoupling') {
+      if (value <= 5) {
+        return {
+          label: t('training.cyclingPerformance.status.good'),
+          badgeClassName: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
+          valueClassName: 'text-emerald-300',
+        }
+      }
+      if (value <= 8) {
+        return {
+          label: t('training.cyclingPerformance.status.solid'),
+          badgeClassName: 'border-amber-500/25 bg-amber-500/10 text-amber-300',
+          valueClassName: 'text-amber-300',
+        }
+      }
+      return {
+        label: t('training.cyclingPerformance.status.watch'),
+        badgeClassName: 'border-rose-500/25 bg-rose-500/10 text-rose-300',
+        valueClassName: 'text-rose-300',
+      }
+    }
+
+    if (value >= 95) {
+      return {
+        label: t('training.cyclingPerformance.status.good'),
+        badgeClassName: 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300',
+        valueClassName: 'text-emerald-300',
+      }
+    }
+    if (value >= 90) {
+      return {
+        label: t('training.cyclingPerformance.status.solid'),
+        badgeClassName: 'border-amber-500/25 bg-amber-500/10 text-amber-300',
+        valueClassName: 'text-amber-300',
+      }
+    }
+    return {
+      label: t('training.cyclingPerformance.status.watch'),
+      badgeClassName: 'border-rose-500/25 bg-rose-500/10 text-rose-300',
+      valueClassName: 'text-rose-300',
+    }
+  }
+
   const timeRangeLabels: Record<number, string> = {
     0: t('training.pace.filters.all'),
     24: t('training.pace.filters.twoYears'),
@@ -413,6 +465,8 @@ export function Training() {
   const sidebarCardClass = 'border-border/60 bg-card/95 shadow-sm'
   const sidebarLegendClass = 'inline-flex items-center gap-2 rounded-full border border-border/40 bg-muted/10 px-2.5 py-0.5 text-[11px] text-muted-foreground'
   const paceMetricTileClass = 'rounded-xl border border-border/50 bg-background/70 px-4 py-3 shadow-sm'
+  const cyclingDecouplingStatus = getCyclingMetricStatus('decoupling', cyclingPerformanceSummary.medianDecouplingPct)
+  const cyclingDurabilityStatus = getCyclingMetricStatus('durability', cyclingPerformanceSummary.medianDurabilityPct)
 
   const renderHeartRateZonesCard = () => (
     <Card className={sidebarCardClass}>
@@ -792,10 +846,15 @@ export function Training() {
                           <div className="mt-1 text-sm text-muted-foreground">{t('training.cyclingPerformance.cards.avgHrHint')}</div>
                         </div>
                         <div className="rounded-xl border border-border/60 bg-background/60 p-4">
-                          <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                            {t('training.cyclingPerformance.cards.decoupling')}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                              {t('training.cyclingPerformance.cards.decoupling')}
+                            </div>
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${cyclingDecouplingStatus.badgeClassName}`}>
+                              {cyclingDecouplingStatus.label}
+                            </span>
                           </div>
-                          <div className="mt-2 text-3xl font-semibold tabular-nums text-sky-300">
+                          <div className={`mt-2 text-3xl font-semibold tabular-nums ${cyclingDecouplingStatus.valueClassName}`}>
                             {formatPercentValue(cyclingPerformanceSummary.medianDecouplingPct)}
                           </div>
                           <div className="mt-1 text-sm text-muted-foreground">
@@ -805,10 +864,15 @@ export function Training() {
                           </div>
                         </div>
                         <div className="rounded-xl border border-border/60 bg-background/60 p-4">
-                          <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
-                            {t('training.cyclingPerformance.cards.durability')}
+                          <div className="flex items-start justify-between gap-3">
+                            <div className="text-xs uppercase tracking-[0.16em] text-muted-foreground">
+                              {t('training.cyclingPerformance.cards.durability')}
+                            </div>
+                            <span className={`rounded-full border px-2 py-0.5 text-[10px] font-semibold uppercase tracking-[0.14em] ${cyclingDurabilityStatus.badgeClassName}`}>
+                              {cyclingDurabilityStatus.label}
+                            </span>
                           </div>
-                          <div className="mt-2 text-3xl font-semibold tabular-nums text-emerald-300">
+                          <div className={`mt-2 text-3xl font-semibold tabular-nums ${cyclingDurabilityStatus.valueClassName}`}>
                             {formatPercentValue(cyclingPerformanceSummary.medianDurabilityPct)}
                           </div>
                           <div className="mt-1 text-sm text-muted-foreground">

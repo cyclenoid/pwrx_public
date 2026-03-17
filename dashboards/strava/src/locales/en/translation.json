@@ -839,6 +839,12 @@
         "avgHr": "Avg HR",
         "rides": "{{count}} rides"
       },
+      "status": {
+        "good": "Good",
+        "solid": "Solid",
+        "watch": "Watch",
+        "noData": "N/A"
+      },
       "footnote": "Only rides with heart rate, power, and at least 30 minutes moving time are included. Cardiac drift uses rides of 45 minutes or more, durability uses rides of 60 minutes or more."
     },
     "trainingLoad": {
