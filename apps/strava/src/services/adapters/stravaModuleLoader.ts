@@ -9,6 +9,7 @@ const defaultStravaModulePath = '@your-org/pwrx-adapter-strava';
 const stravaModulePath = String(process.env.ADAPTER_STRAVA_MODULE || defaultStravaModulePath).trim();
 let externalModuleChecked = false;
 let externalModuleValue: any | null = null;
+let missingFactoryWarnings = new Set<string>();
 
 const getExternalModule = (): any | null => {
   if (externalModuleChecked) return externalModuleValue;
@@ -57,23 +58,16 @@ const resolveFactory = <T extends AnyFactory>(
   return undefined;
 };
 
-const loadLocalFactory = <T extends AnyFactory>(
-  localModulePath: string,
-  exportNames: string[],
-  label: string
-): T | undefined => {
-  try {
-    const moduleExports = require(localModulePath);
-    const factory = resolveFactory<T>(moduleExports, exportNames, label);
-    if (factory) return factory;
-    console.warn(`${label} module loaded but no matching factory export was found.`);
-    return undefined;
-  } catch (error: any) {
-    if (error?.code !== 'MODULE_NOT_FOUND') {
-      console.warn(`Failed to load optional ${label} module:`, error?.message || error);
-    }
-    return undefined;
+const warnMissingFactory = (label: string): void => {
+  if (missingFactoryWarnings.has(label)) return;
+  missingFactoryWarnings.add(label);
+  if (!stravaModulePath) {
+    console.warn(`${label} unavailable: ADAPTER_STRAVA_MODULE is empty.`);
+    return;
   }
+  console.warn(
+    `${label} unavailable in public-core mode. Install the private adapter package and ensure ADAPTER_STRAVA_MODULE="${stravaModulePath}" can be resolved.`
+  );
 };
 
 export const loadStravaSyncClientFactory = (): (() => AdapterSyncClient) | undefined => {
@@ -84,11 +78,8 @@ export const loadStravaSyncClientFactory = (): (() => AdapterSyncClient) | undef
     'Strava sync adapter'
   );
   if (externalFactory) return externalFactory;
-  return loadLocalFactory<() => AdapterSyncClient>(
-    './stravaSyncAdapter',
-    ['createStravaSyncAdapterClient', 'default'],
-    'Strava sync adapter'
-  );
+  warnMissingFactory('Strava sync adapter');
+  return undefined;
 };
 
 export const loadStravaUserClientFactory = (): (() => AdapterUserClient) | undefined => {
@@ -99,11 +90,8 @@ export const loadStravaUserClientFactory = (): (() => AdapterUserClient) | undef
     'Strava user adapter'
   );
   if (externalFactory) return externalFactory;
-  return loadLocalFactory<() => AdapterUserClient>(
-    './stravaUserAdapter',
-    ['createStravaUserAdapterClient', 'default'],
-    'Strava user adapter'
-  );
+  warnMissingFactory('Strava user adapter');
+  return undefined;
 };
 
 export const loadStravaRoutesFactory = (): CreateStravaRoutes | undefined => {
@@ -114,9 +102,6 @@ export const loadStravaRoutesFactory = (): CreateStravaRoutes | undefined => {
     'Strava routes'
   );
   if (externalFactory) return externalFactory;
-  return loadLocalFactory<CreateStravaRoutes>(
-    '../../api/stravaRoutes',
-    ['default'],
-    'Strava routes'
-  );
+  warnMissingFactory('Strava routes');
+  return undefined;
 };
