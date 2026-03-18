@@ -681,6 +681,12 @@ export function Dashboard() {
       yearToDate,
     }
   }, [activities, currentYear])
+  const formatPizzaSlices = (kcal: number) => {
+    const pizzaSliceKcal = 285
+    const slices = kcal / pizzaSliceKcal
+    if (!Number.isFinite(slices) || slices <= 0) return '—'
+    return slices >= 10 ? formatNumber(Math.round(slices)) : formatNumber(slices, 1)
+  }
 
 
   if (statsError || activitiesError) {
@@ -1293,24 +1299,39 @@ export function Dashboard() {
               </div>
             </CardHeader>
             <CardContent className="grid grid-cols-3 gap-2 pt-0">
-              <CompactStat
-                icon={<Clock size={14} />}
-                label={t('dashboard.calories.last7Days')}
-                value={`${formatCompactNumber(Math.round(caloriesSummary.last7Days))} kcal`}
-                color="text-orange-500"
-              />
-              <CompactStat
-                icon={<Activity size={14} />}
-                label={t('dashboard.calories.last30Days')}
-                value={`${formatCompactNumber(Math.round(caloriesSummary.last30Days))} kcal`}
-                color="text-amber-500"
-              />
-              <CompactStat
-                icon={<Mountain size={14} />}
-                label={t('dashboard.calories.yearToDate')}
-                value={`${formatCompactNumber(Math.round(caloriesSummary.yearToDate))} kcal`}
-                color="text-stone-400"
-              />
+              {[
+                {
+                  icon: <Clock size={14} />,
+                  label: t('dashboard.calories.last7Days'),
+                  value: caloriesSummary.last7Days,
+                  color: 'text-orange-500',
+                },
+                {
+                  icon: <Activity size={14} />,
+                  label: t('dashboard.calories.last30Days'),
+                  value: caloriesSummary.last30Days,
+                  color: 'text-amber-500',
+                },
+                {
+                  icon: <Mountain size={14} />,
+                  label: t('dashboard.calories.yearToDate'),
+                  value: caloriesSummary.yearToDate,
+                  color: 'text-stone-400',
+                },
+              ].map((item) => (
+                <div key={item.label} className="rounded-lg border border-border/50 bg-background/60 px-3 py-2.5">
+                  <div className={`mb-1 flex items-center gap-1.5 text-xs ${item.color}`}>
+                    {item.icon}
+                    <span className="text-muted-foreground">{item.label}</span>
+                  </div>
+                  <div className="text-base font-semibold tabular-nums">
+                    {formatCompactNumber(Math.round(item.value))} kcal
+                  </div>
+                  <div className="mt-1 text-[11px] text-muted-foreground">
+                    {t('dashboard.calories.pizzaEquivalent', { value: formatPizzaSlices(item.value) })}
+                  </div>
+                </div>
+              ))}
             </CardContent>
           </Card>
         )}

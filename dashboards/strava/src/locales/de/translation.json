@@ -145,7 +145,8 @@
       "subtitle": "{{count}} Aktivitäten mit Kalorienwert",
       "last7Days": "7 Tage",
       "last30Days": "30 Tage",
-      "yearToDate": "Jahr"
+      "yearToDate": "Jahr",
+      "pizzaEquivalent": "≈ {{value}} Pizzastücke"
     },
     "versionCard": {
       "title": "Version",
