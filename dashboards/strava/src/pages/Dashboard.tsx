@@ -681,11 +681,19 @@ export function Dashboard() {
       yearToDate,
     }
   }, [activities, currentYear])
-  const formatPizzaSlices = (kcal: number) => {
-    const pizzaSliceKcal = 285
-    const slices = kcal / pizzaSliceKcal
-    if (!Number.isFinite(slices) || slices <= 0) return '—'
-    return slices >= 10 ? formatNumber(Math.round(slices)) : formatNumber(slices, 1)
+  const formatFoodEquivalent = (kcal: number, perUnit: number) => {
+    const units = kcal / perUnit
+    if (!Number.isFinite(units) || units <= 0) return '—'
+    return units >= 10 ? formatNumber(Math.round(units)) : formatNumber(units, 1)
+  }
+
+  const formatCaloriesEquivalentLine = (kcal: number) => {
+    if (!Number.isFinite(kcal) || kcal <= 0) return '—'
+    return t('dashboard.calories.equivalents', {
+      pizza: formatFoodEquivalent(kcal, 285),
+      banana: formatFoodEquivalent(kcal, 105),
+      croissant: formatFoodEquivalent(kcal, 230),
+    })
   }
 
 
@@ -1328,7 +1336,7 @@ export function Dashboard() {
                     {formatCompactNumber(Math.round(item.value))} kcal
                   </div>
                   <div className="mt-1 text-[11px] text-muted-foreground">
-                    {t('dashboard.calories.pizzaEquivalent', { value: formatPizzaSlices(item.value) })}
+                    {formatCaloriesEquivalentLine(item.value)}
                   </div>
                 </div>
               ))}
