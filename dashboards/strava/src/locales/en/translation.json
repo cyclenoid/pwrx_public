@@ -146,7 +146,7 @@
       "last7Days": "7 days",
       "last30Days": "30 days",
       "yearToDate": "Year",
-      "pizzaEquivalent": "≈ {{value}} pizza slices"
+      "equivalents": "≈ {{pizza}} pizza • {{banana}} banana • {{croissant}} croissant"
     },
     "versionCard": {
       "title": "Version",
