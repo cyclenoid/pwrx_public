@@ -687,14 +687,7 @@ export function Dashboard() {
     return units >= 10 ? formatNumber(Math.round(units)) : formatNumber(units, 1)
   }
 
-  const formatCaloriesEquivalentLine = (kcal: number) => {
-    if (!Number.isFinite(kcal) || kcal <= 0) return '—'
-    return t('dashboard.calories.equivalents', {
-      pizza: formatFoodEquivalent(kcal, 285),
-      banana: formatFoodEquivalent(kcal, 105),
-      croissant: formatFoodEquivalent(kcal, 230),
-    })
-  }
+  const formatPizzaEquivalent = (kcal: number) => formatFoodEquivalent(kcal, 285)
 
 
   if (statsError || activitiesError) {
@@ -1335,8 +1328,16 @@ export function Dashboard() {
                   <div className="text-base font-semibold tabular-nums">
                     {formatCompactNumber(Math.round(item.value))} kcal
                   </div>
-                  <div className="mt-1 text-[11px] text-muted-foreground">
-                    {formatCaloriesEquivalentLine(item.value)}
+                  <div className="mt-1 flex items-center gap-1.5 text-[11px] text-muted-foreground">
+                    <span className="inline-flex h-4 w-4 items-center justify-center text-orange-500/90" aria-hidden="true">
+                      <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                        <path d="M21 7.5c-2.4 6-7.3 11-13.5 13.5-.8.3-1.7-.1-2-.9-.1-.3-.1-.7 0-1l4.5-15c.2-.7.8-1.1 1.5-1.1 3.5 0 6.8 1.6 9 4.5Z"/>
+                        <path d="M15 8c.5 0 1 .4 1 1"/>
+                        <path d="M11.5 11.5c.5 0 1 .4 1 1"/>
+                        <path d="M16.5 12.5c.4 0 .8.3.8.8"/>
+                      </svg>
+                    </span>
+                    <span>{t('dashboard.calories.pizzaEquivalent', { value: formatPizzaEquivalent(item.value) })}</span>
                   </div>
                 </div>
               ))}
