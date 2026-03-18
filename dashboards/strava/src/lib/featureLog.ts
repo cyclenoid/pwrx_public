@@ -18,102 +18,52 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
-    id: '2026-03-18-dashboard-calories-and-equivalents',
+    id: '2026-03-18-dashboard-and-in-app-updates',
     date: '2026-03-18',
-    tag: '334df95',
+    tag: '9b675e4',
     title: {
-      de: 'Kalorien-Kachel im Dashboard erweitert',
-      en: 'Dashboard calories card expanded',
+      de: 'Dashboard und In-App-Updates ausgebaut',
+      en: 'Dashboard and in-app updates expanded',
     },
     summary: {
-      de: 'Das Dashboard zeigt den kumulierten Kalorienverbrauch jetzt direkt in der Sidebar, inklusive alltagsnaher Vergleiche.',
-      en: 'The dashboard now shows cumulative calories burned directly in the sidebar, including simple everyday equivalents.',
+      de: 'Dashboard und App zeigen jetzt klarer, was neu ist, und fassen zusätzliche Alltagsmetriken direkt in der Sidebar zusammen.',
+      en: 'Dashboard and the app now make recent changes more visible and add extra everyday metrics directly in the sidebar.',
     },
     bullets: {
       de: [
         'Neue Kalorien-Kachel mit Summen für 7 Tage, 30 Tage und das laufende Jahr.',
-        'Kalorienwerte nutzen vorhandene Aktivitätsdaten und fallen bei Bedarf auf Kilojoule zurück.',
-        'Zusätzliche Vergleichswerte wie Pizza, Banane und Croissant helfen beim Einordnen der Größenordnung.',
+        'Kalorien lassen sich zusätzlich über einfache Alltagsvergleiche wie Pizza, Banane oder Croissant einordnen.',
+        'Version und Feature-Log sind jetzt direkt in der App sichtbar und schneller erreichbar.',
       ],
       en: [
         'New calories card with totals for 7 days, 30 days and the current year.',
-        'Calorie values use existing activity data and fall back to kilojoules when needed.',
-        'Extra comparisons such as pizza, banana and croissant help put the totals into perspective.',
+        'Calories can now also be put into perspective with simple comparisons such as pizza, banana or croissant.',
+        'Version and feature log are now visible directly inside the app and easier to reach.',
       ],
     },
   },
   {
-    id: '2026-03-18-cycling-performance-speed-and-stability',
-    date: '2026-03-18',
-    tag: '6e30d3c',
-    title: {
-      de: 'Rad-Leistung vs. Puls schneller und stabiler',
-      en: 'Cycling power vs heart rate made faster and more stable',
-    },
-    summary: {
-      de: 'Die neue Rad-Kachel lädt jetzt sichtbarer, bleibt beim Zeitraumwechsel stabil und reagiert dank Cache deutlich schneller.',
-      en: 'The new cycling card now loads more visibly, stays stable during range changes and responds much faster thanks to caching.',
-    },
-    bullets: {
-      de: [
-        'Ride-Kachel zeigt einen echten Ladezustand statt kurz zu verschwinden.',
-        'Bulk-Auswertung für Leistung vs. Puls nutzt jetzt einen Backend-Cache für schnellere Wiederholungen.',
-        'Herzfrequenz-Zonen und Ride-Analysen wurden auf plausiblere Datengrundlagen und Ride-Typen abgestimmt.',
-      ],
-      en: [
-        'The ride card now shows a real loading state instead of disappearing briefly.',
-        'Bulk power-vs-heart-rate analytics now use backend caching for much faster repeat loads.',
-        'Heart-rate zones and ride analytics were aligned to more plausible data inputs and ride-type coverage.',
-      ],
-    },
-  },
-  {
-    id: '2026-03-17-activity-photo-lightbox',
+    id: '2026-03-17-running-and-cycling-training-insights',
     date: '2026-03-17',
-    tag: '550ba9b',
+    tag: 'training',
     title: {
-      de: 'Aktivitätsfotos jetzt als Lightbox',
-      en: 'Activity photos now open in a lightbox',
+      de: 'Trainingsansicht für Laufen und Radfahren aufgewertet',
+      en: 'Training view upgraded for running and cycling',
     },
     summary: {
-      de: 'Fotos aus Aktivitäten lassen sich jetzt direkt als Overlay öffnen und komfortabel durchblättern.',
-      en: 'Activity photos can now be opened directly in an overlay and browsed more comfortably.',
+      de: 'Die Trainingsseite zeigt jetzt mehr leistungsbezogene Metriken, verbindet Puls und Leistung klarer und ist visuell ruhiger aufgebaut.',
+      en: 'The training page now shows more performance-focused metrics, connects heart rate and output more clearly and uses a calmer layout.',
     },
     bullets: {
       de: [
-        'Klick auf ein Foto öffnet ein Overlay im selben Fenster.',
-        'Navigation per Pfeilen und Tastatur ist direkt eingebaut.',
-        'Die Originaldatei lässt sich weiterhin separat öffnen.',
+        'Laufen bewertet jetzt Pace und Effizienz in Relation zur Herzfrequenz.',
+        'Radfahren zeigt Leistung vs. Puls inklusive Cardiac Drift und Durability.',
+        'Sidebars, Zonen und Charts wurden kompakter, ruhiger und im Dashboard-Stil vereinheitlicht.',
       ],
       en: [
-        'Clicking a photo now opens an overlay in the same window.',
-        'Arrow buttons and keyboard navigation are built in.',
-        'The original image can still be opened separately.',
-      ],
-    },
-  },
-  {
-    id: '2026-03-17-version-and-feature-log',
-    date: '2026-03-17',
-    tag: '3257a98',
-    title: {
-      de: 'Version und Feature-Log in der App',
-      en: 'Version and feature log inside the app',
-    },
-    summary: {
-      de: 'Dashboard und Tech-Bereich zeigen jetzt direkt, was sich zuletzt geändert hat.',
-      en: 'Dashboard and the tech area now show what changed recently without leaving the app.',
-    },
-    bullets: {
-      de: [
-        'Neue Feature-Log-Seite mit kuratiertem Änderungsverlauf.',
-        'Dashboard-Sidebar zeigt Version, letzte Änderung und direkten Sprung zum Log.',
-        'Tech-Bereich verlinkt jetzt auf denselben Verlauf statt nur auf technische Rohdaten.',
-      ],
-      en: [
-        'New feature log page with a curated change history.',
-        'Dashboard sidebar now shows version, latest update and a direct jump into the log.',
-        'The tech area now links to the same history instead of only showing raw technical stats.',
+        'Running now evaluates pace and efficiency in relation to heart rate.',
+        'Cycling now shows power vs heart rate including cardiac drift and durability.',
+        'Sidebars, zones and charts were made more compact, calmer and aligned with the dashboard style.',
       ],
     },
   },
@@ -143,27 +93,27 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     },
   },
   {
-    id: '2026-03-17-running-insights-and-training-redesign',
+    id: '2026-03-17-activity-photo-lightbox',
     date: '2026-03-17',
-    tag: 'training',
+    tag: '550ba9b',
     title: {
-      de: 'Laufmetriken und Trainingsansicht überarbeitet',
-      en: 'Running metrics and training view redesigned',
+      de: 'Aktivitätsfotos jetzt als Lightbox',
+      en: 'Activity photos now open in a lightbox',
     },
     summary: {
-      de: 'Laufen bewertet jetzt Leistung und Herzfrequenz gemeinsam, und die Trainingsseite ist klarer priorisiert.',
-      en: 'Running now evaluates performance together with heart rate, and the training page is better prioritized.',
+      de: 'Fotos aus Aktivitäten lassen sich jetzt direkt als Overlay öffnen und komfortabel durchblättern.',
+      en: 'Activity photos can now be opened directly in an overlay and browsed more comfortably.',
     },
     bullets: {
       de: [
-        'Neue Kennzahlen wie Pace @150 bpm und Effizienz für Läufe.',
-        'Trainingsseite für Laufen und Rad bekam eine Sidebar mit kompakteren Nebenstatistiken.',
-        'Charts wurden visuell beruhigt und näher an den Dashboard-Stil gezogen.',
+        'Klick auf ein Foto öffnet ein Overlay im selben Fenster.',
+        'Navigation per Pfeilen und Tastatur ist direkt eingebaut.',
+        'Die Originaldatei lässt sich weiterhin separat öffnen.',
       ],
       en: [
-        'New running metrics such as pace @150 bpm and efficiency.',
-        'Training pages for running and cycling now use a sidebar for more compact secondary stats.',
-        'Charts were softened visually and aligned more closely with the dashboard style.',
+        'Clicking a photo now opens an overlay in the same window.',
+        'Arrow buttons and keyboard navigation are built in.',
+        'The original image can still be opened separately.',
       ],
     },
   },
