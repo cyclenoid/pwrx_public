@@ -625,6 +625,62 @@ export function Dashboard() {
 
   const recentRunPerformance = runningPerformanceWindow.recent
   const previousRunPerformance = runningPerformanceWindow.previous
+  const caloriesSummary = useMemo(() => {
+    if (!activities) {
+      return {
+        hasData: false,
+        activityCount: 0,
+        last7Days: 0,
+        last30Days: 0,
+        yearToDate: 0,
+      }
+    }
+
+    const now = new Date()
+    const sevenDaysAgo = new Date(now)
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    const thirtyDaysAgo = new Date(now)
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
+
+    let activityCount = 0
+    let last7Days = 0
+    let last30Days = 0
+    let yearToDate = 0
+
+    activities.forEach((activity) => {
+      const activityDate = new Date(activity.start_date)
+      const caloriesValue = Number(activity.calories)
+      const kilojoulesValue = Number(activity.kilojoules)
+      const estimatedCalories =
+        Number.isFinite(caloriesValue) && caloriesValue > 0
+          ? caloriesValue
+          : Number.isFinite(kilojoulesValue) && kilojoulesValue > 0
+            ? kilojoulesValue * 0.239
+            : 0
+
+      if (!estimatedCalories) return
+
+      activityCount += 1
+
+      if (activityDate >= sevenDaysAgo) {
+        last7Days += estimatedCalories
+      }
+      if (activityDate >= thirtyDaysAgo) {
+        last30Days += estimatedCalories
+      }
+      if (activityDate.getFullYear() === currentYear) {
+        yearToDate += estimatedCalories
+      }
+    })
+
+    return {
+      hasData: activityCount > 0,
+      activityCount,
+      last7Days,
+      last30Days,
+      yearToDate,
+    }
+  }, [activities, currentYear])
 
 
   if (statsError || activitiesError) {
@@ -1219,6 +1275,45 @@ export function Dashboard() {
             )}
           </CardContent>
         </Card>
+
+        {caloriesSummary.hasData && (
+          <Card className="border-border/60 bg-card/95 shadow-sm">
+            <CardHeader className="pb-2">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-orange-500">
+                  <path d="M12 2c1.8 2.3 2.7 4.2 2.7 5.8 0 1.7-.9 3-2.7 4.2-1.8-1.2-2.7-2.5-2.7-4.2C9.3 6.2 10.2 4.3 12 2Z"/>
+                  <path d="M8 14a4 4 0 1 0 8 0c0-1.7-1-3.2-2.6-4.6-.3 1.5-1.2 2.6-2.7 3.6-1.4-1-2.4-2.1-2.7-3.6C9 10.8 8 12.3 8 14Z"/>
+                  <path d="M12 22a7 7 0 0 0 7-7c0-2.8-1.4-5.1-3.6-7" />
+                  <path d="M12 22a7 7 0 0 1-7-7c0-2.8 1.4-5.1 3.6-7" />
+                </svg>
+                {t('dashboard.calories.title')}
+              </CardTitle>
+              <div className="text-xs text-muted-foreground">
+                {t('dashboard.calories.subtitle', { count: caloriesSummary.activityCount })}
+              </div>
+            </CardHeader>
+            <CardContent className="grid grid-cols-3 gap-2 pt-0">
+              <CompactStat
+                icon={<Clock size={14} />}
+                label={t('dashboard.calories.last7Days')}
+                value={`${formatCompactNumber(Math.round(caloriesSummary.last7Days))} kcal`}
+                color="text-orange-500"
+              />
+              <CompactStat
+                icon={<Activity size={14} />}
+                label={t('dashboard.calories.last30Days')}
+                value={`${formatCompactNumber(Math.round(caloriesSummary.last30Days))} kcal`}
+                color="text-amber-500"
+              />
+              <CompactStat
+                icon={<Mountain size={14} />}
+                label={t('dashboard.calories.yearToDate')}
+                value={`${formatCompactNumber(Math.round(caloriesSummary.yearToDate))} kcal`}
+                color="text-stone-400"
+              />
+            </CardContent>
+          </Card>
+        )}
 
         {/* Distance Chart */}
         <WeeklyBarChart

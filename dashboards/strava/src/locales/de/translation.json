@@ -140,6 +140,13 @@
       "openTraining": "Training",
       "compareWindow": "vs. 6 Wochen davor"
     },
+    "calories": {
+      "title": "Kalorienverbrauch",
+      "subtitle": "{{count}} Aktivitäten mit Kalorienwert",
+      "last7Days": "7 Tage",
+      "last30Days": "30 Tage",
+      "yearToDate": "Jahr"
+    },
     "versionCard": {
       "title": "Version",
       "featureLog": "Feature-Log",

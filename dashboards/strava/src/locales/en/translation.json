@@ -140,6 +140,13 @@
       "openTraining": "Training",
       "compareWindow": "vs previous 6 weeks"
     },
+    "calories": {
+      "title": "Calories burned",
+      "subtitle": "{{count}} activities with calorie data",
+      "last7Days": "7 days",
+      "last30Days": "30 days",
+      "yearToDate": "Year"
+    },
     "versionCard": {
       "title": "Version",
       "featureLog": "Feature log",
