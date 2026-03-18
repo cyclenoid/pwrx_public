@@ -18,6 +18,81 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-03-18-dashboard-calories-and-equivalents',
+    date: '2026-03-18',
+    tag: '334df95',
+    title: {
+      de: 'Kalorien-Kachel im Dashboard erweitert',
+      en: 'Dashboard calories card expanded',
+    },
+    summary: {
+      de: 'Das Dashboard zeigt den kumulierten Kalorienverbrauch jetzt direkt in der Sidebar, inklusive alltagsnaher Vergleiche.',
+      en: 'The dashboard now shows cumulative calories burned directly in the sidebar, including simple everyday equivalents.',
+    },
+    bullets: {
+      de: [
+        'Neue Kalorien-Kachel mit Summen für 7 Tage, 30 Tage und das laufende Jahr.',
+        'Kalorienwerte nutzen vorhandene Aktivitätsdaten und fallen bei Bedarf auf Kilojoule zurück.',
+        'Zusätzliche Vergleichswerte wie Pizza, Banane und Croissant helfen beim Einordnen der Größenordnung.',
+      ],
+      en: [
+        'New calories card with totals for 7 days, 30 days and the current year.',
+        'Calorie values use existing activity data and fall back to kilojoules when needed.',
+        'Extra comparisons such as pizza, banana and croissant help put the totals into perspective.',
+      ],
+    },
+  },
+  {
+    id: '2026-03-18-cycling-performance-speed-and-stability',
+    date: '2026-03-18',
+    tag: '6e30d3c',
+    title: {
+      de: 'Rad-Leistung vs. Puls schneller und stabiler',
+      en: 'Cycling power vs heart rate made faster and more stable',
+    },
+    summary: {
+      de: 'Die neue Rad-Kachel lädt jetzt sichtbarer, bleibt beim Zeitraumwechsel stabil und reagiert dank Cache deutlich schneller.',
+      en: 'The new cycling card now loads more visibly, stays stable during range changes and responds much faster thanks to caching.',
+    },
+    bullets: {
+      de: [
+        'Ride-Kachel zeigt einen echten Ladezustand statt kurz zu verschwinden.',
+        'Bulk-Auswertung für Leistung vs. Puls nutzt jetzt einen Backend-Cache für schnellere Wiederholungen.',
+        'Herzfrequenz-Zonen und Ride-Analysen wurden auf plausiblere Datengrundlagen und Ride-Typen abgestimmt.',
+      ],
+      en: [
+        'The ride card now shows a real loading state instead of disappearing briefly.',
+        'Bulk power-vs-heart-rate analytics now use backend caching for much faster repeat loads.',
+        'Heart-rate zones and ride analytics were aligned to more plausible data inputs and ride-type coverage.',
+      ],
+    },
+  },
+  {
+    id: '2026-03-17-activity-photo-lightbox',
+    date: '2026-03-17',
+    tag: '550ba9b',
+    title: {
+      de: 'Aktivitätsfotos jetzt als Lightbox',
+      en: 'Activity photos now open in a lightbox',
+    },
+    summary: {
+      de: 'Fotos aus Aktivitäten lassen sich jetzt direkt als Overlay öffnen und komfortabel durchblättern.',
+      en: 'Activity photos can now be opened directly in an overlay and browsed more comfortably.',
+    },
+    bullets: {
+      de: [
+        'Klick auf ein Foto öffnet ein Overlay im selben Fenster.',
+        'Navigation per Pfeilen und Tastatur ist direkt eingebaut.',
+        'Die Originaldatei lässt sich weiterhin separat öffnen.',
+      ],
+      en: [
+        'Clicking a photo now opens an overlay in the same window.',
+        'Arrow buttons and keyboard navigation are built in.',
+        'The original image can still be opened separately.',
+      ],
+    },
+  },
+  {
     id: '2026-03-17-version-and-feature-log',
     date: '2026-03-17',
     tag: '3257a98',
