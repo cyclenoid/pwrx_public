@@ -687,7 +687,7 @@ export function Dashboard() {
     return units >= 10 ? formatNumber(Math.round(units)) : formatNumber(units, 1)
   }
 
-  const formatPizzaEquivalent = (kcal: number) => formatFoodEquivalent(kcal, 285)
+  const formatPizzaEquivalent = (kcal: number) => formatFoodEquivalent(kcal, 1140)
 
 
   if (statsError || activitiesError) {
