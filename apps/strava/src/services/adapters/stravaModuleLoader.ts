@@ -1,5 +1,5 @@
 import type express from 'express';
-import type { AdapterSyncClient, AdapterUserClient } from './types';
+import type { AdapterCapabilities, AdapterSyncClient, AdapterUserClient } from './types';
 
 type AnyFactory = (...args: any[]) => any;
 
@@ -104,4 +104,22 @@ export const loadStravaRoutesFactory = (): CreateStravaRoutes | undefined => {
   if (externalFactory) return externalFactory;
   warnMissingFactory('Strava routes');
   return undefined;
+};
+
+export const loadStravaCapabilityOverrides = (): Partial<AdapterCapabilities> | undefined => {
+  const externalModule = getExternalModule();
+  const capabilityResponse =
+    externalModule?.adapterRegistry?.getCapabilities?.() ??
+    externalModule?.default?.adapterRegistry?.getCapabilities?.();
+
+  if (!capabilityResponse || typeof capabilityResponse !== 'object') {
+    return undefined;
+  }
+
+  const capabilities = capabilityResponse.capabilities;
+  if (!capabilities || typeof capabilities !== 'object') {
+    return undefined;
+  }
+
+  return capabilities as Partial<AdapterCapabilities>;
 };
