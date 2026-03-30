@@ -11,8 +11,55 @@
     "segments": "Segmente",
     "climbs": "Segmente",
     "import": "Import",
+    "club": "Club",
     "gear": "Gear",
     "settings": "Einstellungen"
+  },
+  "club": {
+    "kicker": "Strava Club",
+    "title": "Club-Statistiken",
+    "intro": "Verknüpfe einen Strava-Club, berechne Kennzahlen der letzten 30 Tage und exportiere sie für Einbettungen wie loewenhain.com.",
+    "window": "Zeitraum",
+    "windowValue": "Letzte {{days}} Tage",
+    "statsTitle": "Aktuelle Werte",
+    "statsIntro": "Die Kennzahlen werden live aus dem Club-Feed berechnet. Mitgliederzahl kommt direkt aus dem Clubprofil.",
+    "exportTitle": "Export",
+    "exportIntro": "PWRX bleibt lokal. Für öffentliche Websites werden nur aggregierte Club-Daten an eine externe URL gepusht.",
+    "cards": {
+      "members": "Mitglieder",
+      "activities": "Aktivitäten",
+      "distance": "Kilometer",
+      "elevation": "Höhenmeter"
+    },
+    "fields": {
+      "clubName": "Clubname",
+      "activeAthletes": "Aktive Athleten",
+      "updatedAt": "Aktualisiert",
+      "clubId": "Strava Club ID",
+      "exportUrl": "Export URL",
+      "exportToken": "Export Token",
+      "exportTokenConfigured": "Bereits hinterlegt",
+      "exportTokenPlaceholder": "Neuen Token optional eingeben",
+      "exportEnabled": "Export für öffentliche Einbettung aktivieren",
+      "lastExportedAt": "Letzter Export: {{value}}",
+      "lastExportError": "Letzter Exportfehler: {{value}}"
+    },
+    "actions": {
+      "save": "Konfiguration speichern",
+      "saving": "Speichere...",
+      "export": "Jetzt exportieren",
+      "exporting": "Exportiere..."
+    },
+    "messages": {
+      "loading": "Club-Daten werden geladen...",
+      "noStats": "Noch keine Club-Statistiken verfügbar. Bitte Club-ID setzen und erneut laden.",
+      "saved": "Club-Konfiguration gespeichert.",
+      "saveError": "Club-Konfiguration konnte nicht gespeichert werden.",
+      "exported": "Club-Statistiken wurden exportiert.",
+      "exportError": "Club-Statistiken konnten nicht exportiert werden."
+    },
+    "distanceValue": "{{value}} km",
+    "elevationValue": "{{value}} m"
   },
   "dashboard": {
     "firstRun": {

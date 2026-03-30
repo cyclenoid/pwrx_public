@@ -7,6 +7,7 @@ export interface AdapterCapabilities {
   supportsSegments: boolean;
   supportsSync: boolean;
   supportsPhotos: boolean;
+  supportsClubs: boolean;
 }
 
 export interface AdapterIngestParams {
@@ -95,4 +96,5 @@ export const emptyCapabilities = (): AdapterCapabilities => ({
   supportsSegments: false,
   supportsSync: false,
   supportsPhotos: false,
+  supportsClubs: false,
 });

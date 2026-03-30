@@ -43,6 +43,7 @@ export interface AdapterCapabilities {
   supportsSegments: boolean
   supportsSync: boolean
   supportsPhotos: boolean
+  supportsClubs: boolean
 }
 
 export interface ActivitySourceAdapter {
@@ -65,6 +66,52 @@ export interface CapabilitiesResponse {
 
 export const getCapabilities = async (): Promise<CapabilitiesResponse> => {
   const { data } = await api.get<CapabilitiesResponse>('/capabilities')
+  return data
+}
+
+export interface ClubStats {
+  clubId: number
+  clubName: string
+  memberCount: number
+  activityCount: number
+  activeAthletes: number
+  distanceKm: number
+  elevationM: number
+  windowDays: number
+  updatedAt: string
+}
+
+export interface ClubConfig {
+  clubId: string
+  exportEnabled: boolean
+  exportUrl: string
+  exportTokenConfigured: boolean
+  lastExportedAt?: string | null
+  lastExportError?: string | null
+}
+
+export const getClubStats = async (days = 30): Promise<ClubStats> => {
+  const { data } = await api.get<ClubStats>('/club/stats', { params: { days } })
+  return data
+}
+
+export const getClubConfig = async (): Promise<ClubConfig> => {
+  const { data } = await api.get<ClubConfig>('/club/config')
+  return data
+}
+
+export const saveClubConfig = async (payload: {
+  clubId: string
+  exportEnabled: boolean
+  exportUrl: string
+  exportToken?: string
+}): Promise<ClubConfig> => {
+  const { data } = await api.put<ClubConfig>('/club/config', payload)
+  return data
+}
+
+export const exportClubStats = async (days = 30): Promise<{ success: boolean; exportedAt?: string; targetUrl?: string }> => {
+  const { data } = await api.post<{ success: boolean; exportedAt?: string; targetUrl?: string }>('/club/export', { days })
   return data
 }
 
