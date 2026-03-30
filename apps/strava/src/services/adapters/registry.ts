@@ -7,7 +7,11 @@ import {
   AdapterUserClient,
   emptyCapabilities,
 } from './types';
-import { loadStravaSyncClientFactory, loadStravaUserClientFactory } from './stravaModuleLoader';
+import {
+  loadStravaCapabilityOverrides,
+  loadStravaSyncClientFactory,
+  loadStravaUserClientFactory,
+} from './stravaModuleLoader';
 
 const parseEnabled = (value: string | undefined, fallback: boolean): boolean => {
   if (value === undefined || value === null || value === '') return fallback;
@@ -101,6 +105,7 @@ const buildDefaultRegistry = (): AdapterRegistry => {
   const stravaRequested = parseEnabled(process.env.ADAPTER_STRAVA_ENABLED, true);
   const stravaSyncFactory = stravaRequested ? loadStravaSyncClientFactory() : undefined;
   const stravaUserFactory = stravaRequested ? loadStravaUserClientFactory() : undefined;
+  const stravaCapabilityOverrides = stravaRequested ? loadStravaCapabilityOverrides() : undefined;
   const supportsSync = typeof stravaSyncFactory === 'function';
   const supportsOAuth = typeof stravaUserFactory === 'function';
   const stravaEnabled = stravaRequested && (supportsSync || supportsOAuth);
@@ -121,7 +126,7 @@ const buildDefaultRegistry = (): AdapterRegistry => {
       supportsSegments: stravaEnabled && supportsSync,
       supportsSync: stravaEnabled && supportsSync,
       supportsPhotos: stravaEnabled && supportsSync,
-      supportsClubs: false,
+      supportsClubs: stravaEnabled && Boolean(stravaCapabilityOverrides?.supportsClubs),
     },
   });
 
