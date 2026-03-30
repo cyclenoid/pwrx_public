@@ -12,6 +12,7 @@ import { Heatmap } from './pages/Heatmap'
 import { Training } from './pages/Training'
 import { PowerProfile } from './pages/PowerProfile'
 import { Gear } from './pages/Gear'
+import { Club } from './pages/Club'
 import { FeatureLog } from './pages/FeatureLog'
 import ImportPage from './pages/Import'
 import Settings from './pages/Settings'
@@ -47,6 +48,7 @@ function App() {
               <Route path="training" element={<Training />} />
               <Route path="power" element={<PowerProfile />} />
               <Route path="gear" element={<Gear />} />
+              <Route path="club" element={<Club />} />
               <Route path="feature-log" element={<FeatureLog />} />
               <Route path="settings" element={<Settings />} />
             </Route>

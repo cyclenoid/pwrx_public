@@ -8,6 +8,7 @@ const fallbackCapabilities: AdapterCapabilities = {
   supportsSegments: true,
   supportsSync: true,
   supportsPhotos: true,
+  supportsClubs: false,
 }
 
 export function useCapabilities() {

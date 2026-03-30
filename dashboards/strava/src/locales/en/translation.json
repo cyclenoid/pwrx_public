@@ -11,8 +11,55 @@
     "segments": "Segments",
     "climbs": "Segments",
     "import": "Import",
+    "club": "Club",
     "gear": "Gear",
     "settings": "Settings"
+  },
+  "club": {
+    "kicker": "Strava Club",
+    "title": "Club stats",
+    "intro": "Connect a Strava club, calculate last-30-days metrics, and export them for embeds such as loewenhain.com.",
+    "window": "Window",
+    "windowValue": "Last {{days}} days",
+    "statsTitle": "Current values",
+    "statsIntro": "Metrics are calculated live from the club feed. Member count comes directly from the club profile.",
+    "exportTitle": "Export",
+    "exportIntro": "PWRX stays local. Public websites only receive aggregated club data pushed to an external URL.",
+    "cards": {
+      "members": "Members",
+      "activities": "Activities",
+      "distance": "Distance",
+      "elevation": "Elevation"
+    },
+    "fields": {
+      "clubName": "Club name",
+      "activeAthletes": "Active athletes",
+      "updatedAt": "Updated",
+      "clubId": "Strava club ID",
+      "exportUrl": "Export URL",
+      "exportToken": "Export token",
+      "exportTokenConfigured": "Already configured",
+      "exportTokenPlaceholder": "Optionally enter a new token",
+      "exportEnabled": "Enable export for public embeds",
+      "lastExportedAt": "Last export: {{value}}",
+      "lastExportError": "Last export error: {{value}}"
+    },
+    "actions": {
+      "save": "Save configuration",
+      "saving": "Saving...",
+      "export": "Export now",
+      "exporting": "Exporting..."
+    },
+    "messages": {
+      "loading": "Loading club data...",
+      "noStats": "No club stats available yet. Set a club ID and try again.",
+      "saved": "Club configuration saved.",
+      "saveError": "Club configuration could not be saved.",
+      "exported": "Club stats exported.",
+      "exportError": "Club stats could not be exported."
+    },
+    "distanceValue": "{{value}} km",
+    "elevationValue": "{{value}} m"
   },
   "dashboard": {
     "firstRun": {

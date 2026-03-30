@@ -68,6 +68,7 @@ export class AdapterRegistry {
       acc.supportsSegments = acc.supportsSegments || adapter.capabilities.supportsSegments;
       acc.supportsSync = acc.supportsSync || adapter.capabilities.supportsSync;
       acc.supportsPhotos = acc.supportsPhotos || adapter.capabilities.supportsPhotos;
+      acc.supportsClubs = acc.supportsClubs || adapter.capabilities.supportsClubs;
       return acc;
     }, emptyCapabilities());
 
@@ -93,6 +94,7 @@ const buildDefaultRegistry = (): AdapterRegistry => {
       supportsSegments: true,
       supportsSync: false,
       supportsPhotos: false,
+      supportsClubs: false,
     },
   });
 
@@ -119,6 +121,7 @@ const buildDefaultRegistry = (): AdapterRegistry => {
       supportsSegments: stravaEnabled && supportsSync,
       supportsSync: stravaEnabled && supportsSync,
       supportsPhotos: stravaEnabled && supportsSync,
+      supportsClubs: false,
     },
   });
 

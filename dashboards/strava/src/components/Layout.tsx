@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
 import { ThemeToggle } from './ThemeToggle'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, Trophy, Map, Activity, Zap, Bike, Settings, Flag, FileUp } from 'lucide-react'
+import { LayoutDashboard, Trophy, Map, Activity, Zap, Bike, Settings, Flag, FileUp, Users } from 'lucide-react'
 import { useCapabilities } from '../hooks/useCapabilities'
 
 export function Layout() {
@@ -51,6 +51,12 @@ export function Layout() {
       path: '/gear',
       label: t('nav.gear'),
       icon: <Bike size={16} />,
+    },
+    {
+      path: '/club',
+      label: t('nav.club'),
+      icon: <Users size={16} />,
+      enabled: capabilities.supportsClubs,
     },
   ].filter((item) => item.enabled !== false)
 
