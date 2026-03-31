@@ -20,6 +20,7 @@ const app = express();
 const PORT = process.env.API_PORT || 3001;
 let activityTask: cron.ScheduledTask | null = null;
 let backfillTask: cron.ScheduledTask | null = null;
+let clubExportTask: cron.ScheduledTask | null = null;
 let syncConfigPoller: NodeJS.Timeout | null = null;
 let syncConfigFingerprint = '';
 let startupSyncChecked = false;
@@ -28,6 +29,9 @@ let syncCapabilityDisabledLogged = false;
 
 const hasSyncCapability = (): boolean =>
   Boolean(adapterRegistry.getCapabilities().capabilities.supportsSync);
+
+const hasClubCapability = (): boolean =>
+  Boolean(adapterRegistry.getCapabilities().capabilities.supportsClubs);
 
 function formatSyncError(error: any): string {
   const status = error?.response?.status;
@@ -340,11 +344,58 @@ async function runInitialSync(settings: SyncSettings, userId: number, days: numb
   }
 }
 
+async function runClubStatsExport(reason: string, days: number = 30): Promise<void> {
+  if (!hasClubCapability()) {
+    console.log(`⏭️  Skip ${reason}: club capability disabled`);
+    return;
+  }
+
+  try {
+    const configResponse = await fetch(`http://127.0.0.1:${PORT}/api/club/config`);
+    if (!configResponse.ok) {
+      console.log(`⏭️  Skip ${reason}: club config unavailable (${configResponse.status})`);
+      return;
+    }
+
+    const config: any = await configResponse.json();
+    if (!config?.exportEnabled) {
+      console.log(`⏭️  Skip ${reason}: club export disabled`);
+      return;
+    }
+    if (!config?.clubId || !config?.exportUrl || !config?.exportTokenConfigured) {
+      console.log(`⏭️  Skip ${reason}: club export not fully configured`);
+      return;
+    }
+
+    console.log(`📤 Starting ${reason}...`);
+    const response = await fetch(`http://127.0.0.1:${PORT}/api/club/export`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ days }),
+    });
+
+    if (!response.ok) {
+      const message = await response.text();
+      console.error(`❌ ${reason} failed: ${message || response.statusText}`);
+      return;
+    }
+
+    const payload: any = await response.json().catch(() => ({}));
+    console.log(`✅ ${reason} completed (${String(payload?.exportedAt || 'ok')})`);
+  } catch (error: any) {
+    console.error(`❌ ${reason} failed:`, error?.message || error);
+  }
+}
+
 function scheduleSyncTasks(settings: SyncSettings): void {
   destroyTask(activityTask);
   destroyTask(backfillTask);
+  destroyTask(clubExportTask);
   activityTask = null;
   backfillTask = null;
+  clubExportTask = null;
 
   if (!hasSyncCapability()) {
     if (!syncCapabilityDisabledLogged) {
@@ -385,14 +436,32 @@ function scheduleSyncTasks(settings: SyncSettings): void {
   } else {
     console.log('⏸️  Backfill sync schedule disabled');
   }
+
+  if (hasClubCapability()) {
+    const clubExportCron = String(process.env.CLUB_STATS_EXPORT_CRON || '15 4 * * *').trim();
+    if (cron.validate(clubExportCron)) {
+      clubExportTask = cron.schedule(
+        clubExportCron,
+        () => runClubStatsExport('scheduled club stats export', 30),
+        { timezone }
+      );
+      console.log(`⏰ Club stats export schedule: ${clubExportCron} (${timezone})`);
+    } else {
+      console.warn(`⚠️  Invalid club export cron expression: ${clubExportCron}`);
+    }
+  } else {
+    console.log('⏸️  Club stats export schedule disabled');
+  }
 }
 
 async function refreshSyncSchedules(force: boolean = false): Promise<void> {
   if (!hasSyncCapability()) {
     destroyTask(activityTask);
     destroyTask(backfillTask);
+    destroyTask(clubExportTask);
     activityTask = null;
     backfillTask = null;
+    clubExportTask = null;
     return;
   }
 
@@ -449,6 +518,10 @@ async function refreshSyncSchedules(force: boolean = false): Promise<void> {
       } else {
         console.log('⏸️  Startup catch-up disabled');
       }
+    }
+
+    if (force && hasClubCapability()) {
+      await runClubStatsExport('startup club stats export', 30);
     }
   } catch (error: any) {
     console.error('❌ Failed to refresh sync schedules:', error.message);
@@ -517,6 +590,7 @@ process.on('SIGTERM', () => {
   console.log('\n👋 Shutting down gracefully...');
   destroyTask(activityTask);
   destroyTask(backfillTask);
+  destroyTask(clubExportTask);
   watchFolderService.stop();
   importQueueWorker.stop();
   importQueueAlertMonitor.stop();
@@ -528,6 +602,7 @@ process.on('SIGINT', () => {
   console.log('\n👋 Shutting down gracefully...');
   destroyTask(activityTask);
   destroyTask(backfillTask);
+  destroyTask(clubExportTask);
   watchFolderService.stop();
   importQueueWorker.stop();
   importQueueAlertMonitor.stop();
