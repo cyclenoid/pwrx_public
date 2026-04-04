@@ -146,11 +146,13 @@ Important:
 Official Strava references:
 - https://developers.strava.com/docs/rate-limits/
 - https://developers.strava.com/docs/getting-started/
+- API connectivity options and operator recipes: `docs/STRAVA_CONNECTIVITY.md`
 
 ## Optional: notes for advanced operators
 
 If you deliberately run a private connector setup as maintainer/operator, read:
 - `docs/DEPLOYMENT_RUNBOOK.md`
+- `docs/STRAVA_CONNECTIVITY.md`
 
 This is intentionally a separate operator path, not the recommended starting point for normal users.
 

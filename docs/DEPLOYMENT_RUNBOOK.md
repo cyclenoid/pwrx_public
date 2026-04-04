@@ -76,6 +76,7 @@ STRAVA_REFRESH_TOKEN=...
 ```
 
 Also ensure SSH/deploy-key access is available to install the private adapter package.
+If you use a public npm package or `git+https` source, SSH key mount is not required.
 
 ### Operator checks for Strava mode
 
@@ -85,6 +86,10 @@ Also ensure SSH/deploy-key access is available to install the private adapter pa
   - verify env vars
   - recreate backend container
   - check adapter installation logs
+
+Detailed connectivity options and adapter recipes:
+- `docs/STRAVA_CONNECTIVITY.md`
+- `docs/STRAVA_CONNECTIVITY.de.md`
 
 ## Troubleshooting
 
@@ -98,4 +103,3 @@ Also ensure SSH/deploy-key access is available to install the private adapter pa
   - verify `ADAPTER_STRAVA_ENABLED=true`
   - verify private adapter install access
   - recreate backend container
-
