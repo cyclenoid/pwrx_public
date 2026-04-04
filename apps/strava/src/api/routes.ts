@@ -435,7 +435,82 @@ type HeatmapHotspotCache = {
   sourceActivityCount: number;
 };
 const heatmapHotspotCache = new Map<string, HeatmapHotspotCache>();
+type PowerCurveAnalysisCacheEntry = {
+  data: any;
+  timestamp: number;
+  fingerprint: string;
+};
+const powerCurveAnalysisCache = new Map<string, PowerCurveAnalysisCacheEntry>();
+const POWER_CURVE_ANALYSIS_CACHE_TTL_MS = Math.max(
+  60 * 1000,
+  Number(process.env.POWER_CURVE_ANALYSIS_CACHE_TTL_MS || (12 * 60 * 60 * 1000))
+);
+const POWER_CURVE_ANALYSIS_CACHE_MAX_ENTRIES = Math.max(
+  4,
+  Number(process.env.POWER_CURVE_ANALYSIS_CACHE_MAX_ENTRIES || 20)
+);
+const POWER_CURVE_SUPPORTED_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide'] as const;
 let heatmapPrewarmTimeout: NodeJS.Timeout | null = null;
+
+const buildPowerCurveAnalysisCacheKey = (userId: number, months: number): string =>
+  `${userId}:${months}`;
+
+const trimPowerCurveAnalysisCache = (): void => {
+  if (powerCurveAnalysisCache.size <= POWER_CURVE_ANALYSIS_CACHE_MAX_ENTRIES) return;
+  const sorted = Array.from(powerCurveAnalysisCache.entries())
+    .sort((a, b) => a[1].timestamp - b[1].timestamp);
+  while (sorted.length > 0 && powerCurveAnalysisCache.size > POWER_CURVE_ANALYSIS_CACHE_MAX_ENTRIES) {
+    const oldest = sorted.shift();
+    if (!oldest) break;
+    powerCurveAnalysisCache.delete(oldest[0]);
+  }
+};
+
+const clearPowerCurveAnalysisCache = (reason: string = 'manual'): number => {
+  const cleared = powerCurveAnalysisCache.size;
+  powerCurveAnalysisCache.clear();
+  if (cleared > 0) {
+    console.log(`Power-curve analysis cache cleared (${cleared} entries, reason=${reason})`);
+  }
+  return cleared;
+};
+
+const buildPowerCurveAnalysisFingerprint = async (
+  userId: number,
+  monthsAgo: number,
+  athleteWeight: number
+): Promise<string> => {
+  const result = await db.query(
+    `
+    SELECT
+      COUNT(DISTINCT a.strava_activity_id)::bigint AS activity_count,
+      COALESCE(MAX(a.updated_at), TIMESTAMP 'epoch') AS max_activity_updated_at,
+      COALESCE(MAX(s.created_at), TIMESTAMP 'epoch') AS max_stream_created_at
+    FROM strava.activities a
+    LEFT JOIN strava.activity_streams s
+      ON s.activity_id = a.strava_activity_id
+      AND s.stream_type = 'watts'
+    WHERE a.user_id = $1
+      AND a.average_watts IS NOT NULL
+      AND a.average_watts > 0
+      AND a.start_date >= NOW() - make_interval(months => $2)
+      AND a.type = ANY($3::text[])
+    `,
+    [userId, monthsAgo, [...POWER_CURVE_SUPPORTED_TYPES]]
+  );
+
+  const row = result.rows[0] || {};
+  const count = Number(row.activity_count || 0);
+  const maxActivity = row.max_activity_updated_at
+    ? new Date(row.max_activity_updated_at).toISOString()
+    : 'epoch';
+  const maxStream = row.max_stream_created_at
+    ? new Date(row.max_stream_created_at).toISOString()
+    : 'epoch';
+  const weight = Number.isFinite(athleteWeight) ? athleteWeight.toFixed(2) : '75.00';
+
+  return `${count}|${maxActivity}|${maxStream}|${weight}`;
+};
 
 const normalizeHeatmapHotspotLocationLabel = (value: string | null | undefined): string | null => {
   const normalized = String(value || '')
@@ -4905,19 +4980,45 @@ router.get('/analytics/time-of-day', async (req: Request, res: Response) => {
  */
 router.get('/analytics/power-curve', async (req: Request, res: Response) => {
   try {
-    const { months = '12' } = req.query;
-    const monthsAgo = parseInt(months as string);
+    const parsedMonths = Number.parseInt(String(req.query.months ?? '12'), 10);
+    const monthsAgo = Number.isFinite(parsedMonths)
+      ? Math.min(60, Math.max(1, parsedMonths))
+      : 12;
+
+    const currentProfile = await ensureDefaultSingleUserProfile();
+    const activeUserId = Number(currentProfile?.id);
+    if (!Number.isFinite(activeUserId) || activeUserId <= 0) {
+      return res.status(500).json({ error: 'No active user profile available' });
+    }
 
     // Get user weight for W/kg calculations
-    const userQuery = await db.query(`
-      SELECT value FROM strava.user_settings
-      WHERE user_id = (SELECT id FROM strava.user_profile WHERE is_active = true LIMIT 1)
+    const userQuery = await db.query(
+      `
+      SELECT value
+      FROM strava.user_settings
+      WHERE user_id = $1
       AND key = 'athlete_weight'
-    `);
+      LIMIT 1
+      `,
+      [activeUserId]
+    );
     const userWeight = userQuery.rows[0]?.value ? parseFloat(userQuery.rows[0].value) : 75; // Default 75kg
 
+    const fingerprint = await buildPowerCurveAnalysisFingerprint(activeUserId, monthsAgo, userWeight);
+    const cacheKey = buildPowerCurveAnalysisCacheKey(activeUserId, monthsAgo);
+    const cached = powerCurveAnalysisCache.get(cacheKey);
+    const now = Date.now();
+    if (cached && cached.fingerprint === fingerprint && (now - cached.timestamp) < POWER_CURVE_ANALYSIS_CACHE_TTL_MS) {
+      return res.json({
+        ...cached.data,
+        cached: true,
+        cache_age_seconds: Math.floor((now - cached.timestamp) / 1000),
+      });
+    }
+
     // Get all activities with power data
-    const query = `
+    const result = await db.query(
+      `
       SELECT
         a.strava_activity_id,
         a.type,
@@ -4927,15 +5028,18 @@ router.get('/analytics/power-curve', async (req: Request, res: Response) => {
         a.max_watts,
         s.data as watts_stream
       FROM strava.activities a
-      LEFT JOIN strava.activity_streams s ON s.activity_id = a.strava_activity_id AND s.stream_type = 'watts'
-      WHERE a.average_watts IS NOT NULL
+      LEFT JOIN strava.activity_streams s
+        ON s.activity_id = a.strava_activity_id
+        AND s.stream_type = 'watts'
+      WHERE a.user_id = $1
+        AND a.average_watts IS NOT NULL
         AND a.average_watts > 0
-        AND a.start_date >= NOW() - INTERVAL '${monthsAgo} months'
-        AND a.type IN ('Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide')
+        AND a.start_date >= NOW() - make_interval(months => $2)
+        AND a.type = ANY($3::text[])
       ORDER BY a.start_date DESC
-    `;
-
-    const result = await db.query(query);
+      `,
+      [activeUserId, monthsAgo, [...POWER_CURVE_SUPPORTED_TYPES]]
+    );
 
     // Time intervals to analyze (in seconds)
     const intervals = [5, 10, 30, 60, 120, 300, 600, 1200, 1800, 3600];
@@ -5031,7 +5135,7 @@ router.get('/analytics/power-curve', async (req: Request, res: Response) => {
       power_watts: powerCurve[duration] || 0
     }));
 
-    res.json({
+    const responseData = {
       rider_type: riderType,
       strengths,
       power_curve: curveData,
@@ -5044,6 +5148,18 @@ router.get('/analytics/power-curve', async (req: Request, res: Response) => {
       },
       activities_analyzed: result.rows.length,
       period_months: monthsAgo
+    };
+
+    powerCurveAnalysisCache.set(cacheKey, {
+      data: responseData,
+      timestamp: Date.now(),
+      fingerprint,
+    });
+    trimPowerCurveAnalysisCache();
+
+    res.json({
+      ...responseData,
+      cached: false,
     });
 
   } catch (error: any) {
@@ -5919,7 +6035,11 @@ router.get('/sync-logs', async (req: Request, res: Response) => {
  */
 router.post('/cache/clear', async (req: Request, res: Response) => {
   techStatsCache = null;
-  res.json({ message: 'Cache cleared' });
+  const powerCurveCleared = clearPowerCurveAnalysisCache('api_cache_clear');
+  res.json({
+    message: 'Cache cleared',
+    power_curve_analysis_entries_cleared: powerCurveCleared,
+  });
 });
 
 /**
