@@ -1,96 +1,70 @@
-# Deployment Runbook (Public Repo as Source for Unraid)
+# Deployment Runbook (Advanced / Operators)
 
-This runbook defines the standard deployment process for PWRX.
+This document is for advanced operators who deploy PWRX on a server.  
+If you are a normal end user, use the Quick Start in `README.md` / `README.de.md`.
 
-## Product baseline
+## Public baseline (important)
 
-- PWRX must be deployable as a standalone app from `cyclenoid/pwrx_public`.
-- External users do not need a separate `data-hub` repository.
-- Shared-host or multi-app setups are optional operator-specific variants.
-- The Unraid folder name `/mnt/user/appdata/data-hub` is historical only and not part of the product contract.
-- Official public baseline is file import / public-core.
-- Strava connector enablement on Unraid is a private operator override, not a public product promise.
+The official public setup is:
+- repository: `cyclenoid/pwrx_public`
+- file-import first (single file + ZIP bulk import)
+- no Strava API setup required
 
-## Scope
+The app can run on:
+- Linux server
+- Windows (Docker Desktop)
+- macOS (Docker Desktop)
+- NAS systems (including Unraid)
 
-- Source for production (Unraid): `cyclenoid/pwrx_public` (`main`)
-- Optional development source: private repo (`cyclenoid/pwrx`)
-- Optional local test runtime: Docker Desktop
+## Scope of this runbook
 
-## Rule of truth
+Use this guide when you:
+- deploy updates on a server
+- manage production-like environments
+- optionally run a private Strava connector variant
 
-- Unraid must always run code from `pwrx_public/main`.
-- Private repo is for development only.
-- Before production deploy, changes from private repo must be mirrored to public repo.
+## Deployment source and environment
 
-## Environments
-
-- Public repo local working copy: `C:\DEV\pwrx-public-beta`
-- Unraid app path: `/mnt/user/appdata/data-hub` (historical folder name)
-- API health endpoint: `http://<unraid-ip>:3001/api/health`
-
-## Database guidance
-
-- Official baseline: dedicated PWRX database for the PWRX app
-- Private operator variant: shared PostgreSQL server is fine, but keep a dedicated PWRX database/user
-- Avoid making a single shared application database a requirement for normal users
-
-## One-time Unraid setup
-
-Run once on Unraid to ensure the production remote is the public repo:
-
-```bash
-cd /mnt/user/appdata/data-hub
-git remote -v
-```
-
-Expected remote:
-
-- `origin https://github.com/cyclenoid/pwrx_public.git`
-
-If not, fix it:
-
-```bash
-git remote set-url origin https://github.com/cyclenoid/pwrx_public.git
-```
+- Source of truth: `origin/main` from `https://github.com/cyclenoid/pwrx_public.git`
+- App path on host: `<APP_PATH>` (example: `/opt/pwrx` or `/mnt/user/appdata/pwrx`)
+- API health endpoint: `http://<host>:3001/api/health`
 
 ## Standard update flow
 
-1. Develop and test changes (private repo and/or local Docker).
-2. Mirror snapshot to `pwrx_public` and push to `main`.
-3. On Unraid, update to latest `origin/main`.
-4. Rebuild/start containers.
-5. Verify health and capabilities.
+1. Push tested changes to `pwrx_public/main`.
+2. Update server checkout from `origin/main`.
+3. Recreate containers.
+4. Verify health and capabilities.
 
-## Public snapshot + push
-
-From your workstation:
-
-```powershell
-cd C:\DEV\pwrx-public-beta
-git add -A
-git commit -m "chore: deploy latest pwrx snapshot"
-git push origin main
-```
-
-## Unraid deploy (always from public)
+## Server deploy commands
 
 ```bash
-cd /mnt/user/appdata/data-hub
+cd <APP_PATH>
 git fetch origin --prune
-git reset --hard origin/main
-# verify / restore the Unraid-only Strava runtime flags in .env if needed
+git checkout main
+git pull --ff-only origin main
 docker compose up -d --build strava-tracker strava-dashboard
 ```
 
-Important:
+## Verification checklist
 
-- `git reset --hard origin/main` discards tracked local code/config changes in this folder.
-- Keep local secrets/runtime config in `.env` and mounted data directories, not in tracked files.
+```bash
+cd <APP_PATH>
+git rev-parse --short HEAD
+curl -s http://127.0.0.1:3001/api/health
+curl -s http://127.0.0.1:3001/api/capabilities
+```
 
-## Unraid-only difference: private Strava connector enabled
+Expected:
+- `health.status = ok`
+- backend responds on `/api/capabilities`
+- running commit equals `origin/main`
 
-Public baseline can stay public-core style, but on Unraid keep:
+## Optional private Strava connector (advanced only)
+
+This is not part of the normal public end-user setup.
+
+If you intentionally run this advanced operator mode, set:
 
 ```env
 ADAPTER_STRAVA_ENABLED=true
@@ -101,66 +75,27 @@ STRAVA_CLIENT_SECRET=...
 STRAVA_REFRESH_TOKEN=...
 ```
 
-This is the only intended runtime difference on Unraid.
+Also ensure SSH/deploy-key access is available to install the private adapter package.
 
-Important product rule:
+### Operator checks for Strava mode
 
-- public docs must not position Strava API enablement as a normal end-user setup
-- if Strava is enabled on Unraid, that is a private maintainer/operator variant
-- private adapter access and credentials must stay out of the public support baseline
-
-Important operator rule on Unraid:
-
-- after updating from the public repo, verify that the Strava runtime is still enabled
-- if needed, restore the Unraid-only Strava values in `.env` before recreating containers
-- after deploy, `capabilities.adapters.strava.enabled` must still be `true`
-- public-core no longer uses local Strava fallback modules; Unraid must load the private adapter successfully
-
-## Verification checklist after deploy
-
-```bash
-git -C /mnt/user/appdata/data-hub rev-parse --short HEAD
-curl -s http://127.0.0.1:3001/api/health
-curl -s http://127.0.0.1:3001/api/capabilities
-```
-
-Optional local helper from the workstation:
-
-```powershell
-pwsh ./scripts/unraid-private-strava-smoke.ps1
-```
-
-Expected:
-
-- `health.status = ok`
-- `capabilities.adapters.strava.enabled = true` (on Unraid)
-- Git head on Unraid equals `pwrx_public/main`
-- `version.commit` in capabilities is populated (compose mounts `.git` into backend)
-
-If `capabilities.adapters.strava.enabled` is `false` after the update:
-
-```bash
-cd /mnt/user/appdata/data-hub
-grep -E '^(ADAPTER_STRAVA_ENABLED|ADAPTER_STRAVA_PACKAGE|ADAPTER_STRAVA_MODULE|STRAVA_CLIENT_ID|STRAVA_CLIENT_SECRET|STRAVA_REFRESH_TOKEN)=' .env
-docker compose up -d --force-recreate strava-tracker
-curl -s http://127.0.0.1:3001/api/capabilities
-```
-
-## Local Docker Desktop test modes
-
-- Public-core mode:
-  - `ADAPTER_STRAVA_ENABLED=false`
-  - no Strava connector required
-- Private/Strava mode:
-  - `ADAPTER_STRAVA_ENABLED=true`
-  - requires private adapter access, private credentials, and SSH key setup
-  - not part of the official public user path
+- after deploy, verify Strava capability still enabled:
+  - `capabilities.adapters.strava.enabled = true`
+- if disabled:
+  - verify env vars
+  - recreate backend container
+  - check adapter installation logs
 
 ## Troubleshooting
 
-- If UI version seems old:
-  - check Unraid repo head (`git rev-parse --short HEAD`)
-  - rebuild services (`docker compose up -d --build ...`)
-- If Strava API missing on Unraid:
-  - verify `ADAPTER_STRAVA_ENABLED=true` in Unraid `.env`
-  - recreate `strava-tracker`
+- UI looks old:
+  - verify Git HEAD in `<APP_PATH>`
+  - rebuild containers with `--build`
+- backend not healthy:
+  - check `docker compose logs strava-tracker`
+  - verify DB credentials in `.env`
+- Strava missing in advanced mode:
+  - verify `ADAPTER_STRAVA_ENABLED=true`
+  - verify private adapter install access
+  - recreate backend container
+

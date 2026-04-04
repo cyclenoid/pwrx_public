@@ -4,6 +4,14 @@
 
 Security fixes are provided on the `main` branch.
 
+## Scope
+
+This project has:
+- a normal public setup (file-import based)
+- optional advanced operator variants (for example private Strava connector)
+
+Security expectations apply to both, but most users only need the public setup.
+
 ## Reporting a Vulnerability
 
 Do not open public issues for sensitive reports.
@@ -27,10 +35,12 @@ You can expect:
 - Rotate compromised credentials immediately.
 
 For this project in particular:
-- Protect `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`.
 - Protect database credentials (`POSTGRES_USER`, `POSTGRES_PASSWORD`).
-- Protect CI secret `PWRX_ADAPTER_DEPLOY_KEY` (private SSH key for optional private-adapter access checks).
 - Use distinct credentials for development and production.
+
+If you run the optional private Strava connector:
+- Protect `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`.
+- Protect CI secret `PWRX_ADAPTER_DEPLOY_KEY` (private SSH key for optional private-adapter access checks).
 
 ## Recommended Hardening
 

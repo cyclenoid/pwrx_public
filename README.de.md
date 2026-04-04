@@ -21,8 +21,8 @@ Du musst kein Entwickler sein. Wenn Docker laeuft, kannst du PWRX nutzen.
 - Trainingsdateien (z. B. FIT/GPX/TCX oder ein ZIP-Export)
 
 Hinweis:
-- Kein separates `data-hub`-Repository notwendig
-- Kein API-Zwang fuer den Standardbetrieb
+- Der Standardweg funktioniert direkt mit Datei-Import
+- Keine API-Einrichtung noetig, um zu starten
 
 ## Typische Szenarien
 
@@ -33,7 +33,7 @@ Hinweis:
 2. Du willst deine alte Historie uebernehmen:
    - ZIP-Export einmalig als Massenimport hochladen
    - danach neue FIT/GPX/TCX-Dateien regelmaessig nachziehen
-3. Du willst PWRX auf Unraid/NAS laufen lassen:
+3. Du willst PWRX auf einem Heimserver laufen lassen (z. B. Linux, Windows, NAS oder Unraid):
    - gleicher Datei-Import-Workflow
    - Zugriff per Browser im Heimnetz
 
@@ -128,18 +128,18 @@ Nein. Der Standardbetrieb ist dateibasiert.
 **Ist der erste Import langsam?**  
 Bei grossen Historien kann der erste Lauf dauern. Der Import laeuft im Hintergrund weiter.
 
-## Historie: API-Sync und warum die Public-Doku dateibasiert ist
+## Historie: Strava-API-Sync und warum die Public-Doku dateibasiert ist
 
-Fruehere Versionen hatten einen direkten API-Sync-Ansatz fuer einzelne Betreiber-Setups.  
-Im oeffentlichen Repository fuehrt das bei normalen Endnutzern schnell zu Verwirrung, weil externe API-Freigaben (inkl. Review-/Limit-Regeln) nicht fuer jede Installation als Standard zugesichert werden koennen.
+Fruehere Versionen hatten einen direkten Strava-API-Sync.  
+Im oeffentlichen Repository fuehrt das bei normalen Endnutzern schnell zu Verwirrung, weil Strava-API-Freigaben, Review-Prozesse und Rate-Limits nicht fuer jede Installation als Standard zugesichert werden koennen.
 
 Deshalb ist der offizielle Public-Standard heute klar:
 - Datei-Import als Standardweg (Einzelimport + ZIP-Massenimport)
-- Keine API-Freischaltung als Produktversprechen fuer den Normalfall
+- Keine Strava-API-Einrichtung als Voraussetzung fuer den Normalfall
 
 Wichtig:
 - Die Architektur bleibt technisch offen fuer Connectoren
-- Solche Wege sind Betreiber-/Maintainer-Themen und nicht Teil des normalen Public-Endnutzer-Supports
+- Solche Wege sind fortgeschrittene Betreiber-/Maintainer-Themen und nicht Teil des normalen Public-Endnutzer-Supports
 
 Offizielle Strava-Hinweise zu Limits/Review:
 - https://developers.strava.com/docs/rate-limits/
@@ -163,4 +163,3 @@ Apache-2.0 (siehe `LICENSE`)
 ## Support
 
 Buy me a coffee: `https://buymeacoffee.com/cyclenoid`
-

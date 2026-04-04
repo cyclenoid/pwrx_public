@@ -23,8 +23,8 @@ You do not need to be a developer. If Docker runs, you can use PWRX.
 - Training files (for example FIT/GPX/TCX or a ZIP export)
 
 Notes:
-- no separate `data-hub` repository required
-- no API setup required for the standard workflow
+- the standard path works directly with file import
+- no API setup required to get started
 
 ## Typical scenarios
 
@@ -35,7 +35,7 @@ Notes:
 2. You want to migrate full history:
    - upload one ZIP export as bulk import
    - then keep adding new FIT/GPX/TCX files
-3. You want to run it on Unraid/NAS:
+3. You want to run it on a home server (for example Linux, Windows, NAS, or Unraid):
    - same file-import workflow
    - browser access in your local network
 
@@ -130,18 +130,18 @@ No. The standard mode is file based.
 **Is first import slow?**  
 Large histories can take time. Import continues in the background.
 
-## History: API sync and why public docs focus on files
+## History: Strava API sync and why public docs focus on files
 
-Earlier versions included a direct API-sync path for selected operator setups.  
-In a public repo this can confuse normal users, because external API access (review/capacity/rate-limit rules) is not guaranteed as a standard installation path.
+Earlier versions included a direct Strava API sync path.  
+In a public repo this can confuse normal users, because Strava API review/capacity/rate-limit rules are not guaranteed as a standard installation path.
 
 So the official public baseline is now clear:
 - file import as default path (single + ZIP bulk import)
-- no API enablement promise for normal end-user setup
+- no Strava API setup required for normal end-user setup
 
 Important:
 - architecture stays open for connectors
-- connector-based paths are operator/maintainer topics, not normal public end-user support
+- connector-based paths are advanced operator/maintainer topics, not normal public end-user support
 
 Official Strava references:
 - https://developers.strava.com/docs/rate-limits/
@@ -165,4 +165,3 @@ Apache-2.0 (see `LICENSE`)
 ## Support
 
 Buy me a coffee: `https://buymeacoffee.com/cyclenoid`
-
