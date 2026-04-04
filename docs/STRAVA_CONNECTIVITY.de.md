@@ -41,6 +41,10 @@ Minimales Zielbild:
 3. Dateien in den Watch Folder legen oder per Import-API hochladen.
 4. PWRX verarbeitet die Daten wie im Standard-Import.
 
+Starter-Implementierung in diesem Repo:
+- `scripts/strava-sidecar.mjs`
+- Quickstart: `docs/STRAVA_SIDECAR_QUICKSTART.md`
+
 ## Weg C: Native Adapter-Integration (volle Integration, hoher Aufwand)
 
 PWRX kann ein Strava-Adapter-Modul dynamisch laden.

@@ -41,6 +41,10 @@ Minimal architecture:
 3. Write fetched files to watch folder or upload via import API.
 4. Let PWRX process files as usual.
 
+Starter implementation in this repo:
+- `scripts/strava-sidecar.mjs`
+- Quickstart: `docs/STRAVA_SIDECAR_QUICKSTART.md`
+
 ## Path C: Native adapter module (full integration, highest effort)
 
 PWRX can load a Strava adapter module dynamically.
