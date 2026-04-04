@@ -36,10 +36,16 @@ Hinweis: PWRX kann bei Datei-Importen lokale Segmente auf Basis der GPS-Daten er
 
 ## Einrichtung in 5 Schritten
 
-1. PWRX lokal starten und API pruefen:
+1. PWRX starten und API pruefen:
 
 ```text
 http://127.0.0.1:3001/api/health
+```
+
+Wenn PWRX auf einem Server laeuft, nutze die Server-Adresse statt `127.0.0.1`, z. B.:
+
+```text
+http://10.10.10.129:3001/api/health
 ```
 
 2. Sidecar-Umgebung anlegen:
@@ -52,6 +58,12 @@ Windows (CMD):
 
 ```bat
 copy scripts\strava-sidecar.env.example .env.sidecar
+```
+
+Windows (PowerShell):
+
+```powershell
+Copy-Item .\scripts\strava-sidecar.env.example .\.env.sidecar
 ```
 
 3. In `.env.sidecar` setzen:
@@ -69,6 +81,12 @@ node scripts/strava-sidecar.mjs --mock --dry-run
 
 ```bash
 node scripts/strava-sidecar.mjs --mode import_api --api-base http://127.0.0.1:3001/api
+```
+
+Windows (PowerShell):
+
+```powershell
+node .\scripts\strava-sidecar.mjs --mode import_api --api-base http://127.0.0.1:3001/api
 ```
 
 ## Menge und Zeitraum steuern
@@ -91,6 +109,16 @@ node scripts/strava-sidecar.mjs --mode import_api --lookback-days 14 --max-activ
 
 Fuer die meisten ist `import_api` einfacher.
 
+## Lokal oder Server: macht das einen Unterschied?
+
+Ja, aber nur organisatorisch:
+
+- Die Sidecar-Logik ist identisch.
+- Entscheidend ist, wo das Skript laeuft und welche API-Adresse du nutzt.
+- Lokal: meist `http://127.0.0.1:3001/api`.
+- Server/NAS/Unraid: Host-IP oder DNS des Servers, z. B. `http://10.10.10.129:3001/api`.
+- Bei `watch_folder` muss der Zielordner fuer PWRX erreichbar sein (gleicher Host oder gemounteter Pfad).
+
 ## Wichtig zu API-Richtlinien
 
 - Das Sidecar-Skript ist ein oeffentliches Technik-Beispiel.
@@ -100,4 +128,3 @@ Fuer die meisten ist `import_api` einfacher.
 Siehe auch:
 - `docs/STRAVA_CONNECTIVITY.de.md`
 - `docs/STRAVA_SIDECAR_QUICKSTART.md`
-
