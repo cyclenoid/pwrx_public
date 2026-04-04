@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-04-rider-profile-cache-and-faster-power-page',
+    date: '2026-04-04',
+    tag: '141907c',
+    title: {
+      de: 'Fahrerprofil gecached und Power-Ansicht beschleunigt',
+      en: 'Rider profile cached and power view made faster',
+    },
+    summary: {
+      de: 'Die Fahreranalyse im Power-Bereich wird jetzt serverseitig zwischengespeichert und bei unveränderten Daten direkt aus dem Cache geliefert.',
+      en: 'The rider analysis on the power page is now cached on the server and returned from cache when source data has not changed.',
+    },
+    bullets: {
+      de: [
+        'Rider-Profile-Analyse nutzt einen Fingerprint aus den zugrundeliegenden Daten.',
+        'Bei identischem Datenstand entfällt die komplette Neuberechnung.',
+        'Die Ansicht reagiert dadurch im Alltag stabiler und spürbar schneller.',
+      ],
+      en: [
+        'Rider profile analysis now uses a fingerprint of the underlying data.',
+        'When data is unchanged, the full recomputation step is skipped.',
+        'This makes the view more stable and noticeably faster in day-to-day use.',
+      ],
+    },
+  },
+  {
     id: '2026-03-18-dashboard-and-in-app-updates',
     date: '2026-03-18',
     tag: '9b675e4',

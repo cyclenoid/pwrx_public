@@ -59,6 +59,7 @@ Expected:
 - `health.status = ok`
 - backend responds on `/api/capabilities`
 - running commit equals `origin/main`
+- for user-visible UI/API changes, update `dashboards/strava/src/lib/featureLog.ts` in the same release
 
 ## Optional private Strava connector (advanced only)
 
