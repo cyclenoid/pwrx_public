@@ -63,6 +63,7 @@ Expected:
 ## Optional private Strava connector (advanced only)
 
 This is not part of the normal public end-user setup.
+This path is operator-owned and not a turnkey public multi-user feature.
 
 If you intentionally run this advanced operator mode, set:
 

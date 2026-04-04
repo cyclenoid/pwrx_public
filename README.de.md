@@ -152,6 +152,10 @@ Wenn du als Maintainer bewusst einen privaten Connector-Pfad betreibst, lies:
 - `docs/DEPLOYMENT_RUNBOOK.md`
 - `docs/STRAVA_CONNECTIVITY.de.md`
 
+Wichtig:
+- Strava-API-Konnektivitaet ist nicht Teil des oeffentlichen Standard-Supports.
+- Sidecar-/Adapter-Betrieb liegt beim Betreiber und muss den Strava-API-Bedingungen inkl. Review-/Capacity-Regeln entsprechen.
+
 Das ist absichtlich ein separater Operator-Pfad und nicht der empfohlene Start fuer normale Nutzer.
 
 ## Sicherheit

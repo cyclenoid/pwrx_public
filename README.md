@@ -154,6 +154,10 @@ If you deliberately run a private connector setup as maintainer/operator, read:
 - `docs/DEPLOYMENT_RUNBOOK.md`
 - `docs/STRAVA_CONNECTIVITY.md`
 
+Important:
+- Strava API connectivity is not part of the public default support path.
+- Any sidecar/adapter usage is operator-owned and must comply with Strava API Agreement and app review/capacity rules.
+
 This is intentionally a separate operator path, not the recommended starting point for normal users.
 
 ## Security

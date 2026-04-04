@@ -1,11 +1,16 @@
 # Strava API Connectivity (Advanced Options)
 
 This guide is for advanced users/operators who want API-based Strava connectivity.
+It is not part of the official public default support path.
 
 Important baseline:
 - normal public setup = file import (`FIT/GPX/TCX`, single or ZIP)
 - no API credentials required for normal operation
 - this document describes optional advanced paths
+
+Compliance note:
+- this document is technical guidance, not legal advice
+- operator is fully responsible for Strava API Agreement compliance
 
 ## Which path should you choose?
 
@@ -44,6 +49,10 @@ Minimal architecture:
 Starter implementation in this repo:
 - `scripts/strava-sidecar.mjs`
 - Quickstart: `docs/STRAVA_SIDECAR_QUICKSTART.md`
+
+Scope of this starter:
+- reference implementation for private operator setups
+- no guarantee of Strava policy compatibility for your specific use case
 
 ## Path C: Native adapter module (full integration, highest effort)
 
@@ -89,9 +98,18 @@ When `ADAPTER_STRAVA_ENABLED=true`:
 - follow Strava developer terms/rate limits
 - do not expose local API publicly without auth/reverse-proxy hardening
 
+Required operational guardrails:
+- do not share one app/token set across unrelated third-party operators
+- each operator should use their own Strava app registration and credentials
+- new Strava apps may run in single-athlete mode until Strava review/approval
+- if you serve multiple athletes, handle consent, deauthorization, and deletion requirements
+- if unsure, contact Strava Developer Support before rollout
+
 Official Strava references:
 - https://developers.strava.com/docs/getting-started/
 - https://developers.strava.com/docs/rate-limits/
+- https://www.strava.com/legal/api
+- https://developers.strava.com/docs/webhooks/
 
 ## Support scope
 
@@ -102,3 +120,4 @@ Public support baseline:
 Advanced Strava API setups:
 - best-effort guidance
 - operator responsibility for app registration, tokens, and adapter maintenance
+- no commitment for turnkey public multi-user Strava setup in this repo

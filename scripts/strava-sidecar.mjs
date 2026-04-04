@@ -344,6 +344,7 @@ async function run() {
 
   console.log(`[sidecar] mode=${config.mode} mock=${config.mock} dry_run=${config.dryRun}`);
   console.log(`[sidecar] output_dir=${config.outputDir}`);
+  console.log('[sidecar] compliance: use your own Strava app credentials; do not expose tokens; follow Strava API Agreement.');
 
   if (!config.dryRun) {
     await ensureDir(config.outputDir);

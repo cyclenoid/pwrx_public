@@ -1,9 +1,18 @@
 # Strava Sidecar Quickstart
 
 This is a practical helper script for advanced users who want API-based Strava ingestion without deep adapter coupling.
+It is a reference for private operator setups, not an official public default feature.
 
 Script:
 - `scripts/strava-sidecar.mjs`
+
+## Compliance first (read before use)
+
+- this guide is technical guidance, not legal advice
+- you are responsible for Strava API Agreement compliance
+- use your own Strava app + your own credentials
+- do not publish/reuse one shared app/token set for unrelated third-party users
+- if your app needs more than single-athlete mode, complete Strava review/capacity process
 
 ## What it does
 
@@ -75,3 +84,4 @@ Windows Task Scheduler:
 - some activities have no GPS streams (indoor): these are skipped by design
 - keep API credentials in local secrets, never commit them
 - if Strava rotates refresh token, update your configured secret
+- for multi-athlete/public operation you must additionally implement consent/deauthorization/deletion handling

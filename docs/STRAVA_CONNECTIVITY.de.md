@@ -1,11 +1,16 @@
 # Strava-API-Konnektivitaet (fortgeschrittene Wege)
 
 Diese Anleitung ist fuer fortgeschrittene Nutzer/Betreiber, die Strava per API anbinden wollen.
+Sie ist nicht Teil des offiziellen Public-Standard-Supports.
 
 Wichtiger Standard:
 - oeffentlicher Normalbetrieb = Datei-Import (`FIT/GPX/TCX`, einzeln oder ZIP)
 - keine API-Zugaenge noetig
 - dieses Dokument beschreibt optionale erweiterte Wege
+
+Compliance-Hinweis:
+- dieses Dokument ist technische Orientierung, keine Rechtsberatung
+- die Verantwortung fuer API-Compliance liegt beim Betreiber
 
 ## Welcher Weg passt zu dir?
 
@@ -44,6 +49,10 @@ Minimales Zielbild:
 Starter-Implementierung in diesem Repo:
 - `scripts/strava-sidecar.mjs`
 - Quickstart: `docs/STRAVA_SIDECAR_QUICKSTART.md`
+
+Scope dieser Starter-Loesung:
+- Referenz fuer private Betreiber-Setups
+- keine Zusicherung, dass dein konkreter Use Case automatisch Strava-konform ist
 
 ## Weg C: Native Adapter-Integration (volle Integration, hoher Aufwand)
 
@@ -89,9 +98,18 @@ Bei `ADAPTER_STRAVA_ENABLED=true` gilt:
 - Strava-Richtlinien und Rate-Limits einhalten
 - lokale API nicht ohne Auth/Proxy-Haertung ins Internet stellen
 
+Wichtige Betriebsregeln:
+- kein Teilen eines App-/Token-Sets ueber mehrere fremde Betreiber
+- jeder Betreiber sollte eigene Strava-App und eigene Credentials verwenden
+- neue Strava-Apps laufen ggf. zunaechst im Single-Athlete-Modus bis Review/Freigabe
+- bei Multi-Athlete-Betrieb Consent-, Deauth- und Loeschpflichten sauber umsetzen
+- bei Unsicherheit vor Rollout direkt mit Strava Developer Support klaeren
+
 Offizielle Strava-Referenzen:
 - https://developers.strava.com/docs/getting-started/
 - https://developers.strava.com/docs/rate-limits/
+- https://www.strava.com/legal/api
+- https://developers.strava.com/docs/webhooks/
 
 ## Support-Umfang
 
@@ -102,3 +120,4 @@ Offizieller Public-Support:
 Erweiterte Strava-API-Setups:
 - Best-Effort-Hinweise
 - Betrieb, App-Registrierung, Token-Handling und Adapter-Wartung liegen beim Betreiber
+- kein zugesicherter Turnkey-Public-Multi-User-Strava-Betrieb in diesem Repo
