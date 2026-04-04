@@ -144,11 +144,13 @@ Wichtig:
 Offizielle Strava-Hinweise zu Limits/Review:
 - https://developers.strava.com/docs/rate-limits/
 - https://developers.strava.com/docs/getting-started/
+- API-Konnektivitaet und Betreiber-Recipe: `docs/STRAVA_CONNECTIVITY.de.md`
 
 ## Optional: Hinweise fuer fortgeschrittene Betreiber
 
 Wenn du als Maintainer bewusst einen privaten Connector-Pfad betreibst, lies:
 - `docs/DEPLOYMENT_RUNBOOK.md`
+- `docs/STRAVA_CONNECTIVITY.de.md`
 
 Das ist absichtlich ein separater Operator-Pfad und nicht der empfohlene Start fuer normale Nutzer.
 
