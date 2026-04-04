@@ -3,6 +3,10 @@
 This is a practical helper script for advanced users who want API-based Strava ingestion without deep adapter coupling.
 It is a reference for private operator setups, not an official public default feature.
 
+If you want a less technical walkthrough first:
+- `docs/STRAVA_SIDECAR_SIMPLE_GUIDE.de.md` (German)
+- `docs/STRAVA_SIDECAR_SIMPLE_GUIDE.md` (English)
+
 Script:
 - `scripts/strava-sidecar.mjs`
 

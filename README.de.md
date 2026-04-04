@@ -145,12 +145,14 @@ Offizielle Strava-Hinweise zu Limits/Review:
 - https://developers.strava.com/docs/rate-limits/
 - https://developers.strava.com/docs/getting-started/
 - API-Konnektivitaet und Betreiber-Recipe: `docs/STRAVA_CONNECTIVITY.de.md`
+- Sidecar einfach erklaert (Anwender): `docs/STRAVA_SIDECAR_SIMPLE_GUIDE.de.md`
 
 ## Optional: Hinweise fuer fortgeschrittene Betreiber
 
 Wenn du als Maintainer bewusst einen privaten Connector-Pfad betreibst, lies:
 - `docs/DEPLOYMENT_RUNBOOK.md`
 - `docs/STRAVA_CONNECTIVITY.de.md`
+- `docs/STRAVA_SIDECAR_SIMPLE_GUIDE.de.md`
 
 Wichtig:
 - Strava-API-Konnektivitaet ist nicht Teil des oeffentlichen Standard-Supports.

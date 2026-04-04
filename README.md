@@ -147,12 +147,14 @@ Official Strava references:
 - https://developers.strava.com/docs/rate-limits/
 - https://developers.strava.com/docs/getting-started/
 - API connectivity options and operator recipes: `docs/STRAVA_CONNECTIVITY.md`
+- Sidecar explained simply (user guide): `docs/STRAVA_SIDECAR_SIMPLE_GUIDE.md`
 
 ## Optional: notes for advanced operators
 
 If you deliberately run a private connector setup as maintainer/operator, read:
 - `docs/DEPLOYMENT_RUNBOOK.md`
 - `docs/STRAVA_CONNECTIVITY.md`
+- `docs/STRAVA_SIDECAR_SIMPLE_GUIDE.md`
 
 Important:
 - Strava API connectivity is not part of the public default support path.
