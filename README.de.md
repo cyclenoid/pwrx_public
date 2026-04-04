@@ -155,6 +155,7 @@ Wenn du als Maintainer bewusst einen privaten Connector-Pfad betreibst, lies:
 Wichtig:
 - Strava-API-Konnektivitaet ist nicht Teil des oeffentlichen Standard-Supports.
 - Sidecar-/Adapter-Betrieb liegt beim Betreiber und muss den Strava-API-Bedingungen inkl. Review-/Capacity-Regeln entsprechen.
+- Das oeffentliche Sidecar-Skript ist nur eine technische Referenz und ersetzt keine Compliance-Pflichten.
 
 Das ist absichtlich ein separater Operator-Pfad und nicht der empfohlene Start fuer normale Nutzer.
 
