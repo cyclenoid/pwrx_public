@@ -1,219 +1,168 @@
 # PWRX - Power Explorer for Training Data
 
-Self-hosted training analytics app with PostgreSQL, file import, and a React dashboard.
+PWRX is a self-hosted training analytics app for cycling and running.  
+You import your activities from files (FIT/GPX/TCX or ZIP export), and PWRX builds a local dashboard with history, records, training load, and insights.
 
-## Deployment model
-
-PWRX is intended to run as a standalone app from this repository.
-
-- End users only need this repo, Docker, and PostgreSQL.
-- No separate `data-hub` repository or multi-app platform is required.
-- Shared-host setups are optional operator variants, not the product baseline.
-
-## Requirements
-- Docker + Docker Compose
-- PostgreSQL
-- Optional, private-only: additional connector access by separate arrangement
+It runs on a normal computer or home server.
 
 German version: `README.de.md`
 
-## Quick Start (Docker)
-1. Copy `.env.example` to `.env`
+## Who is PWRX for?
+
+PWRX is for athletes who want to:
+- keep control of their training data
+- run analytics locally
+- evaluate long training history from export files
+
+You do not need to be a developer. If Docker runs, you can use PWRX.
+
+## What you need
+
+- Docker + Docker Compose
+- Some free disk space for database and imports
+- Training files (for example FIT/GPX/TCX or a ZIP export)
+
+Notes:
+- no separate `data-hub` repository required
+- no API setup required for the standard workflow
+
+## Typical scenarios
+
+1. You want to run it locally on your laptop:
+   - start PWRX
+   - import files
+   - use the dashboard
+2. You want to migrate full history:
+   - upload one ZIP export as bulk import
+   - then keep adding new FIT/GPX/TCX files
+3. You want to run it on Unraid/NAS:
+   - same file-import workflow
+   - browser access in your local network
+
+## Quick start (local, a few minutes)
+
+1. Clone repository
+```bash
+git clone https://github.com/cyclenoid/pwrx_public.git
+cd pwrx_public
+```
+
+2. Create config
 ```bash
 cp .env.example .env
 ```
+Windows (CMD):
+```bat
+copy .env.example .env
+```
 
-2. Fill required variables in `.env`
-- `POSTGRES_DB`, `POSTGRES_USER`, `POSTGRES_PASSWORD`
-- Optional: `DATA_HUB_DATA_DIR` (default: `./data`)
-- Optional: `WATCH_FOLDER_SMB_PATH` (UI hint for self-hosted watch-folder users; default install shows `./data/imports/watch`)
-Note: The Postgres password is set only on first initialization of the DB volume. If you change it later, you must either update the DB user password inside Postgres or reset the volume.
+3. Set required values in `.env`:
+- `POSTGRES_DB`
+- `POSTGRES_USER`
+- `POSTGRES_PASSWORD`
 
-3. Start services
+Optional:
+- `DATA_HUB_DATA_DIR` (default: `./data`)
+- `WATCH_FOLDER_SMB_PATH` (UI hint only for SMB/network-path setups)
+
+4. Start containers
 ```bash
 docker compose up -d
 ```
 
-4. Open services
+5. Open in browser
 ```text
 Dashboard: http://localhost:8088
 API health: http://localhost:3001/api/health
 pgAdmin: http://localhost:5050
 ```
 
-## Public-Core Mode (Official Public Baseline)
-This is the official public baseline for this repository.
+## Standard workflow: import activities
 
-- file import works without Strava API access
-- no private adapter package access is required
-- no SSH deploy key is required
+This is the recommended default for all users.
 
-Set in `.env`:
-```env
-ADAPTER_FILE_ENABLED=true
-ADAPTER_STRAVA_ENABLED=false
-```
+### A) Single import
+- Upload individual FIT/GPX/TCX files in the Import page.
 
-Everything else in `.env.example` related to Strava/private adapters is optional and only relevant for selected private operators.
+### B) Bulk import (ZIP)
+- Upload a full ZIP export (best for your first historical migration).
 
-Then restart backend + dashboard:
-```bash
-docker compose up -d --force-recreate strava-tracker strava-dashboard
-```
+### C) Optional: watch folder
+- Drop files into a watched folder for automatic import.
 
-## Private Connector Path (Not Part of the Public Offering)
-The public repository does not officially ship or support provider API connector setup for normal end users.
+Import docs:
+- Quickstart: `docs/IMPORT_QUICKSTART.md`
+- Provider guide: `docs/IMPORT_PROVIDER_GUIDE.md`
 
-Reason:
-- Strava API access is subject to Strava's developer review and athlete-capacity restrictions.
-- New apps start in a single-athlete mode until reviewed by Strava.
-- Because of that, PWRX public docs must not present Strava API enablement as a standard public feature.
+## What is stored locally
 
-Official Strava sources:
-- https://developers.strava.com/docs/rate-limits/
-- https://developers.strava.com/docs/getting-started/
+Data is stored in your configured data path:
+- default: `./data`
+- includes: database content, exports, logs, images/media
 
-If you explicitly enable the private connector path:
-```env
-ADAPTER_STRAVA_ENABLED=true
-```
+PWRX is designed for local operation.
 
-you are entering a private maintainer/operator setup that requires:
-- private adapter access
-- Strava credentials
-- a host SSH directory containing `pwrx_adapter_key`
+## Updates
 
-In this private mode, the Docker runtime injects the private adapter package during container startup. The public `package.json` intentionally does not depend on it by default.
-
-Recommended private settings:
-```env
-ADAPTER_STRAVA_PACKAGE=git+ssh://git@github.com/your-org/pwrx-adapter-strava.git
-ADAPTER_STRAVA_MODULE=@your-org/pwrx-adapter-strava
-```
-
-Important:
-- `ADAPTER_STRAVA_PACKAGE` is the install source used by Docker/npm
-- `ADAPTER_STRAVA_MODULE` is the runtime module id used by Node
-- keep those separate; a Git URL is not a valid `require()` module id
-
-If that key is missing, backend startup will fail with:
-```text
-Missing /root/.ssh/pwrx_adapter_key for private adapter install
-```
-
-Important:
-- `PWRX_SSH_DIR` must be a host path, not the container path `/root/.ssh`
-- example Windows host path: `C:/Users/<you>/.ssh`
-- example Linux host path: `/home/<you>/.ssh`
-This private connector path is maintainer-only and not part of the official public support contract.
-
-Important technical rule:
-- public-core no longer falls back to local Strava modules
-- if the private adapter cannot be installed or loaded, Strava stays disabled
-- this is intentional
-
-## First Sync
-On first start, PWRX runs an initial import/sync initialization. In private connector operator setups, an API-backed initial sync can take time depending on data size and rate limits.
-
-## Sync (Auto + Manual)
-- Auto sync runs daily at the configured time.
-- Optional: catch-up after startup if the machine was offline.
-- Manual sync is available in the UI (Settings/Dashboard).
-
-API endpoints:
-- Full sync (activity + backfill): `POST /api/sync` (alias: `POST /api/sync/full`)
-- Backfill only (gaps): `POST /api/sync/backfill`
-
-## Non-24/7 Machines
-If the device is off during the scheduled time, enable "Catch-up after startup" in Settings. The next start will run the missed sync.
-
-## Update
 ```bash
 git pull
 docker compose up -d
 ```
 
-## Database Migrations
-If a release adds DB columns/tables, you must run migrations after updating:
+If a release includes DB schema changes, run migration:
 ```bash
 docker compose exec strava-tracker npm run db:migrate
 ```
-
-Local dev:
-```bash
-cd apps/strava
-npm run db:migrate
-```
-
-Optional auto-migrate on startup:
-- Set `MIGRATE_ON_START=1` in `.env`.
 
 Check status:
 ```bash
 docker compose exec strava-tracker npm run db:check
 ```
 
-## Data & Storage
-Exports, logs, and photos are stored in `DATA_HUB_DATA_DIR` (default: `./data`).
+## FAQ (short)
 
-## Activity File Import
-- Quickstart: `docs/IMPORT_QUICKSTART.md`
-- Provider guide (Zwift/Wahoo/Garmin/Apple Health): `docs/IMPORT_PROVIDER_GUIDE.md`
-- Docker release test runbook: `docs/DOCKER_RELEASE_TEST_PLAN.md`
-- Deployment runbook (public repo -> Unraid + Strava override): `docs/DEPLOYMENT_RUNBOOK.md`
-- PowerShell smoke script: `scripts/docker-release-smoke.ps1`
+**Can I use PWRX without a 24/7 machine?**  
+Yes. Start the stack when needed. Optional catch-up after startup can be enabled.
 
-### Watch Folder (Self-hosted / SMB)
-- PWRX watches the container path `/imports/watch`.
-- Standard Docker install exposes the corresponding host path `./data/imports/watch` and shows it in the UI as copy target.
-- Optional: set `WATCH_FOLDER_SMB_PATH` in `.env` to show a network share path in the UI (for example `\\\\unraid\\pwrx-import`).
+**Do I need API credentials to get started?**  
+No. The standard mode is file based.
 
-## Private Adapter Validation in CI
-Public backend checks now run without the private adapter.
+**Is first import slow?**  
+Large histories can take time. Import continues in the background.
 
-Optional private-adapter access validation in CI can still use repository secret:
-- `PWRX_ADAPTER_KEY`
+## History: API sync and why public docs focus on files
 
-Secret value:
-- full private SSH key (OpenSSH format) that matches a read-only deploy key on `your-org/pwrx-adapter-strava`.
-- keep OpenSSH key formatting intact (multi-line):
-  - `-----BEGIN OPENSSH PRIVATE KEY-----`
-  - base64 lines
-  - `-----END OPENSSH PRIVATE KEY-----`
+Earlier versions included a direct API-sync path for selected operator setups.  
+In a public repo this can confuse normal users, because external API access (review/capacity/rate-limit rules) is not guaranteed as a standard installation path.
 
-Without this secret, public backend lint/build/tests still run. Only the optional private-adapter access check is skipped.
+So the official public baseline is now clear:
+- file import as default path (single + ZIP bulk import)
+- no API enablement promise for normal end-user setup
 
-For local Docker tests with the private adapter on Windows/Linux:
-- set `PWRX_SSH_DIR` in `.env` (for example `C:/Users/<you>/.ssh` on Windows)
-- ensure `pwrx_adapter_key` exists in that directory and validates:
-```bash
-ssh-keygen -y -f ~/.ssh/pwrx_adapter_key
-```
+Important:
+- architecture stays open for connectors
+- connector-based paths are operator/maintainer topics, not normal public end-user support
+
+Official Strava references:
+- https://developers.strava.com/docs/rate-limits/
+- https://developers.strava.com/docs/getting-started/
+
+## Optional: notes for advanced operators
+
+If you deliberately run a private connector setup as maintainer/operator, read:
+- `docs/DEPLOYMENT_RUNBOOK.md`
+
+This is intentionally a separate operator path, not the recommended starting point for normal users.
 
 ## Security
+
 - Security policy and vulnerability reporting: `SECURITY.md`
 
-## FAQ
-**What do the photo sync and download numbers mean?**  
-Photo sync = metadata from the connected source (for example URLs/captions). Downloads = local files saved to disk. Both are per-run counts.
-
-**Why is the first sync slow?**  
-Large histories and provider rate limits can slow down the initial import. It will continue in the background.
-
-**Why are segments still pending?**  
-Segments are filled in chunks during backfill. If you hit rate limits, run manual sync again later.
-
-**Can I run without auto sync?**  
-Yes. Disable Auto Sync in Settings and use the manual sync button when needed.
-
-**Laptop or machine not always on?**  
-Enable catch-up after startup. It will run once the machine is back online.
-
-**Do I need migrations after updating?**  
-Only when a release adds DB schema changes. Then run `npm run db:migrate`.
-
 ## License
-Apache-2.0 (see `LICENSE`).
+
+Apache-2.0 (see `LICENSE`)
 
 ## Support
+
 Buy me a coffee: `https://buymeacoffee.com/cyclenoid`
+
