@@ -23,6 +23,14 @@ Use this guide when you:
 - manage production-like environments
 - optionally run a private Strava connector variant
 
+## Internal workspace reference (optional)
+
+For the local `C:\DEV` workspace:
+- Project ID: `A-001`
+- Alias path: `C:\DEV\projects\apps\A-001_pwrx-public-beta`
+- Original path: `C:\DEV\pwrx-public-beta`
+- Registry: `C:\DEV\00-meta\PROJECTS.md`
+
 ## Deployment source and environment
 
 - Source of truth: `origin/main` from `https://github.com/cyclenoid/pwrx_public.git`
