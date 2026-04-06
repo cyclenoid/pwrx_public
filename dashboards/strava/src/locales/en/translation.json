@@ -203,6 +203,18 @@
       "yearToDate": "Year",
       "pizzaEquivalent": "≈ {{value}} pizza"
     },
+    "newsCard": {
+      "title": "Important news",
+      "subtitle": "Data import: 3 paths for existing users",
+      "pathSingleTitle": "1) Single import",
+      "pathSingleBody": "Upload individual FIT/GPX/TCX files directly.",
+      "pathBulkTitle": "2) Bulk / watch folder",
+      "pathBulkBody": "Import many files or ZIP bundles in one run.",
+      "pathSidecarTitle": "3) Sidecar (optional)",
+      "pathSidecarBody": "An external job pulls Strava data and drops files into the import folder.",
+      "openImport": "Open import",
+      "openSyncSettings": "Sync settings"
+    },
     "versionCard": {
       "title": "Version",
       "featureLog": "Feature log",
