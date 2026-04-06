@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-cached-power-vs-heart-rate',
+    date: '2026-04-06',
+    tag: 'cache',
+    title: {
+      de: 'Leistung-vs-Puls serverseitig gecached',
+      en: 'Power-vs-heart-rate now server-side cached',
+    },
+    summary: {
+      de: 'Die Bulk-Berechnung für Leistung-vs-Puls nutzt jetzt einen Fingerprint-Cache mit längerer Lebensdauer, damit die Trainingsseite deutlich schneller lädt.',
+      en: 'The bulk calculation behind power-vs-heart-rate now uses a fingerprint-based cache with a longer lifetime, so the training page loads significantly faster.',
+    },
+    bullets: {
+      de: [
+        'Cache trifft nur bei unverändertem Datenstand und passendem Zeitraum/Typ.',
+        'Bei Datenänderungen wird automatisch neu berechnet statt veraltete Werte auszuliefern.',
+        'Der Cache ist größenbegrenzt und kann über den bestehenden Cache-Clear-Endpunkt geleert werden.',
+      ],
+      en: [
+        'Cache hits only when data is unchanged and timeframe/type match.',
+        'When data changes, the endpoint automatically recomputes instead of serving stale values.',
+        'Cache size is bounded and can be cleared via the existing cache-clear endpoint.',
+      ],
+    },
+  },
+  {
     id: '2026-04-04-rider-profile-cache-and-faster-power-page',
     date: '2026-04-04',
     tag: '141907c',
