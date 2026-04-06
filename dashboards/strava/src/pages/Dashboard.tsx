@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Bike, Footprints, Activity, Flame, Dumbbell, RefreshCw, LayoutGrid, List, ChevronLeft, ChevronRight, Award, Globe, Clock, Mountain } from 'lucide-react'
+import { Bike, Footprints, Activity, Flame, Dumbbell, RefreshCw, LayoutGrid, List, ChevronLeft, ChevronRight, Award, Globe, Clock, Mountain, Megaphone } from 'lucide-react'
 import {
   getActivities,
   getActivity,
@@ -1464,6 +1464,40 @@ export function Dashboard() {
               <QuickLink to="/records" icon="trophy" label={t('nav.records')} />
               <QuickLink to="/power" icon="zap" label={t('nav.power')} />
               <QuickLink to="/analytics" icon="chart" label={t('dashboard.quickLinks.analytics')} />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-card/95 to-card shadow-sm">
+          <CardHeader className="pb-2">
+            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+              <Megaphone className="h-4 w-4 text-orange-400" />
+              <span>{t('dashboard.newsCard.title')}</span>
+            </CardTitle>
+            <p className="text-xs text-muted-foreground">
+              {t('dashboard.newsCard.subtitle')}
+            </p>
+          </CardHeader>
+          <CardContent className="space-y-2 pt-0">
+            <div className="rounded-lg border border-border/50 bg-background/60 p-2.5">
+              <div className="text-xs font-semibold text-foreground">{t('dashboard.newsCard.pathSingleTitle')}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{t('dashboard.newsCard.pathSingleBody')}</div>
+            </div>
+            <div className="rounded-lg border border-border/50 bg-background/60 p-2.5">
+              <div className="text-xs font-semibold text-foreground">{t('dashboard.newsCard.pathBulkTitle')}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{t('dashboard.newsCard.pathBulkBody')}</div>
+            </div>
+            <div className="rounded-lg border border-border/50 bg-background/60 p-2.5">
+              <div className="text-xs font-semibold text-foreground">{t('dashboard.newsCard.pathSidecarTitle')}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{t('dashboard.newsCard.pathSidecarBody')}</div>
+            </div>
+            <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-2 text-[11px]">
+              <Link to="/import" className="font-medium text-orange-400 transition-colors hover:text-orange-300">
+                {t('dashboard.newsCard.openImport')}
+              </Link>
+              <Link to="/settings?tab=sync" className="font-medium text-foreground transition-colors hover:text-orange-300">
+                {t('dashboard.newsCard.openSyncSettings')}
+              </Link>
             </div>
           </CardContent>
         </Card>

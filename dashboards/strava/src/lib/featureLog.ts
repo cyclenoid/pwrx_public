@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-dashboard-import-news-card',
+    date: '2026-04-06',
+    tag: 'dashboard',
+    title: {
+      de: 'Dashboard: Wichtige-News-Kachel fuer Importwege',
+      en: 'Dashboard: important-news card for import paths',
+    },
+    summary: {
+      de: 'Ueber der Versionskachel zeigt das Dashboard jetzt kompakt die drei Datenwege: Einzelimport, Bulk/Watch Folder und optional Sidecar.',
+      en: 'Above the version card, dashboard now highlights the three data paths: single import, bulk/watch folder, and optional sidecar.',
+    },
+    bullets: {
+      de: [
+        'Bestandsnutzer sehen den Import-Statuspunkt direkt beim Oeffnen.',
+        'Der Sidecar-Weg ist klar als optionaler Operator-Pfad markiert.',
+        'Direktlinks zu Import und Sync-Einstellungen sind in der Kachel enthalten.',
+      ],
+      en: [
+        'Existing users now see import guidance immediately on dashboard open.',
+        'The sidecar path is clearly marked as an optional operator route.',
+        'Direct links to import and sync settings are included in the card.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-heatmap-hotspot-labels-restored',
     date: '2026-04-06',
     tag: 'heatmap',

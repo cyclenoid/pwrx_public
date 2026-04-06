@@ -203,6 +203,18 @@
       "yearToDate": "Jahr",
       "pizzaEquivalent": "≈ {{value}} Pizza"
     },
+    "newsCard": {
+      "title": "Wichtige News",
+      "subtitle": "Datenimport: 3 Wege für Bestandsnutzer",
+      "pathSingleTitle": "1) Einzelimport",
+      "pathSingleBody": "Einzelne FIT/GPX/TCX-Dateien direkt hochladen.",
+      "pathBulkTitle": "2) Bulk / Watch Folder",
+      "pathBulkBody": "Mehrere Dateien oder ZIPs gesammelt importieren.",
+      "pathSidecarTitle": "3) Sidecar (optional)",
+      "pathSidecarBody": "Externer Job lädt Strava-Daten und legt sie im Import-Ordner ab.",
+      "openImport": "Import öffnen",
+      "openSyncSettings": "Sync-Einstellungen"
+    },
     "versionCard": {
       "title": "Version",
       "featureLog": "Feature-Log",
