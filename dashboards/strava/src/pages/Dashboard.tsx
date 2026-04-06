@@ -12,6 +12,7 @@ import {
   getYearStats,
   getFTP,
   getBulkPowerMetrics,
+  getTrainingLoadPMC,
   getGear,
   getSyncLogs,
   triggerFullSync,
@@ -106,6 +107,12 @@ export function Dashboard() {
   const supportsSync = capabilities.supportsSync
   const currentYear = new Date().getFullYear()
   const appVersionLabel = capabilitiesData?.version?.label || capabilitiesData?.version?.backend || null
+  const todayIso = useMemo(() => new Date().toISOString().split('T')[0], [])
+  const ninetyDaysAgo = useMemo(() => {
+    const date = new Date()
+    date.setDate(date.getDate() - 90)
+    return date.toISOString().split('T')[0]
+  }, [])
 
   const formatMonthYear = (date: Date) => {
     try {
@@ -156,6 +163,20 @@ export function Dashboard() {
     queryKey: ['week-streak'],
     queryFn: getWeekStreak,
     staleTime: 5 * 60 * 1000,
+  })
+
+  const { data: dashboardTrainingLoad } = useQuery({
+    queryKey: ['dashboard-training-load', ninetyDaysAgo, todayIso, ftpData?.ftp],
+    queryFn: () =>
+      getTrainingLoadPMC({
+        startDate: ninetyDaysAgo,
+        endDate: todayIso,
+        type: 'Ride',
+      }),
+    enabled: !!ftpData?.ftp,
+    staleTime: 60 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   const { data: gearList } = useQuery({
@@ -361,8 +382,6 @@ export function Dashboard() {
 
   const displayedActivitiesBase = useMemo(() => filteredActivities.slice(0, displayCount), [filteredActivities, displayCount])
 
-  const todayDate = useMemo(() => new Date().toISOString().split('T')[0], [])
-
   const earliestDisplayedDate = useMemo(() => {
     if (displayedActivitiesBase.length === 0) return null
     let minDate = displayedActivitiesBase[0].start_date
@@ -384,10 +403,10 @@ export function Dashboard() {
   }, [activities])
 
   const { data: bulkPowerMetrics } = useQuery({
-    queryKey: ['bulk-power-metrics-dashboard', earliestDisplayedDate, todayDate, ftpData?.ftp, latestActivityId],
+    queryKey: ['bulk-power-metrics-dashboard', earliestDisplayedDate, todayIso, ftpData?.ftp, latestActivityId],
     queryFn: () => getBulkPowerMetrics({
       startDate: earliestDisplayedDate!,
-      endDate: todayDate,
+      endDate: todayIso,
     }),
     enabled: !!earliestDisplayedDate && !!ftpData?.ftp,
     staleTime: 5 * 60 * 1000,
@@ -404,6 +423,23 @@ export function Dashboard() {
     })
     return map
   }, [bulkPowerMetrics?.activities])
+
+  const dashboardCtls = dashboardTrainingLoad?.current?.ctl
+  const dashboardTsb = dashboardTrainingLoad?.current?.tsb
+  const ctlValue = typeof dashboardCtls === 'number' ? Math.round(dashboardCtls) : null
+  const tsbValue = typeof dashboardTsb === 'number' ? Math.round(dashboardTsb) : null
+  const tsbStatus = tsbValue === null
+    ? null
+    : tsbValue >= 10
+      ? 'fresh'
+      : tsbValue >= -10
+        ? 'balanced'
+        : 'fatigued'
+  const tsbStatusClass = tsbStatus === 'fresh'
+    ? 'text-emerald-500'
+    : tsbStatus === 'balanced'
+      ? 'text-orange-500'
+      : 'text-rose-500'
 
   // Calculate weekly hours for last 4 weeks
   const weeklyHours = useMemo(() => {
@@ -951,18 +987,40 @@ export function Dashboard() {
         <Card className="bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30">
           <CardContent className="p-5">
             <div className="text-sm font-medium text-orange-600 dark:text-orange-400 mb-3">{t('dashboard.streak.title')}</div>
-            <div className="flex items-center gap-4">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30">
-                <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="white">
-                  <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
-                </svg>
-              </div>
-              <div>
-                <div className="flex items-baseline gap-2">
-                  <span className="text-4xl font-bold bg-gradient-to-br from-orange-600 to-orange-500 bg-clip-text text-transparent">{weekStreak?.week_streak || 0}</span>
-                  <span className="text-lg text-muted-foreground">{t('dashboard.streak.weeks')}</span>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="flex items-center gap-3">
+                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30 flex-shrink-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white">
+                    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
+                  </svg>
                 </div>
-                <p className="text-xs text-muted-foreground mt-1">{t('dashboard.streak.subtitle')}</p>
+                <div>
+                  <div className="flex items-baseline gap-2">
+                    <span className="text-3xl font-bold bg-gradient-to-br from-orange-600 to-orange-500 bg-clip-text text-transparent">{weekStreak?.week_streak || 0}</span>
+                    <span className="text-sm text-muted-foreground">{t('dashboard.streak.weeks')}</span>
+                  </div>
+                  <p className="text-[11px] text-muted-foreground mt-1 leading-tight">{t('dashboard.streak.subtitle')}</p>
+                </div>
+              </div>
+              <div className="border-l border-orange-500/20 pl-4 flex flex-col justify-center">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('dashboard.streak.ctlLabel')}</div>
+                {ctlValue !== null ? (
+                  <>
+                    <div className="text-3xl font-bold text-foreground leading-none mt-1">{ctlValue}</div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {t('dashboard.streak.tsbLabel')}: <span className={`font-semibold ${tsbStatusClass}`}>{tsbValue ?? '--'}</span>
+                    </div>
+                    <div className={`mt-1 text-xs font-medium ${tsbStatusClass}`}>
+                      {tsbStatus === 'fresh'
+                        ? t('dashboard.streak.formFresh')
+                        : tsbStatus === 'balanced'
+                          ? t('dashboard.streak.formBalanced')
+                          : t('dashboard.streak.formTired')}
+                    </div>
+                  </>
+                ) : (
+                  <div className="text-sm text-muted-foreground mt-2">{t('dashboard.streak.ctlNoData')}</div>
+                )}
               </div>
             </div>
           </CardContent>

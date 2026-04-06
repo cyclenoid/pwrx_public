@@ -115,7 +115,13 @@
     "streak": {
       "title": "Deine Serie",
       "weeks": "Wochen",
-      "subtitle": "Aktive Wochenserie 🔥"
+      "subtitle": "Aktive Wochenserie 🔥",
+      "ctlLabel": "CTL Fitness",
+      "tsbLabel": "TSB",
+      "ctlNoData": "CTL ohne FTP nicht verfügbar",
+      "formFresh": "Frisch",
+      "formBalanced": "Ausgeglichen",
+      "formTired": "Belastet"
     },
     "calendar": {
       "prevMonth": "Vorheriger Monat",
