@@ -4,7 +4,12 @@ import compression from 'compression';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as cron from 'node-cron';
-import apiRoutes, { clearTrainingLoadCache, refreshTechStatsCache, scheduleHeatmapCachePrewarm } from './api/routes';
+import apiRoutes, {
+  clearTrainingLoadCache,
+  refreshTechStatsCache,
+  scheduleHeatmapCachePrewarm,
+  schedulePerformanceCachePrewarm,
+} from './api/routes';
 import DatabaseService from './services/database';
 import { loadSyncSettings, SyncSettings } from './services/syncSettings';
 import { checkPendingMigrations, runMigrations } from './services/migrations';
@@ -37,6 +42,7 @@ const notifyAnalyticsDataChanged = (reason: string): void => {
   refreshTechStatsCache();
   scheduleHeatmapCachePrewarm(reason);
   clearTrainingLoadCache(reason);
+  schedulePerformanceCachePrewarm(reason);
 };
 
 function formatSyncError(error: any): string {
@@ -742,6 +748,7 @@ app.listen(PORT, () => {
 
   // Pre-warm the tech stats cache on startup
   refreshTechStatsCache();
+  schedulePerformanceCachePrewarm('startup');
   refreshSyncSchedules(true);
   watchFolderService.start().catch((error: any) => {
     console.error('❌ Failed to start watch-folder service:', error?.message || error);

@@ -89,19 +89,22 @@ export function PowerProfile() {
   const queryClient = useQueryClient()
   const [selectedYears, setSelectedYears] = useState<number[]>([])
   const [showDetails, setShowDetails] = useState(false)
+  const ANALYTICS_STALE_MS = 60 * 60 * 1000
 
   // Fetch user settings (including weight)
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: getSettings,
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
   })
 
   // Fetch FTP and power zones
   const { data: ftpData } = useQuery({
     queryKey: ['ftp'],
     queryFn: getFTP,
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
   })
 
   // Fetch power curve analysis (rider type & strengths) - cached for 24 hours
@@ -134,13 +137,17 @@ export function PowerProfile() {
   const { data: yearlyData, isLoading: yearlyLoading, refetch: refetchYearly } = useQuery({
     queryKey: ['power-curve-yearly-cached'],
     queryFn: () => getCachedYearlyPowerCurve(),
-    staleTime: 60 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   const { data: allTimeData, isLoading: allTimeLoading, refetch: refetchAllTime } = useQuery({
     queryKey: ['power-curve-alltime-cached'],
     queryFn: () => getCachedPowerCurve(),
-    staleTime: 60 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   // Initialize selected years when data loads
