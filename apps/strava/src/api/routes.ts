@@ -467,6 +467,8 @@ const TRAINING_LOAD_CACHE_MAX_ENTRIES = Math.max(
 const trainingLoadRefreshInProgress = new Set<string>();
 const POWER_CURVE_SUPPORTED_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide'] as const;
 let heatmapPrewarmTimeout: NodeJS.Timeout | null = null;
+let performanceCachePrewarmTimeout: NodeJS.Timeout | null = null;
+let performanceCachePrewarmRunning = false;
 
 const buildPowerCurveAnalysisCacheKey = (userId: number, months: number): string =>
   `${userId}:${months}`;
@@ -1396,6 +1398,93 @@ const scheduleHeatmapCachePrewarm = (reason: string = 'manual') => {
     heatmapHotspotCache.clear();
     console.log(`Heatmap cache invalidated (${reason}); fresh cache will be generated on next request.`);
   }, 1500);
+};
+
+const schedulePerformanceCachePrewarm = (reason: string = 'manual') => {
+  if (performanceCachePrewarmTimeout) {
+    clearTimeout(performanceCachePrewarmTimeout);
+  }
+
+  performanceCachePrewarmTimeout = setTimeout(() => {
+    performanceCachePrewarmTimeout = null;
+    if (performanceCachePrewarmRunning) return;
+
+    performanceCachePrewarmRunning = true;
+    void (async () => {
+      try {
+        const endDate = new Date().toISOString().slice(0, 10);
+        const startDateObj = new Date();
+        startDateObj.setDate(startDateObj.getDate() - 90);
+        const startDate = startDateObj.toISOString().slice(0, 10);
+
+        const ftpResult = await db.query("SELECT value FROM strava.user_settings WHERE key = 'ftp'");
+        const ftp = ftpResult.rows.length > 0 && ftpResult.rows[0].value
+          ? parseFloat(ftpResult.rows[0].value)
+          : null;
+
+        const bulkQuery: BulkPowerMetricsQuery = {
+          startDate,
+          endDate: null,
+          type: 'Ride',
+        };
+        const bulkCacheKey = JSON.stringify({
+          startDate,
+          endDate: 'all',
+          type: 'Ride',
+          ftp: ftp ?? 'none',
+        });
+        const bulkComputed = await computeBulkPowerMetricsPayload(bulkQuery, ftp);
+        setBulkPowerMetricsCache(
+          bulkCacheKey,
+          bulkComputed.payload,
+          bulkComputed.fingerprint,
+          getBulkPowerMetricsUtcDayKey()
+        );
+
+        const trainingRideKey = buildTrainingLoadCacheKey(startDate, endDate, 'Ride');
+        const trainingRideComputed = await computeTrainingLoadPayload(startDate, endDate, 'Ride');
+        setTrainingLoadCache(trainingRideKey, trainingRideComputed.payload, getBulkPowerMetricsUtcDayKey());
+
+        const userResult = await db.query(`
+          WITH active_user AS (
+            SELECT id FROM strava.user_profile WHERE is_active = true ORDER BY id LIMIT 1
+          ),
+          fallback_user AS (
+            SELECT id FROM strava.user_profile ORDER BY id LIMIT 1
+          )
+          SELECT COALESCE((SELECT id FROM active_user), (SELECT id FROM fallback_user)) AS id
+        `);
+        const activeUserId = Number(userResult.rows[0]?.id);
+        if (Number.isFinite(activeUserId) && activeUserId > 0) {
+          const weightResult = await db.query(
+            `
+            SELECT value
+            FROM strava.user_settings
+            WHERE user_id = $1
+            AND key = 'athlete_weight'
+            LIMIT 1
+            `,
+            [activeUserId]
+          );
+          const userWeight = weightResult.rows[0]?.value ? parseFloat(weightResult.rows[0].value) : 75;
+          const powerKey = buildPowerCurveAnalysisCacheKey(activeUserId, 12);
+          const powerComputed = await computePowerCurveAnalysisPayload(activeUserId, 12, userWeight);
+          setPowerCurveAnalysisCache(
+            powerKey,
+            powerComputed.payload,
+            powerComputed.fingerprint,
+            getBulkPowerMetricsUtcDayKey()
+          );
+        }
+
+        console.log(`Performance caches prewarmed (${reason})`);
+      } catch (error: any) {
+        console.warn(`Performance cache prewarm failed (${reason}): ${error?.message || error}`);
+      } finally {
+        performanceCachePrewarmRunning = false;
+      }
+    })();
+  }, 1800);
 };
 
 const hasCapability = (capability: keyof AdapterCapabilities): boolean =>
@@ -6264,7 +6353,7 @@ async function refreshTechStatsCache(): Promise<void> {
 }
 
 // Export for use in index.ts after sync
-export { refreshTechStatsCache, scheduleHeatmapCachePrewarm, clearTrainingLoadCache };
+export { refreshTechStatsCache, scheduleHeatmapCachePrewarm, schedulePerformanceCachePrewarm, clearTrainingLoadCache };
 
 /**
  * GET /api/tech/cached

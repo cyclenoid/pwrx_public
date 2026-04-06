@@ -21,6 +21,7 @@ export function Training() {
   const requestedActivityType = searchParams.get('type') === 'Run' ? 'Run' : 'Ride'
   const [activityType, setActivityType] = useState<string>(requestedActivityType) // 'Ride' or 'Run' - no 'All' option
   const [analysisTimePeriod, setAnalysisTimePeriod] = useState<number>(0) // 0 = All Time
+  const ANALYTICS_STALE_MS = 60 * 60 * 1000
 
   useEffect(() => {
     setActivityType(current => current === requestedActivityType ? current : requestedActivityType)
@@ -74,7 +75,8 @@ export function Training() {
   const { data: ftpData } = useQuery({
     queryKey: ['ftp'],
     queryFn: getFTP,
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
   })
 
   // Fetch TSS-based training load (CTL/ATL/TSB) - last 90 days for better context
@@ -91,32 +93,42 @@ export function Training() {
       endDate: new Date().toISOString().split('T')[0],
       type: activityType || undefined,
     }),
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
     enabled: !!ftpData?.ftp, // Only fetch if FTP is set
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   const { data: hrZones, isLoading: loadingZones } = useQuery({
     queryKey: ['hr-zones', activityType, sidebarPeriodParam],
     queryFn: () => getHeartRateZones({ type: activityType || undefined, months: sidebarPeriodParam }),
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   const { data: weekdayData, isLoading: loadingWeekday } = useQuery({
     queryKey: ['weekday-distribution', activityType, sidebarPeriodParam],
     queryFn: () => getWeekdayDistribution({ type: activityType || undefined, months: sidebarPeriodParam }),
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   const { data: monthlyData, isLoading: loadingMonthly } = useQuery({
     queryKey: ['monthly-comparison', activityType, sidebarPeriodParam],
     queryFn: () => getMonthlyComparison({ type: activityType || undefined, months: sidebarPeriodParam }),
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   const { data: timeOfDayData, isLoading: loadingTimeOfDay } = useQuery({
     queryKey: ['time-of-day', activityType, sidebarPeriodParam],
     queryFn: () => getTimeOfDayDistribution({ type: activityType || undefined, months: sidebarPeriodParam }),
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   // Fetch all running activities for pace chart and running-performance insights
@@ -125,7 +137,9 @@ export function Training() {
     queryKey: ['running-activities', analysisTimePeriod],
     queryFn: () => getRunningActivities({ months: paceMonthsForPeriod }),
     enabled: isRunning,
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   const analysisStartDate = useMemo(() => {
@@ -232,9 +246,11 @@ export function Training() {
       startDate: analysisStartDate,
       type: activityType || undefined,
     }),
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
     enabled: activityType === 'Ride',
     placeholderData: keepPreviousData,
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   // Separate 30-day power window for the existing TSS/IF table
@@ -244,8 +260,10 @@ export function Training() {
       startDate: thirtyDaysAgo,
       type: activityType || undefined,
     }),
-    staleTime: 5 * 60 * 1000,
+    staleTime: ANALYTICS_STALE_MS,
     enabled: activityType === 'Ride',
+    refetchOnWindowFocus: false,
+    refetchOnMount: false,
   })
 
   const cyclingPerformanceSamples = useMemo(() => {

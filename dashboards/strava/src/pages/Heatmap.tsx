@@ -664,13 +664,14 @@ export function Heatmap() {
         <div className="flex flex-col h-full">
           <Link
             to="/"
-            aria-label={t('navigation.home')}
-            className="absolute top-3 left-3 z-[1002] p-2 rounded-lg bg-background/80 backdrop-blur border hover:bg-secondary transition-colors"
+            aria-label={t('nav.dashboard')}
+            className="absolute top-3 left-3 z-[1002] inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-background/85 backdrop-blur border hover:bg-secondary transition-colors text-sm font-medium"
           >
-            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
               <polyline points="9 22 9 12 15 12 15 22"/>
             </svg>
+            <span>{t('nav.dashboard')}</span>
           </Link>
 
           {/* Header */}
@@ -838,17 +839,6 @@ export function Heatmap() {
         </div>
       )}
 
-      {/* Back to Dashboard */}
-      <Link
-        to="/"
-        className="absolute bottom-4 right-4 z-[1001] px-4 py-2 rounded-lg bg-background/95 backdrop-blur border shadow-lg hover:bg-secondary transition-colors flex items-center gap-2 text-sm"
-      >
-        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-          <path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
-          <polyline points="9 22 9 12 15 12 15 22"/>
-        </svg>
-        {t('nav.dashboard')}
-      </Link>
     </div>
   )
 }

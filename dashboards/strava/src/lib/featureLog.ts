@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-performance-prewarm-and-heatmap-dashboard-link',
+    date: '2026-04-06',
+    tag: 'performance',
+    title: {
+      de: 'Performance-Prewarm fuer Training/Power und Dashboard-Link oben links',
+      en: 'Performance prewarm for training/power and dashboard link in top-left',
+    },
+    summary: {
+      de: 'Die wichtigsten Training/Power-Caches werden nach Start und nach Datenaenderungen proaktiv vorgewärmt; in der Heatmap sitzt der Dashboard-Shortcut jetzt links oben.',
+      en: 'Core training/power caches are now proactively prewarmed after startup and data changes; in heatmap the dashboard shortcut now sits in the top-left corner.',
+    },
+    bullets: {
+      de: [
+        'Server-seitiges Prewarm fuer Training-Load, Bulk-Power-Metrics und Power-Profil-Analyse.',
+        'Prewarm startet bei App-Start und nach Sync/Adapter-Datenaenderungen automatisch.',
+        'Dashboard-Link in der Heatmap ist jetzt als klar beschrifteter Shortcut links oben.',
+      ],
+      en: [
+        'Server-side prewarm for training load, bulk power metrics, and power profile analysis.',
+        'Prewarm runs automatically at app startup and after sync/adapter data changes.',
+        'Heatmap dashboard link is now a clearly labeled shortcut in the top-left corner.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-heatmap-home-icon-top-left',
     date: '2026-04-06',
     tag: 'ui',
