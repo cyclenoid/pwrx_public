@@ -1289,13 +1289,14 @@ const buildHeatmapHotspotCacheKey = (
   types: string[],
   years: number[],
   excludeVirtual: boolean,
+  includeLabels: boolean,
   limit: number,
   minActivityCount: number,
   minDistanceKm: number
 ) => {
   const typeKey = [...types].sort().join(',');
   const yearKey = [...years].sort((a, b) => a - b).join(',');
-  return `hotspots_${typeKey || 'all'}_${yearKey || 'all'}_${excludeVirtual ? 'xv1' : 'xv0'}_${limit}_${minActivityCount}_${minDistanceKm.toFixed(1)}_${HEATMAP_HOTSPOT_GRID_DEG}`;
+  return `hotspots_${typeKey || 'all'}_${yearKey || 'all'}_${excludeVirtual ? 'xv1' : 'xv0'}_${includeLabels ? 'lbl1' : 'lbl0'}_${limit}_${minActivityCount}_${minDistanceKm.toFixed(1)}_${HEATMAP_HOTSPOT_GRID_DEG}`;
 };
 
 const buildHeatmapHotspots = async (
@@ -1421,13 +1422,13 @@ const scheduleHeatmapCachePrewarm = (reason: string = 'manual') => {
         const limit = HEATMAP_HOTSPOT_DEFAULT_LIMIT;
         const minActivityCount = HEATMAP_HOTSPOT_DEFAULT_MIN_ACTIVITY_COUNT;
         const minDistanceKm = HEATMAP_HOTSPOT_MIN_DISTANCE_KM;
-        const cacheKey = buildHeatmapHotspotCacheKey([], [], true, limit, minActivityCount, minDistanceKm);
+        const cacheKey = buildHeatmapHotspotCacheKey([], [], true, true, limit, minActivityCount, minDistanceKm);
 
         const hotspots = await buildHeatmapHotspots(filteredActivities, {
           limit,
           minActivityCount,
           minDistanceKm,
-          includeLabels: false,
+          includeLabels: true,
         });
 
         heatmapHotspotCache.set(cacheKey, {
@@ -1439,6 +1440,7 @@ const scheduleHeatmapCachePrewarm = (reason: string = 'manual') => {
               types: [],
               years: [],
               exclude_virtual: true,
+              include_labels: true,
               limit,
               min_activity_count: minActivityCount,
               min_distance_km: minDistanceKm,
@@ -2157,7 +2159,7 @@ router.get('/activities/heatmap/hotspots', async (req: Request, res: Response) =
       ? Math.max(0, Math.min(500, minDistanceRaw))
       : HEATMAP_HOTSPOT_MIN_DISTANCE_KM;
 
-    const cacheKey = buildHeatmapHotspotCacheKey(types, years, excludeVirtual, limit, minActivityCount, minDistanceKm);
+    const cacheKey = buildHeatmapHotspotCacheKey(types, years, excludeVirtual, includeLabels, limit, minActivityCount, minDistanceKm);
     if (!refresh) {
       const cached = heatmapHotspotCache.get(cacheKey);
       if (cached && (Date.now() - cached.timestamp) < HEATMAP_HOTSPOT_CACHE_TTL_MS) {
@@ -2199,6 +2201,7 @@ router.get('/activities/heatmap/hotspots', async (req: Request, res: Response) =
         types,
         years,
         exclude_virtual: excludeVirtual,
+        include_labels: includeLabels,
         limit,
         min_activity_count: minActivityCount,
         min_distance_km: minDistanceKm,

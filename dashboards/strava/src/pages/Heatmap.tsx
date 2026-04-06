@@ -396,7 +396,7 @@ export function Heatmap() {
   }, [filteredActivities])
 
   const { data: hotspotsResponse } = useQuery({
-    queryKey: ['heatmap-hotspots', [...selectedTypes].sort().join(','), [...selectedYears].sort((a, b) => a - b).join(',')],
+    queryKey: ['heatmap-hotspots', 'labels-v1', [...selectedTypes].sort().join(','), [...selectedYears].sort((a, b) => a - b).join(',')],
     enabled: !!data,
     staleTime: 1000 * 60 * 30,
     queryFn: () => getHeatmapHotspots({
@@ -406,7 +406,7 @@ export function Heatmap() {
       limit: HOTSPOT_MAX_ITEMS,
       min_activity_count: HOTSPOT_MIN_ACTIVITY_COUNT,
       min_distance_km: HOTSPOT_MIN_DISTANCE_KM,
-      include_labels: false,
+      include_labels: true,
     }),
   })
 
