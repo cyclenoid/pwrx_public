@@ -748,6 +748,7 @@ app.listen(PORT, () => {
 
   // Pre-warm the tech stats cache on startup
   refreshTechStatsCache();
+  scheduleHeatmapCachePrewarm('startup');
   schedulePerformanceCachePrewarm('startup');
   refreshSyncSchedules(true);
   watchFolderService.start().catch((error: any) => {

@@ -467,6 +467,7 @@ const TRAINING_LOAD_CACHE_MAX_ENTRIES = Math.max(
 const trainingLoadRefreshInProgress = new Set<string>();
 const POWER_CURVE_SUPPORTED_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide'] as const;
 let heatmapPrewarmTimeout: NodeJS.Timeout | null = null;
+let heatmapPrewarmRunning = false;
 let performanceCachePrewarmTimeout: NodeJS.Timeout | null = null;
 let performanceCachePrewarmRunning = false;
 
@@ -484,6 +485,18 @@ const parseBulkPowerMetricsQueryParam = (value: unknown): string | null => {
 };
 
 const getBulkPowerMetricsUtcDayKey = (): string => new Date().toISOString().slice(0, 10);
+
+const buildBulkPowerMetricsCacheKey = (
+  startDate: string | null,
+  endDate: string | null,
+  type: string | null,
+  ftp: number | null
+): string => JSON.stringify({
+  startDate: startDate || 'all',
+  endDate: endDate || 'all',
+  type: type || 'all',
+  ftp: ftp ?? 'none',
+});
 
 const trimBulkPowerMetricsCache = (): void => {
   if (bulkPowerMetricsCache.size <= BULK_POWER_METRICS_CACHE_MAX_ENTRIES) return;
@@ -1394,9 +1407,56 @@ const scheduleHeatmapCachePrewarm = (reason: string = 'manual') => {
   // Debounced: avoid multiple expensive prewarm runs during consecutive sync events.
   heatmapPrewarmTimeout = setTimeout(() => {
     heatmapPrewarmTimeout = null;
-    heatmapCache.clear();
-    heatmapHotspotCache.clear();
-    console.log(`Heatmap cache invalidated (${reason}); fresh cache will be generated on next request.`);
+    if (heatmapPrewarmRunning) return;
+
+    heatmapPrewarmRunning = true;
+    void (async () => {
+      try {
+        heatmapCache.clear();
+        heatmapHotspotCache.clear();
+        const allHeatmap = await loadHeatmapDataWithCache(null, null, true);
+
+        const sourceActivities = (allHeatmap.data.activities || []) as any[];
+        const filteredActivities = sourceActivities.filter((activity: any) => !isVirtualHeatmapType(activity.type));
+        const limit = HEATMAP_HOTSPOT_DEFAULT_LIMIT;
+        const minActivityCount = HEATMAP_HOTSPOT_DEFAULT_MIN_ACTIVITY_COUNT;
+        const minDistanceKm = HEATMAP_HOTSPOT_MIN_DISTANCE_KM;
+        const cacheKey = buildHeatmapHotspotCacheKey([], [], true, limit, minActivityCount, minDistanceKm);
+
+        const hotspots = await buildHeatmapHotspots(filteredActivities, {
+          limit,
+          minActivityCount,
+          minDistanceKm,
+          includeLabels: false,
+        });
+
+        heatmapHotspotCache.set(cacheKey, {
+          data: {
+            count: hotspots.length,
+            source_activity_count: sourceActivities.length,
+            filtered_activity_count: filteredActivities.length,
+            filters: {
+              types: [],
+              years: [],
+              exclude_virtual: true,
+              limit,
+              min_activity_count: minActivityCount,
+              min_distance_km: minDistanceKm,
+            },
+            hotspots,
+            generation_time_ms: 0,
+          },
+          timestamp: Date.now(),
+          sourceActivityCount: sourceActivities.length,
+        });
+
+        console.log(`Heatmap caches prewarmed (${reason})`);
+      } catch (error: any) {
+        console.warn(`Heatmap cache prewarm failed (${reason}): ${error?.message || error}`);
+      } finally {
+        heatmapPrewarmRunning = false;
+      }
+    })();
   }, 1500);
 };
 
@@ -1413,36 +1473,45 @@ const schedulePerformanceCachePrewarm = (reason: string = 'manual') => {
     void (async () => {
       try {
         const endDate = new Date().toISOString().slice(0, 10);
-        const startDateObj = new Date();
-        startDateObj.setDate(startDateObj.getDate() - 90);
-        const startDate = startDateObj.toISOString().slice(0, 10);
+        const ninetyDaysAgo = (() => {
+          const startDateObj = new Date();
+          startDateObj.setDate(startDateObj.getDate() - 90);
+          return startDateObj.toISOString().slice(0, 10);
+        })();
+        const thirtyDaysAgo = (() => {
+          const startDateObj = new Date();
+          startDateObj.setDate(startDateObj.getDate() - 30);
+          return startDateObj.toISOString().slice(0, 10);
+        })();
 
         const ftpResult = await db.query("SELECT value FROM strava.user_settings WHERE key = 'ftp'");
         const ftp = ftpResult.rows.length > 0 && ftpResult.rows[0].value
           ? parseFloat(ftpResult.rows[0].value)
           : null;
 
-        const bulkQuery: BulkPowerMetricsQuery = {
-          startDate,
-          endDate: null,
-          type: 'Ride',
-        };
-        const bulkCacheKey = JSON.stringify({
-          startDate,
-          endDate: 'all',
-          type: 'Ride',
-          ftp: ftp ?? 'none',
-        });
-        const bulkComputed = await computeBulkPowerMetricsPayload(bulkQuery, ftp);
-        setBulkPowerMetricsCache(
-          bulkCacheKey,
-          bulkComputed.payload,
-          bulkComputed.fingerprint,
-          getBulkPowerMetricsUtcDayKey()
-        );
+        const bulkQueries: BulkPowerMetricsQuery[] = [
+          { startDate: null, endDate: null, type: 'Ride' }, // Training "Leistung vs. Puls" default (Alle)
+          { startDate: ninetyDaysAgo, endDate: null, type: 'Ride' }, // Dashboard/Training context windows
+          { startDate: thirtyDaysAgo, endDate: null, type: 'Ride' }, // Recent TSS/IF table window
+        ];
+        for (const bulkQuery of bulkQueries) {
+          const bulkComputed = await computeBulkPowerMetricsPayload(bulkQuery, ftp);
+          const bulkCacheKey = buildBulkPowerMetricsCacheKey(
+            bulkQuery.startDate,
+            bulkQuery.endDate,
+            bulkQuery.type,
+            ftp
+          );
+          setBulkPowerMetricsCache(
+            bulkCacheKey,
+            bulkComputed.payload,
+            bulkComputed.fingerprint,
+            getBulkPowerMetricsUtcDayKey()
+          );
+        }
 
-        const trainingRideKey = buildTrainingLoadCacheKey(startDate, endDate, 'Ride');
-        const trainingRideComputed = await computeTrainingLoadPayload(startDate, endDate, 'Ride');
+        const trainingRideKey = buildTrainingLoadCacheKey(ninetyDaysAgo, endDate, 'Ride');
+        const trainingRideComputed = await computeTrainingLoadPayload(ninetyDaysAgo, endDate, 'Ride');
         setTrainingLoadCache(trainingRideKey, trainingRideComputed.payload, getBulkPowerMetricsUtcDayKey());
 
         const userResult = await db.query(`
@@ -7167,12 +7236,7 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
       : null;
 
     const query: BulkPowerMetricsQuery = { startDate, endDate, type };
-    const cacheKey = JSON.stringify({
-      startDate: startDate || 'all',
-      endDate: endDate || 'all',
-      type: type || 'all',
-      ftp: ftp ?? 'none',
-    });
+    const cacheKey = buildBulkPowerMetricsCacheKey(startDate, endDate, type, ftp);
 
     const now = Date.now();
     const todayUtc = getBulkPowerMetricsUtcDayKey();
