@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-heatmap-home-icon-top-left',
+    date: '2026-04-06',
+    tag: 'ui',
+    title: {
+      de: 'Heatmap: Home-Icon nach links oben verschoben',
+      en: 'Heatmap: moved home icon to top-left corner',
+    },
+    summary: {
+      de: 'Das Home-Symbol sitzt jetzt links oben in der Sidebar und ist damit schneller erreichbar.',
+      en: 'The home icon is now placed in the top-left corner of the sidebar for quicker access.',
+    },
+    bullets: {
+      de: [
+        'Home-Icon aus dem Header-Rechtsbereich entfernt.',
+        'Als fester Shortcut links oben in der Sidebar platziert.',
+        'Header-Abstand angepasst, damit nichts ueberlappt.',
+      ],
+      en: [
+        'Removed home icon from the right side of the header.',
+        'Placed it as a fixed shortcut in the top-left sidebar corner.',
+        'Adjusted header spacing to avoid overlap.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-heatmap-payload-optimization',
     date: '2026-04-06',
     tag: 'heatmap',
