@@ -22,22 +22,22 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     date: '2026-04-06',
     tag: 'cache',
     title: {
-      de: 'Leistung-vs-Puls serverseitig gecached',
-      en: 'Power-vs-heart-rate now server-side cached',
+      de: 'Leistung-vs-Puls jetzt cache-first',
+      en: 'Power-vs-heart-rate now cache-first',
     },
     summary: {
-      de: 'Die Bulk-Berechnung für Leistung-vs-Puls nutzt jetzt einen Fingerprint-Cache mit längerer Lebensdauer, damit die Trainingsseite deutlich schneller lädt.',
-      en: 'The bulk calculation behind power-vs-heart-rate now uses a fingerprint-based cache with a longer lifetime, so the training page loads significantly faster.',
+      de: 'Die Trainingsseite liefert Leistung-vs-Puls jetzt standardmäßig aus dem Server-Cache und aktualisiert den Datensatz einmal täglich im Hintergrund.',
+      en: 'The training page now serves power-vs-heart-rate from server cache by default and refreshes the dataset once per day in the background.',
     },
     bullets: {
       de: [
-        'Cache trifft nur bei unverändertem Datenstand und passendem Zeitraum/Typ.',
-        'Bei Datenänderungen wird automatisch neu berechnet statt veraltete Werte auszuliefern.',
+        'Bereits vorhandene Ansichten kommen direkt aus dem Cache ohne erneute Blockierung durch Neuberechnung.',
+        'Nach Tageswechsel wird beim ersten Aufruf eine Hintergrund-Aktualisierung angestoßen, während weiter Cache-Daten geliefert werden.',
         'Der Cache ist größenbegrenzt und kann über den bestehenden Cache-Clear-Endpunkt geleert werden.',
       ],
       en: [
-        'Cache hits only when data is unchanged and timeframe/type match.',
-        'When data changes, the endpoint automatically recomputes instead of serving stale values.',
+        'Existing views are returned directly from cache without blocking recomputation.',
+        'After day rollover, the first request triggers a background refresh while cached data is still served.',
         'Cache size is bounded and can be cleared via the existing cache-clear endpoint.',
       ],
     },
