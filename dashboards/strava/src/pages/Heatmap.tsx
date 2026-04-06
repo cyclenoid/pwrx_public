@@ -256,7 +256,10 @@ export function Heatmap() {
     setIsRefreshing(true)
     try {
       await clearHeatmapCache()
-      await queryClient.invalidateQueries({ queryKey: ['heatmap'] })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['heatmap'] }),
+        queryClient.invalidateQueries({ queryKey: ['heatmap-hotspots'] }),
+      ])
     } finally {
       setIsRefreshing(false)
     }

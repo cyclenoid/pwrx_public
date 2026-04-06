@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-training-load-cache-and-heatmap-refresh',
+    date: '2026-04-06',
+    tag: 'cache',
+    title: {
+      de: 'Training-Load jetzt serverseitig cache-first, Heatmap-Refresh konsistenter',
+      en: 'Training load now server-side cache-first, heatmap refresh made consistent',
+    },
+    summary: {
+      de: 'Die PMC-Daten werden jetzt wie Power/Fahrerprofil cache-first mit taeglicher Hintergrund-Aktualisierung ausgeliefert; beim Heatmap-Refresh werden auch Hotspots sicher neu geladen.',
+      en: 'PMC data now uses the same cache-first daily background refresh strategy as power/rider profile; heatmap refresh now also reloads hotspots reliably.',
+    },
+    bullets: {
+      de: [
+        'GET /api/training-load liefert standardmaessig Cache-Daten und aktualisiert nach Tageswechsel im Hintergrund.',
+        'Datenaenderungen (Sync/Adapter) invalidieren jetzt auch den Training-Load-Cache.',
+        'Heatmap-Refresh invalidiert Karte und Hotspot-Sidebar gemeinsam.',
+      ],
+      en: [
+        'GET /api/training-load now serves cached data by default and refreshes in the background after day rollover.',
+        'Data changes (sync/adapter) now invalidate training-load cache as well.',
+        'Heatmap refresh now invalidates both map data and hotspot sidebar together.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-strain-classification-and-settings-deeplink',
     date: '2026-04-06',
     tag: 'training',
