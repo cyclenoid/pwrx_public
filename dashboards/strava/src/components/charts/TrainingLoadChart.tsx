@@ -20,13 +20,41 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
   const colors = getChartColors(resolvedTheme === 'dark' ? 'dark' : 'light')
   const [showExplanation, setShowExplanation] = useState(false)
 
+  const orderedData = useMemo(
+    () => [...data].sort((a, b) => a.date.localeCompare(b.date)),
+    [data]
+  )
+
+  const toLoadArray = (input: DailyTrainingLoad[]): number[] =>
+    input.map((item) => (Number.isFinite(item.tss) ? item.tss : 0))
+
+  const mean = (values: number[]): number =>
+    values.length > 0 ? values.reduce((sum, value) => sum + value, 0) / values.length : 0
+
+  const stdDev = (values: number[]): number => {
+    if (values.length === 0) return 0
+    const avg = mean(values)
+    const variance = values.reduce((sum, value) => sum + (value - avg) ** 2, 0) / values.length
+    return Math.sqrt(variance)
+  }
+
+  const median = (values: number[]): number | null => {
+    if (values.length === 0) return null
+    const sorted = [...values].sort((a, b) => a - b)
+    const mid = Math.floor(sorted.length / 2)
+    if (sorted.length % 2 === 0) {
+      return (sorted[mid - 1] + sorted[mid]) / 2
+    }
+    return sorted[mid]
+  }
+
   // Format data for chart
   const chartData = useMemo(() => {
-    return data.map(item => ({
+    return orderedData.map(item => ({
       ...item,
       dateFormatted: format(parseISO(item.date), 'dd MMM', { locale: de }),
     }))
-  }, [data])
+  }, [orderedData])
 
   const ctlLineColor = colors.primary
   const atlLineColor = colors.textMuted
@@ -51,10 +79,84 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
 
   const tsbStatus = getTSBStatus(currentTSB)
 
+  const acwrMetrics = useMemo(() => {
+    const loads = toLoadArray(orderedData)
+    if (loads.length < 28) return null
+
+    const acuteWindow = loads.slice(-7)
+    const chronicWindow = loads.slice(-28)
+    const acuteAvg = mean(acuteWindow)
+    const chronicAvg = mean(chronicWindow)
+    if (chronicAvg <= 0) return null
+
+    const value = acuteAvg / chronicAvg
+
+    if (value < 0.8) {
+      return { value, label: 'Unterlast', color: colors.info, hint: '7d/28d' }
+    }
+    if (value <= 1.3) {
+      return { value, label: 'Im Ziel', color: colors.success, hint: '7d/28d' }
+    }
+    if (value <= 1.5) {
+      return { value, label: 'Erhöht', color: colors.warning, hint: '7d/28d' }
+    }
+    return { value, label: 'Hoch', color: colors.danger, hint: '7d/28d' }
+  }, [orderedData, colors.danger, colors.info, colors.success, colors.warning])
+
+  const monotonyStrainMetrics = useMemo(() => {
+    const loads = toLoadArray(orderedData)
+    if (loads.length < 7) return null
+
+    const windows: Array<{ monotony: number; strain: number; weeklyLoad: number }> = []
+    for (let end = 6; end < loads.length; end += 1) {
+      const week = loads.slice(end - 6, end + 1)
+      const weeklyLoad = week.reduce((sum, value) => sum + value, 0)
+      const sd = stdDev(week)
+      if (sd <= 0) continue
+      const monotony = mean(week) / sd
+      if (!Number.isFinite(monotony)) continue
+      const strain = weeklyLoad * monotony
+      if (!Number.isFinite(strain)) continue
+      windows.push({ monotony, strain, weeklyLoad })
+    }
+
+    if (windows.length === 0) return null
+    const current = windows[windows.length - 1]
+    const baseline = median(windows.slice(0, -1).map((entry) => entry.strain))
+    const ratio = baseline && baseline > 0 ? current.strain / baseline : null
+
+    let label = 'Variiert'
+    let color = colors.success
+    if (current.monotony > 2.0) {
+      label = 'Monoton hoch'
+      color = colors.warning
+    } else if (current.monotony >= 1.5) {
+      label = 'Monoton mittel'
+      color = colors.textMuted
+    }
+
+    if (ratio !== null && ratio > 1.5) {
+      label = 'Strain hoch'
+      color = colors.danger
+    } else if (ratio !== null && ratio > 1.2 && label === 'Variiert') {
+      label = 'Strain erhöht'
+      color = colors.warning
+    }
+
+    return {
+      monotony: current.monotony,
+      strain: current.strain,
+      strainRatio: ratio,
+      label,
+      color,
+      hint: ratio !== null ? `Wochen-Strain ${ratio.toFixed(2)}x vs. Basis` : 'Wochen-Strain ohne Basis',
+    }
+  }, [orderedData, colors.danger, colors.success, colors.textMuted, colors.warning])
+
   // Generate training recommendations based on PMC values
   const getTrainingRecommendations = useMemo(() => {
-    const ctlWeeklyChange = data.length >= 7
-      ? ((currentCTL - data[data.length - 7].ctl) / data[data.length - 7].ctl) * 100
+    const ctlWeeklyChange = orderedData.length >= 7
+      ? ((currentCTL - orderedData[orderedData.length - 7].ctl) / orderedData[orderedData.length - 7].ctl) * 100
       : 0
     const recommendations: Array<{ type: 'info' | 'warning' | 'success' | 'tip'; title: string; text: string; icon: any }> = []
 
@@ -156,7 +258,7 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
     }
 
     return recommendations
-  }, [currentCTL, currentATL, currentTSB, data])
+  }, [currentCTL, currentATL, currentTSB, orderedData])
 
   return (
     <Card>
@@ -168,7 +270,7 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
       </CardHeader>
       <CardContent>
         {/* Current Values */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
+        <div className="mb-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-5">
           <div className="text-center p-3 bg-secondary/50 rounded-lg">
             <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">CTL (Fitness)</p>
             <p className="text-2xl font-bold" style={{ color: ctlLineColor }}>
@@ -201,6 +303,52 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
               </span>
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">CTL - ATL</p>
+          </div>
+          <div className="text-center p-3 bg-secondary/50 rounded-lg">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">ACWR</p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-2xl font-bold" style={{ color: acwrMetrics?.color || colors.textMuted }}>
+                {acwrMetrics ? acwrMetrics.value.toFixed(2) : '—'}
+              </p>
+              {acwrMetrics && (
+                <span
+                  className="text-[10px] px-2 py-0.5 rounded-full border"
+                  style={{
+                    color: acwrMetrics.color,
+                    borderColor: acwrMetrics.color,
+                    backgroundColor: toRgba(acwrMetrics.color, 0.12),
+                  }}
+                >
+                  {acwrMetrics.label}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">{acwrMetrics?.hint || 'mind. 28 Tage nötig'}</p>
+          </div>
+          <div className="text-center p-3 bg-secondary/50 rounded-lg">
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Monotony / Strain</p>
+            <div className="flex items-center justify-center gap-2">
+              <p className="text-xl font-bold" style={{ color: monotonyStrainMetrics?.color || colors.textMuted }}>
+                {monotonyStrainMetrics ? monotonyStrainMetrics.monotony.toFixed(2) : '—'}
+              </p>
+              {monotonyStrainMetrics && (
+                <span
+                  className="text-[10px] px-2 py-0.5 rounded-full border"
+                  style={{
+                    color: monotonyStrainMetrics.color,
+                    borderColor: monotonyStrainMetrics.color,
+                    backgroundColor: toRgba(monotonyStrainMetrics.color, 0.12),
+                  }}
+                >
+                  {monotonyStrainMetrics.label}
+                </span>
+              )}
+            </div>
+            <p className="text-[10px] text-muted-foreground mt-1">
+              {monotonyStrainMetrics
+                ? `Strain ${Math.round(monotonyStrainMetrics.strain)}`
+                : 'mind. 7 Tage nötig'}
+            </p>
           </div>
         </div>
 
@@ -371,6 +519,13 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
                 <p className="text-[11px] text-muted-foreground italic">
                   <strong>Berechnung:</strong> Exponential Moving Average (EMA) mit k = 2/(n+1), wobei n die Zeitkonstante ist (CTL: 42, ATL: 7).
                   EMA<sub>heute</sub> = (TSS<sub>heute</sub> × k) + (EMA<sub>gestern</sub> × (1 - k))
+                </p>
+                <p className="mt-2 text-[11px] text-muted-foreground italic">
+                  <strong>ACWR:</strong> 7-Tage-Ø Load / 28-Tage-Ø Load. Zielbereich meist etwa 0.8 bis 1.3.
+                  <br />
+                  <strong>Monotony:</strong> 7-Tage-Ø Load / Standardabweichung der 7 Tage.
+                  <br />
+                  <strong>Strain:</strong> Wochenload × Monotony.
                 </p>
               </div>
             </div>
