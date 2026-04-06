@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-dashboard-streak-ctl-icon-alignment',
+    date: '2026-04-06',
+    tag: 'ui',
+    title: {
+      de: 'Dashboard-Kachel: Wochen und CTL visuell vereinheitlicht',
+      en: 'Dashboard card: unified visual layout for weeks and CTL',
+    },
+    summary: {
+      de: 'Wochenserie und CTL stehen jetzt mit gleich großen Zahlen auf gleicher Höhe; Icons ersetzen Emoji.',
+      en: 'Week streak and CTL now use equally sized values on the same visual level; icons replace emoji.',
+    },
+    bullets: {
+      de: [
+        'Beide Teilkacheln folgen jetzt derselben Zeilenstruktur (Icon+Label, Wert, Kurztext).',
+        'Flammen- und Fitness-Icon statt Emoji/Textmarker.',
+        'TSB-Status bleibt erhalten, ist aber kompakter unter dem CTL-Wert angeordnet.',
+      ],
+      en: [
+        'Both sub-cards now follow the same row structure (icon+label, value, short text).',
+        'Flame and fitness icons replace emoji/text markers.',
+        'TSB status remains available with a more compact layout below the CTL value.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-training-heatmap-cache-prewarm',
     date: '2026-04-06',
     tag: 'performance',

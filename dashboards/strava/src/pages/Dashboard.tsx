@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Bike, Footprints, Activity, RefreshCw, LayoutGrid, List, ChevronLeft, ChevronRight, Award, Globe, Clock, Mountain } from 'lucide-react'
+import { Bike, Footprints, Activity, Flame, Dumbbell, RefreshCw, LayoutGrid, List, ChevronLeft, ChevronRight, Award, Globe, Clock, Mountain } from 'lucide-react'
 import {
   getActivities,
   getActivity,
@@ -994,41 +994,35 @@ export function Dashboard() {
         <Card className="bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30">
           <CardContent className="p-5">
             <div className="grid grid-cols-2 gap-3">
-              <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 min-h-[132px] flex flex-col justify-between">
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('dashboard.streak.weeks')}</span>
-                  <span className="text-lg leading-none" aria-hidden>🔥</span>
+              <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 min-h-[132px]">
+                <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <Flame size={14} className="text-orange-500" />
+                  <span>{t('dashboard.streak.weeks')}</span>
                 </div>
-                <div>
-                  <div className="text-5xl font-bold leading-none bg-gradient-to-br from-orange-600 to-orange-500 bg-clip-text text-transparent">
-                    {weekStreak?.week_streak || 0}
-                  </div>
-                  <p className="text-xs text-muted-foreground mt-2 leading-tight">{t('dashboard.streak.streakSubShort')}</p>
+                <div className="mt-2 text-5xl font-bold leading-none bg-gradient-to-br from-orange-600 to-orange-500 bg-clip-text text-transparent">
+                  {weekStreak?.week_streak || 0}
                 </div>
+                <p className="mt-2 text-xs text-muted-foreground leading-tight">{t('dashboard.streak.streakSubShort')}</p>
               </div>
-              <div className={`rounded-xl border p-4 min-h-[132px] flex flex-col justify-between ${tsbSurfaceClass}`}>
-                <div className="flex items-start justify-between gap-2">
-                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('dashboard.streak.ctlLabel')}</span>
-                  {tsbValue !== null && (
-                    <span className={`text-xs font-semibold ${tsbStatusClass}`}>
-                      {t('dashboard.streak.tsbLabel')}: {tsbValue}
-                    </span>
-                  )}
+              <div className={`rounded-xl border p-4 min-h-[132px] ${tsbSurfaceClass}`}>
+                <div className="flex items-center gap-1.5 text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <Dumbbell size={14} className="text-orange-500" />
+                  <span>{t('dashboard.streak.ctlLabel')}</span>
                 </div>
                 {ctlValue !== null ? (
                   <>
-                    <div className="text-5xl font-bold text-foreground leading-none">{ctlValue}</div>
-                    <div className={`text-xs font-medium mt-2 ${tsbStatusClass}`}>
-                      {tsbStatus === 'fresh'
+                    <div className="mt-2 text-5xl font-bold text-foreground leading-none">{ctlValue}</div>
+                    <p className="mt-2 text-xs text-muted-foreground leading-tight">{t('dashboard.streak.ctlSubShort')}</p>
+                    <p className={`text-xs font-semibold leading-tight ${tsbStatusClass}`}>
+                      {t('dashboard.streak.tsbLabel')}: {tsbValue ?? '--'} · {tsbStatus === 'fresh'
                         ? t('dashboard.streak.formFresh')
                         : tsbStatus === 'balanced'
                           ? t('dashboard.streak.formBalanced')
                           : t('dashboard.streak.formTired')}
-                    </div>
-                    <p className="text-xs text-muted-foreground leading-tight">{t('dashboard.streak.ctlSubShort')}</p>
+                    </p>
                   </>
                 ) : (
-                  <div className="text-sm text-muted-foreground">{t('dashboard.streak.ctlNoData')}</div>
+                  <div className="mt-2 text-sm text-muted-foreground">{t('dashboard.streak.ctlNoData')}</div>
                 )}
               </div>
             </div>
