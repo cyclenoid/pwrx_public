@@ -31,13 +31,15 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     },
     bullets: {
       de: [
-        'Standard-Simplifizierung von 600 auf 220 Punkte pro Aktivitaet reduziert.',
+        'Standard-Simplifizierung von 600 auf 140 Punkte pro Aktivitaet reduziert.',
         'Koordinaten werden standardmaessig mit 4 statt 5 Dezimalstellen ausgeliefert.',
+        'Hotspot-Labels sind standardmaessig nicht-blockierend (ohne Reverse-Geocoding im Erstaufruf).',
         'HTTP Cache-Control fuer Heatmap/Hotspots gesetzt, damit Browser-Revalidierung leichter aus dem Cache bedient wird.',
       ],
       en: [
-        'Default simplification lowered from 600 to 220 points per activity.',
+        'Default simplification lowered from 600 to 140 points per activity.',
         'Coordinates are now delivered with 4 decimals by default (previously 5).',
+        'Hotspot labels are now non-blocking by default (no reverse-geocoding in the initial request).',
         'HTTP Cache-Control added for heatmap/hotspots to improve browser revalidation and cache hits.',
       ],
     },

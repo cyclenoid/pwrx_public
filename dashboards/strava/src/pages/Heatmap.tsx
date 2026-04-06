@@ -406,7 +406,7 @@ export function Heatmap() {
       limit: HOTSPOT_MAX_ITEMS,
       min_activity_count: HOTSPOT_MIN_ACTIVITY_COUNT,
       min_distance_km: HOTSPOT_MIN_DISTANCE_KM,
-      include_labels: true,
+      include_labels: false,
     }),
   })
 

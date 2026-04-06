@@ -400,7 +400,7 @@ const BULK_POWER_METRICS_CACHE_MAX_ENTRIES = Math.max(
 const bulkPowerMetricsRefreshInProgress = new Set<string>();
 const HEATMAP_MAX_POINTS_PER_ACTIVITY = Math.max(
   120,
-  Number(process.env.HEATMAP_MAX_POINTS_PER_ACTIVITY || 220)
+  Number(process.env.HEATMAP_MAX_POINTS_PER_ACTIVITY || 140)
 );
 const HEATMAP_COORDINATE_DECIMALS = Math.max(
   3,
@@ -1984,7 +1984,7 @@ router.get('/activities/heatmap/hotspots', async (req: Request, res: Response) =
     const types = Array.from(new Set(parseHeatmapListQuery(req.query.types)));
     const years = parseHeatmapYearListQuery(req.query.years);
     const excludeVirtual = parseBooleanQuery(req.query.exclude_virtual, true);
-    const includeLabels = parseBooleanQuery(req.query.include_labels, true);
+    const includeLabels = parseBooleanQuery(req.query.include_labels, false);
     const refresh = req.query.refresh === 'true';
     const limitRaw = Number(req.query.limit);
     const minActivityRaw = Number(req.query.min_activity_count);
