@@ -121,7 +121,9 @@
       "ctlNoData": "CTL ohne FTP nicht verfügbar",
       "formFresh": "Frisch",
       "formBalanced": "Ausgeglichen",
-      "formTired": "Belastet"
+      "formTired": "Belastet",
+      "streakSubShort": "Wochen aktiv",
+      "ctlSubShort": "Formstatus"
     },
     "calendar": {
       "prevMonth": "Vorheriger Monat",

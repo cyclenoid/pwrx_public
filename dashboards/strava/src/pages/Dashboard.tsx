@@ -440,6 +440,13 @@ export function Dashboard() {
     : tsbStatus === 'balanced'
       ? 'text-orange-500'
       : 'text-rose-500'
+  const tsbSurfaceClass = tsbStatus === 'fresh'
+    ? 'bg-emerald-500/10 border-emerald-500/25'
+    : tsbStatus === 'balanced'
+      ? 'bg-orange-500/10 border-orange-500/30'
+      : tsbStatus === 'fatigued'
+        ? 'bg-rose-500/10 border-rose-500/25'
+        : 'bg-background/40 border-orange-500/20'
 
   // Calculate weekly hours for last 4 weeks
   const weeklyHours = useMemo(() => {
@@ -987,39 +994,42 @@ export function Dashboard() {
         <Card className="bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30">
           <CardContent className="p-5">
             <div className="text-sm font-medium text-orange-600 dark:text-orange-400 mb-3">{t('dashboard.streak.title')}</div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="flex items-center gap-3">
-                <div className="w-14 h-14 rounded-full bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center shadow-lg shadow-orange-500/30 flex-shrink-0">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="28" height="28" viewBox="0 0 24 24" fill="white">
-                    <path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/>
-                  </svg>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 min-h-[132px] flex flex-col justify-between">
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('dashboard.streak.weeks')}</span>
+                  <span className="text-lg leading-none" aria-hidden>🔥</span>
                 </div>
                 <div>
-                  <div className="flex items-baseline gap-2">
-                    <span className="text-3xl font-bold bg-gradient-to-br from-orange-600 to-orange-500 bg-clip-text text-transparent">{weekStreak?.week_streak || 0}</span>
-                    <span className="text-sm text-muted-foreground">{t('dashboard.streak.weeks')}</span>
+                  <div className="text-5xl font-bold leading-none bg-gradient-to-br from-orange-600 to-orange-500 bg-clip-text text-transparent">
+                    {weekStreak?.week_streak || 0}
                   </div>
-                  <p className="text-[11px] text-muted-foreground mt-1 leading-tight">{t('dashboard.streak.subtitle')}</p>
+                  <p className="text-xs text-muted-foreground mt-2 leading-tight">{t('dashboard.streak.streakSubShort')}</p>
                 </div>
               </div>
-              <div className="border-l border-orange-500/20 pl-4 flex flex-col justify-center">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('dashboard.streak.ctlLabel')}</div>
+              <div className={`rounded-xl border p-4 min-h-[132px] flex flex-col justify-between ${tsbSurfaceClass}`}>
+                <div className="flex items-start justify-between gap-2">
+                  <span className="text-[11px] uppercase tracking-wide text-muted-foreground">{t('dashboard.streak.ctlLabel')}</span>
+                  {tsbValue !== null && (
+                    <span className={`text-xs font-semibold ${tsbStatusClass}`}>
+                      {t('dashboard.streak.tsbLabel')}: {tsbValue}
+                    </span>
+                  )}
+                </div>
                 {ctlValue !== null ? (
                   <>
-                    <div className="text-3xl font-bold text-foreground leading-none mt-1">{ctlValue}</div>
-                    <div className="mt-1 text-xs text-muted-foreground">
-                      {t('dashboard.streak.tsbLabel')}: <span className={`font-semibold ${tsbStatusClass}`}>{tsbValue ?? '--'}</span>
-                    </div>
-                    <div className={`mt-1 text-xs font-medium ${tsbStatusClass}`}>
+                    <div className="text-5xl font-bold text-foreground leading-none">{ctlValue}</div>
+                    <div className={`text-xs font-medium mt-2 ${tsbStatusClass}`}>
                       {tsbStatus === 'fresh'
                         ? t('dashboard.streak.formFresh')
                         : tsbStatus === 'balanced'
                           ? t('dashboard.streak.formBalanced')
                           : t('dashboard.streak.formTired')}
                     </div>
+                    <p className="text-xs text-muted-foreground leading-tight">{t('dashboard.streak.ctlSubShort')}</p>
                   </>
                 ) : (
-                  <div className="text-sm text-muted-foreground mt-2">{t('dashboard.streak.ctlNoData')}</div>
+                  <div className="text-sm text-muted-foreground">{t('dashboard.streak.ctlNoData')}</div>
                 )}
               </div>
             </div>
