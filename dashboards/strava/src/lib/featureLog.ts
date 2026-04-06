@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-heatmap-hotspot-labels-restored',
+    date: '2026-04-06',
+    tag: 'heatmap',
+    title: {
+      de: 'Heatmap-Hotspots zeigen wieder Ortsnamen',
+      en: 'Heatmap hotspots now show location names again',
+    },
+    summary: {
+      de: 'Die Hotspot-Bereiche nutzen wieder Ortslabels; Label-Antworten werden separat gecacht und beim Prewarm vorbereitet.',
+      en: 'Hotspot areas now show location labels again; labeled responses are cached separately and prewarmed.',
+    },
+    bullets: {
+      de: [
+        'Frontend fordert Hotspots wieder mit include_labels=true an.',
+        'Backend-Hotspot-Cache unterscheidet jetzt zwischen mit/ohne Labels.',
+        'Standard-Hotspots werden beim Prewarm inklusive Labels erzeugt.',
+      ],
+      en: [
+        'Frontend requests hotspots again with include_labels=true.',
+        'Backend hotspot cache now differentiates labeled vs unlabeled responses.',
+        'Default hotspots are now prewarmed with labels.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-dashboard-streak-ctl-icon-alignment',
     date: '2026-04-06',
     tag: 'ui',
