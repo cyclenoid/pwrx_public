@@ -390,16 +390,14 @@ type BulkPowerMetricsCache = {
   data: any;
   timestamp: number;
   fingerprint: string;
+  refreshedDayUtc: string;
 };
 const bulkPowerMetricsCache = new Map<string, BulkPowerMetricsCache>();
-const BULK_POWER_METRICS_CACHE_TTL_MS = Math.max(
-  60 * 1000,
-  Number(process.env.BULK_POWER_METRICS_CACHE_TTL_MS || (12 * 60 * 60 * 1000))
-);
 const BULK_POWER_METRICS_CACHE_MAX_ENTRIES = Math.max(
   4,
   Number(process.env.BULK_POWER_METRICS_CACHE_MAX_ENTRIES || 24)
 );
+const bulkPowerMetricsRefreshInProgress = new Set<string>();
 const HEATMAP_MAX_POINTS_PER_ACTIVITY = Math.max(
   200,
   Number(process.env.HEATMAP_MAX_POINTS_PER_ACTIVITY || 600)
@@ -470,6 +468,8 @@ const parseBulkPowerMetricsQueryParam = (value: unknown): string | null => {
   return normalized || null;
 };
 
+const getBulkPowerMetricsUtcDayKey = (): string => new Date().toISOString().slice(0, 10);
+
 const trimBulkPowerMetricsCache = (): void => {
   if (bulkPowerMetricsCache.size <= BULK_POWER_METRICS_CACHE_MAX_ENTRIES) return;
   const sorted = Array.from(bulkPowerMetricsCache.entries())
@@ -484,17 +484,24 @@ const trimBulkPowerMetricsCache = (): void => {
 const clearBulkPowerMetricsCache = (reason: string = 'manual'): number => {
   const cleared = bulkPowerMetricsCache.size;
   bulkPowerMetricsCache.clear();
+  bulkPowerMetricsRefreshInProgress.clear();
   if (cleared > 0) {
     console.log(`Bulk power metrics cache cleared (${cleared} entries, reason=${reason})`);
   }
   return cleared;
 };
 
-const setBulkPowerMetricsCache = (cacheKey: string, data: any, fingerprint: string): void => {
+const setBulkPowerMetricsCache = (
+  cacheKey: string,
+  data: any,
+  fingerprint: string,
+  refreshedDayUtc: string = getBulkPowerMetricsUtcDayKey()
+): void => {
   bulkPowerMetricsCache.set(cacheKey, {
     data,
     timestamp: Date.now(),
     fingerprint,
+    refreshedDayUtc,
   });
   trimBulkPowerMetricsCache();
 };
@@ -558,6 +565,129 @@ const buildBulkPowerMetricsFingerprint = async (
     : 'epoch';
 
   return `${activityCount}|${maxActivityUpdatedAt}|${maxActivityStartDate}|${maxStreamCreatedAt}`;
+};
+
+type BulkPowerMetricsQuery = {
+  startDate: string | null;
+  endDate: string | null;
+  type: string | null;
+};
+
+const buildBulkPowerMetricsActivityQuery = (query: BulkPowerMetricsQuery): { activityQuery: string; params: any[] } => {
+  let activityQuery = `
+      SELECT a.strava_activity_id, a.name, a.start_date, a.moving_time, a.distance, a.average_heartrate, a.average_watts, a.type
+      FROM strava.activities a
+      WHERE a.average_watts IS NOT NULL AND a.average_watts > 0
+    `;
+  const params: any[] = [];
+  let paramCount = 0;
+
+  if (query.startDate) {
+    paramCount += 1;
+    activityQuery += ` AND a.start_date >= $${paramCount}`;
+    params.push(query.startDate);
+  }
+
+  if (query.endDate) {
+    paramCount += 1;
+    activityQuery += ` AND a.start_date <= $${paramCount}`;
+    params.push(query.endDate);
+  }
+
+  if (query.type && query.type !== 'all') {
+    if (query.type === 'Ride') {
+      activityQuery += ` AND a.type IN ('Ride', 'VirtualRide', 'GravelRide', 'EBikeRide', 'MountainBikeRide')`;
+    } else if (query.type === 'Run') {
+      activityQuery += ` AND a.type IN ('Run', 'VirtualRun', 'TrailRun')`;
+    } else {
+      paramCount += 1;
+      activityQuery += ` AND a.type = $${paramCount}`;
+      params.push(query.type);
+    }
+  }
+
+  activityQuery += ' ORDER BY a.start_date ASC';
+  return { activityQuery, params };
+};
+
+const computeBulkPowerMetricsPayload = async (
+  query: BulkPowerMetricsQuery,
+  ftp: number | null
+): Promise<{ payload: any; fingerprint: string; generationTimeMs: number }> => {
+  const computeStart = Date.now();
+  const fingerprint = await buildBulkPowerMetricsFingerprint(query.startDate, query.endDate, query.type);
+  const { activityQuery, params } = buildBulkPowerMetricsActivityQuery(query);
+  const activitiesResult = await db.query(activityQuery, params);
+
+  if (activitiesResult.rows.length === 0) {
+    return {
+      payload: {
+        start_date: query.startDate || 'all',
+        end_date: query.endDate || 'all',
+        type: query.type || 'all',
+        ftp,
+        total_activities: 0,
+        activities_with_power: 0,
+        activities: [],
+      },
+      fingerprint,
+      generationTimeMs: Date.now() - computeStart,
+    };
+  }
+
+  const { calculatePowerMetrics } = require('../utils/powerCalculations');
+  const { calculateCyclingEnduranceMetrics } = require('../utils/cyclingInsights');
+
+  const results: any[] = [];
+  for (const activity of activitiesResult.rows) {
+    const streams = await db.getActivityStreams(activity.strava_activity_id);
+    const wattsStream = streams.find(s => s.stream_type === 'watts');
+    const hrStream = streams.find(s => s.stream_type === 'heartrate');
+    const timeStream = streams.find(s => s.stream_type === 'time');
+
+    if (!wattsStream || !wattsStream.data) continue;
+
+    const metrics = calculatePowerMetrics(
+      wattsStream.data,
+      activity.moving_time,
+      ftp
+    );
+    const enduranceMetrics = calculateCyclingEnduranceMetrics({
+      watts: wattsStream.data,
+      heartrate: hrStream?.data,
+      time: timeStream?.data,
+    });
+
+    results.push({
+      activity_id: activity.strava_activity_id,
+      name: activity.name,
+      date: activity.start_date,
+      type: activity.type,
+      duration_seconds: activity.moving_time,
+      distance_m: activity.distance,
+      average_heartrate: activity.average_heartrate,
+      average_power: metrics.average_power,
+      normalized_power: metrics.normalized_power,
+      intensity_factor: metrics.intensity_factor,
+      training_stress_score: metrics.training_stress_score,
+      decoupling_pct: enduranceMetrics.decouplingPct,
+      durability_pct: enduranceMetrics.durabilityPct,
+    });
+  }
+
+  return {
+    payload: {
+      start_date: query.startDate || 'all',
+      end_date: query.endDate || 'all',
+      type: query.type || 'all',
+      ftp,
+      total_activities: activitiesResult.rows.length,
+      activities_with_power: results.length,
+      activities: results,
+    },
+    fingerprint,
+    generationTimeMs: Date.now() - computeStart,
+  };
 };
 
 const trimPowerCurveAnalysisCache = (): void => {
@@ -6819,152 +6949,69 @@ router.get('/activities/:id/power-metrics', async (req: Request, res: Response) 
  */
 router.get('/activities/power-metrics/bulk', async (req: Request, res: Response) => {
   try {
-    const requestStartTime = Date.now();
     const startDate = parseBulkPowerMetricsQueryParam(req.query.startDate);
     const endDate = parseBulkPowerMetricsQueryParam(req.query.endDate);
     const type = parseBulkPowerMetricsQueryParam(req.query.type);
+    const forceRefresh = String(req.query.refresh || '').toLowerCase() === 'true';
 
     const ftpResult = await db.query("SELECT value FROM strava.user_settings WHERE key = 'ftp'");
     const ftp = ftpResult.rows.length > 0 && ftpResult.rows[0].value
       ? parseFloat(ftpResult.rows[0].value)
       : null;
-    const fingerprint = await buildBulkPowerMetricsFingerprint(startDate, endDate, type);
+
+    const query: BulkPowerMetricsQuery = { startDate, endDate, type };
     const cacheKey = JSON.stringify({
       startDate: startDate || 'all',
       endDate: endDate || 'all',
       type: type || 'all',
       ftp: ftp ?? 'none',
     });
+
     const now = Date.now();
+    const todayUtc = getBulkPowerMetricsUtcDayKey();
     const cached = bulkPowerMetricsCache.get(cacheKey);
-    if (
-      cached
-      && cached.fingerprint === fingerprint
-      && (now - cached.timestamp) < BULK_POWER_METRICS_CACHE_TTL_MS
-    ) {
+    if (cached && !forceRefresh) {
+      const refreshDue = cached.refreshedDayUtc !== todayUtc;
+      if (refreshDue && !bulkPowerMetricsRefreshInProgress.has(cacheKey)) {
+        bulkPowerMetricsRefreshInProgress.add(cacheKey);
+        void (async () => {
+          try {
+            const refreshed = await computeBulkPowerMetricsPayload(query, ftp);
+            setBulkPowerMetricsCache(cacheKey, refreshed.payload, refreshed.fingerprint, getBulkPowerMetricsUtcDayKey());
+            console.log(`Bulk power metrics cache refreshed for ${cacheKey} in ${refreshed.generationTimeMs}ms`);
+          } catch (refreshError: any) {
+            console.warn(`Bulk power metrics background refresh failed for ${cacheKey}: ${refreshError?.message || refreshError}`);
+          } finally {
+            bulkPowerMetricsRefreshInProgress.delete(cacheKey);
+          }
+        })();
+      }
+
       res.json({
         ...cached.data,
         cached: true,
         cache_age_seconds: Math.floor((now - cached.timestamp) / 1000),
+        stale_by_day: refreshDue,
+        refresh_in_progress: bulkPowerMetricsRefreshInProgress.has(cacheKey),
+        cache_mode: 'cache_first_daily_refresh',
       });
       return;
     }
 
-    // Build activity query
-    let activityQuery = `
-      SELECT a.strava_activity_id, a.name, a.start_date, a.moving_time, a.distance, a.average_heartrate, a.average_watts, a.type
-      FROM strava.activities a
-      WHERE a.average_watts IS NOT NULL AND a.average_watts > 0
-    `;
-    const params: any[] = [];
-    let paramCount = 0;
-
-    if (startDate) {
-      paramCount++;
-      activityQuery += ` AND a.start_date >= $${paramCount}`;
-      params.push(startDate);
-    }
-
-    if (endDate) {
-      paramCount++;
-      activityQuery += ` AND a.start_date <= $${paramCount}`;
-      params.push(endDate);
-    }
-
-    if (type && type !== 'all') {
-      if (type === 'Ride') {
-        activityQuery += ` AND a.type IN ('Ride', 'VirtualRide', 'GravelRide', 'EBikeRide', 'MountainBikeRide')`;
-      } else if (type === 'Run') {
-        activityQuery += ` AND a.type IN ('Run', 'VirtualRun', 'TrailRun')`;
-      } else {
-        paramCount++;
-        activityQuery += ` AND a.type = $${paramCount}`;
-        params.push(type);
-      }
-    }
-
-    activityQuery += ' ORDER BY a.start_date ASC';
-
-    const activitiesResult = await db.query(activityQuery, params);
-
-    if (activitiesResult.rows.length === 0) {
-      const emptyPayload = {
-        start_date: startDate || 'all',
-        end_date: endDate || 'all',
-        type: type || 'all',
-        ftp: ftp,
-        total_activities: 0,
-        activities_with_power: 0,
-        activities: [],
-      };
-      setBulkPowerMetricsCache(cacheKey, emptyPayload, fingerprint);
-      res.json({
-        ...emptyPayload,
-        cached: false,
-        generation_time_ms: Date.now() - requestStartTime,
-      });
-      return;
-    }
-
-    // Import power calculation functions
-    const { calculatePowerMetrics } = require('../utils/powerCalculations');
-    const { calculateCyclingEnduranceMetrics } = require('../utils/cyclingInsights');
-
-    // Calculate metrics for each activity
-    const results = [];
-
-    for (const activity of activitiesResult.rows) {
-      const streams = await db.getActivityStreams(activity.strava_activity_id);
-      const wattsStream = streams.find(s => s.stream_type === 'watts');
-      const hrStream = streams.find(s => s.stream_type === 'heartrate');
-      const timeStream = streams.find(s => s.stream_type === 'time');
-
-      if (wattsStream && wattsStream.data) {
-        const metrics = calculatePowerMetrics(
-          wattsStream.data,
-          activity.moving_time,
-          ftp
-        );
-        const enduranceMetrics = calculateCyclingEnduranceMetrics({
-          watts: wattsStream.data,
-          heartrate: hrStream?.data,
-          time: timeStream?.data,
-        });
-
-        results.push({
-          activity_id: activity.strava_activity_id,
-          name: activity.name,
-          date: activity.start_date,
-          type: activity.type,
-          duration_seconds: activity.moving_time,
-          distance_m: activity.distance,
-          average_heartrate: activity.average_heartrate,
-          average_power: metrics.average_power,
-          normalized_power: metrics.normalized_power,
-          intensity_factor: metrics.intensity_factor,
-          training_stress_score: metrics.training_stress_score,
-          decoupling_pct: enduranceMetrics.decouplingPct,
-          durability_pct: enduranceMetrics.durabilityPct,
-        });
-      }
-    }
-
-    const payload = {
-      start_date: startDate || 'all',
-      end_date: endDate || 'all',
-      type: type || 'all',
-      ftp: ftp,
-      total_activities: activitiesResult.rows.length,
-      activities_with_power: results.length,
-      activities: results,
-    };
-
-    setBulkPowerMetricsCache(cacheKey, payload, fingerprint);
+    const computed = await computeBulkPowerMetricsPayload(query, ftp);
+    setBulkPowerMetricsCache(
+      cacheKey,
+      computed.payload,
+      computed.fingerprint,
+      getBulkPowerMetricsUtcDayKey()
+    );
 
     res.json({
-      ...payload,
+      ...computed.payload,
       cached: false,
-      generation_time_ms: Date.now() - requestStartTime,
+      generation_time_ms: computed.generationTimeMs,
+      cache_mode: 'cache_first_daily_refresh',
+      force_refresh: forceRefresh,
     });
   } catch (error: any) {
     console.error('Error calculating bulk power metrics:', error);
