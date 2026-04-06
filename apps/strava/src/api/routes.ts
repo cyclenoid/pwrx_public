@@ -399,8 +399,12 @@ const BULK_POWER_METRICS_CACHE_MAX_ENTRIES = Math.max(
 );
 const bulkPowerMetricsRefreshInProgress = new Set<string>();
 const HEATMAP_MAX_POINTS_PER_ACTIVITY = Math.max(
-  200,
-  Number(process.env.HEATMAP_MAX_POINTS_PER_ACTIVITY || 600)
+  120,
+  Number(process.env.HEATMAP_MAX_POINTS_PER_ACTIVITY || 220)
+);
+const HEATMAP_COORDINATE_DECIMALS = Math.max(
+  3,
+  Math.min(6, Number(process.env.HEATMAP_COORDINATE_DECIMALS || 4))
 );
 const HEATMAP_HOTSPOT_GRID_DEG = Math.max(
   0.002,
@@ -1113,20 +1117,22 @@ const buildHeatmapActivityQuery = (type: string | null, year: number | null) => 
 
 const simplifyHeatmapCoordinates = (coords: [number, number][]) => {
   if (!coords || coords.length === 0) return coords;
+  const factor = Math.pow(10, HEATMAP_COORDINATE_DECIMALS);
+  const roundCoord = (value: number) => Math.round(value * factor) / factor;
 
   const maxPoints = HEATMAP_MAX_POINTS_PER_ACTIVITY;
   if (coords.length <= maxPoints) {
     return coords.map((coord: [number, number]) => [
-      Math.round(coord[0] * 100000) / 100000,
-      Math.round(coord[1] * 100000) / 100000,
+      roundCoord(coord[0]),
+      roundCoord(coord[1]),
     ]);
   }
 
   const step = Math.ceil(coords.length / maxPoints);
   const simplified = coords.filter((_: any, i: number) => i % step === 0);
   return simplified.map((coord: [number, number]) => [
-    Math.round(coord[0] * 100000) / 100000,
-    Math.round(coord[1] * 100000) / 100000,
+    roundCoord(coord[0]),
+    roundCoord(coord[1]),
   ]);
 };
 
@@ -1954,6 +1960,7 @@ router.get('/activities', async (req: Request, res: Response) => {
  */
 router.get('/activities/heatmap', async (req: Request, res: Response) => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
     const type = parseHeatmapQueryString(req.query.type);
     const year = parseHeatmapQueryYear(req.query.year);
     const refresh = req.query.refresh === 'true';
@@ -1973,6 +1980,7 @@ router.get('/activities/heatmap', async (req: Request, res: Response) => {
  */
 router.get('/activities/heatmap/hotspots', async (req: Request, res: Response) => {
   try {
+    res.setHeader('Cache-Control', 'public, max-age=300, stale-while-revalidate=3600');
     const types = Array.from(new Set(parseHeatmapListQuery(req.query.types)));
     const years = parseHeatmapYearListQuery(req.query.years);
     const excludeVirtual = parseBooleanQuery(req.query.exclude_virtual, true);
