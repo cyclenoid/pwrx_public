@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-training-heatmap-cache-prewarm',
+    date: '2026-04-06',
+    tag: 'performance',
+    title: {
+      de: 'Training und Heatmap jetzt mit erweitertem Cache-Prewarm',
+      en: 'Training and heatmap now use extended cache prewarm',
+    },
+    summary: {
+      de: 'Leistung-vs-Puls und Heatmap werden nach Start/Datenupdate serverseitig vorgewärmt, damit die erste Ansicht deutlich schneller bereitsteht.',
+      en: 'Power-vs-heart-rate and heatmap are now prewarmed server-side after startup/data updates to speed up the first view.',
+    },
+    bullets: {
+      de: [
+        'Bulk-Power-Metrics Prewarm umfasst jetzt Ride all-time, 90 Tage und 30 Tage.',
+        'Heatmap-Prewarm erzeugt nach Invalidation direkt die Standardkarte und Standard-Hotspots.',
+        'Startup triggert nun auch Heatmap-Prewarm zusätzlich zum Performance-Prewarm.',
+      ],
+      en: [
+        'Bulk power metrics prewarm now covers Ride all-time, 90-day, and 30-day windows.',
+        'Heatmap prewarm now regenerates default map and default hotspots right after invalidation.',
+        'Startup now triggers heatmap prewarm in addition to performance prewarm.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-dashboard-ctl-streak-card',
     date: '2026-04-06',
     tag: 'dashboard',
