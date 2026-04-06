@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-manual-sync-start-fix',
+    date: '2026-04-06',
+    tag: 'sync',
+    title: {
+      de: 'Manueller Sync robuster gestartet',
+      en: 'Manual sync start made more robust',
+    },
+    summary: {
+      de: 'Der manuelle Sync ist jetzt kompatibler über unterschiedliche Backend-Stände und zeigt bei laufendem Job den richtigen Status.',
+      en: 'Manual sync now works more reliably across backend variants and reports running jobs correctly.',
+    },
+    bullets: {
+      de: [
+        'Fallback-Routen für /api/sync wurden im Core ergänzt.',
+        'Dashboard behandelt 409 (Sync läuft bereits) jetzt gezielt statt generischem Fehler.',
+        'Full-Sync-Call nutzt bei Bedarf automatisch den /sync-Fallback.',
+      ],
+      en: [
+        'Fallback routes for /api/sync were added in the core.',
+        'Dashboard now handles 409 (sync already running) explicitly instead of showing a generic error.',
+        'Full-sync call now automatically falls back to /sync when needed.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-pmc-acwr-monotony-strain',
     date: '2026-04-06',
     tag: 'training',
