@@ -993,7 +993,6 @@ export function Dashboard() {
         {/* Week Streak */}
         <Card className="bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30">
           <CardContent className="p-5">
-            <div className="text-sm font-medium text-orange-600 dark:text-orange-400 mb-3">{t('dashboard.streak.title')}</div>
             <div className="grid grid-cols-2 gap-3">
               <div className="rounded-xl border border-orange-500/30 bg-orange-500/10 p-4 min-h-[132px] flex flex-col justify-between">
                 <div className="flex items-start justify-between gap-2">
