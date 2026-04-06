@@ -145,15 +145,36 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
       color = colors.warning
     }
 
+    let strainBandLabel = 'ohne Basis'
+    let strainBandColor = colors.textMuted
+    if (ratio !== null) {
+      if (ratio < 0.8) {
+        strainBandLabel = 'unter Basis'
+        strainBandColor = colors.info
+      } else if (ratio <= 1.2) {
+        strainBandLabel = 'im Rahmen'
+        strainBandColor = colors.success
+      } else if (ratio <= 1.5) {
+        strainBandLabel = 'erhoeht'
+        strainBandColor = colors.warning
+      } else {
+        strainBandLabel = 'deutlich erhoeht'
+        strainBandColor = colors.danger
+      }
+    }
+
     return {
       monotony: current.monotony,
       strain: current.strain,
       strainRatio: ratio,
+      baselineStrain: baseline,
+      strainBandLabel,
+      strainBandColor,
       label,
       color,
       hint: ratio !== null ? `Wochen-Strain ${ratio.toFixed(2)}x vs. Basis` : 'Wochen-Strain ohne Basis',
     }
-  }, [orderedData, colors.danger, colors.success, colors.textMuted, colors.warning])
+  }, [orderedData, colors.danger, colors.info, colors.success, colors.textMuted, colors.warning])
 
   // Generate training recommendations based on PMC values
   const getTrainingRecommendations = useMemo(() => {
@@ -374,9 +395,17 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
             </div>
             <p className="text-[10px] text-muted-foreground mt-1">
               {monotonyStrainMetrics
-                ? `Strain ${Math.round(monotonyStrainMetrics.strain)}`
+                ? `Strain ${Math.round(monotonyStrainMetrics.strain)} · ${monotonyStrainMetrics.strainBandLabel}`
                 : 'mind. 7 Tage nötig'}
             </p>
+            {monotonyStrainMetrics && monotonyStrainMetrics.strainRatio !== null && (
+              <p
+                className="text-[10px] mt-1"
+                style={{ color: monotonyStrainMetrics.strainBandColor }}
+              >
+                {`${monotonyStrainMetrics.strainRatio.toFixed(2)}x deiner Basis`}
+              </p>
+            )}
           </div>
         </div>
         <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-3">
@@ -391,15 +420,20 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
                 Hohe Monotony plus hoher Strain bedeutet oft zu wenig Variation.
               </p>
               <p>
-                Tipp: Fuer belastbare Werte in den <strong className="text-foreground">Settings</strong> mindestens
-                FTP und Koerpergewicht sauber pflegen.
+                Einordnung Strain ueber deine Historie: <strong className="text-foreground">&lt;0.8x</strong> unter Basis,
+                <strong className="text-foreground"> 0.8-1.2x</strong> im Rahmen, <strong className="text-foreground"> 1.2-1.5x</strong> erhoeht,
+                <strong className="text-foreground"> &gt;1.5x</strong> deutlich erhoeht.
+              </p>
+              <p>
+                Tipp: In <strong className="text-foreground">Settings &gt; Personal &gt; Koerperdaten & Leistung</strong>
+                sollten FTP und Koerpergewicht sauber gepflegt sein.
               </p>
             </div>
             <Link
-              to="/settings"
+              to="/settings?tab=personal"
               className="inline-flex h-8 items-center justify-center rounded-md border border-primary/30 bg-background/70 px-3 text-xs font-medium text-foreground hover:bg-background"
             >
-              Zu den Settings
+              Zu FTP & Gewicht
             </Link>
           </div>
         </div>

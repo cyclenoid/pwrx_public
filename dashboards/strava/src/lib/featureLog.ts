@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-strain-classification-and-settings-deeplink',
+    date: '2026-04-06',
+    tag: 'training',
+    title: {
+      de: 'Strain-Einordnung und direkter Settings-Sprung ergänzt',
+      en: 'Added strain classification and direct settings deep link',
+    },
+    summary: {
+      de: 'Der Strain-Wert wird jetzt relativ zur eigenen Basis eingeordnet, und der Link springt direkt zu den relevanten Profilfeldern.',
+      en: 'Strain is now classified relative to personal baseline, and the link jumps directly to the relevant profile fields.',
+    },
+    bullets: {
+      de: [
+        'Strain zeigt jetzt Einordnung (unter Basis, im Rahmen, erhöht, deutlich erhöht).',
+        'Zusätzliche Anzeige als Multiplikator gegen die eigene Basis.',
+        'Link aus Training führt direkt zu Settings > Body/FTP mit erklärenden Feldhinweisen.',
+      ],
+      en: [
+        'Strain now shows a classification (below baseline, in range, elevated, clearly elevated).',
+        'Additional display as multiplier versus personal baseline.',
+        'Training link now jumps directly to Settings > Body/FTP with explanatory field hints.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-acwr-monotony-settings-hint',
     date: '2026-04-06',
     tag: 'training',
