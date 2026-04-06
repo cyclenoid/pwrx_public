@@ -262,11 +262,27 @@ export function Dashboard() {
       queryClient.invalidateQueries({ queryKey: ['weekStreak'] })
       queryClient.invalidateQueries({ queryKey: ['calendar'] })
     },
-    onError: () => {
-      // Show error notification
+    onError: (error: any) => {
+      const status = Number(error?.response?.status ?? error?.status)
+      if (status === 409) {
+        toast({
+          title: t('dashboard.sync.runningTitle'),
+          description: t('dashboard.sync.runningBody'),
+          variant: 'error',
+        })
+        queryClient.invalidateQueries({ queryKey: ['sync-logs'] })
+        return
+      }
+
+      const backendMessage = error?.response?.data?.message
+      const detail =
+        typeof backendMessage === 'string' && backendMessage.trim().length > 0
+          ? backendMessage
+          : t('dashboard.sync.errorBody')
+
       toast({
         title: t('dashboard.sync.errorTitle'),
-        description: t('dashboard.sync.errorBody'),
+        description: detail,
         variant: 'error',
       })
     }
