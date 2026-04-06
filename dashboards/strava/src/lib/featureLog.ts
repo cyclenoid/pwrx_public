@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-acwr-monotony-settings-hint',
+    date: '2026-04-06',
+    tag: 'training',
+    title: {
+      de: 'ACWR/Monotony jetzt mit Kurzerklaerung und Settings-Hinweis',
+      en: 'ACWR/Monotony now include short explanation and settings hint',
+    },
+    summary: {
+      de: 'Im Training-Block gibt es jetzt eine direkte Erklaerung der Kennzahlen plus sichtbaren Verweis auf relevante Einstellungen.',
+      en: 'The training block now includes direct metric explanations plus a visible pointer to relevant settings.',
+    },
+    bullets: {
+      de: [
+        'ACWR und Monotony/Strain in der UI kurz verstaendlich erklaert.',
+        'Hinweis auf FTP/Koerpergewicht als wichtige Basis fuer die Auswertung.',
+        'Direkter Link auf die Settings-Seite aus dem Training-Block.',
+      ],
+      en: [
+        'ACWR and Monotony/Strain are explained directly in the UI.',
+        'Hint that FTP/body weight are key inputs for reliable analysis.',
+        'Direct link to the settings page from the training block.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-training-hints-compact-layout',
     date: '2026-04-06',
     tag: 'training',
