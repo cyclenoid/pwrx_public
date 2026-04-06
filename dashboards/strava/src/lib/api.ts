@@ -1902,8 +1902,17 @@ export const triggerSync = async (): Promise<SyncResponse> => {
 }
 
 export const triggerFullSync = async (): Promise<SyncResponse> => {
-  const { data } = await api.post<SyncResponse>('/sync/full')
-  return data
+  try {
+    const { data } = await api.post<SyncResponse>('/sync/full')
+    return data
+  } catch (error: any) {
+    const status = Number(error?.response?.status ?? error?.status)
+    if (status === 404 || status === 405) {
+      const { data } = await api.post<SyncResponse>('/sync')
+      return data
+    }
+    throw error
+  }
 }
 
 export const triggerInitialSync = async (): Promise<SyncResponse> => {
