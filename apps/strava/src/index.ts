@@ -530,6 +530,170 @@ async function refreshSyncSchedules(force: boolean = false): Promise<void> {
   }
 }
 
+async function isSyncCurrentlyRunning(): Promise<boolean> {
+  const db = new DatabaseService();
+  let lockClient: any | null = null;
+  try {
+    lockClient = await db.acquireSyncLock();
+    return !lockClient;
+  } finally {
+    if (lockClient) {
+      await db.releaseSyncLock(lockClient);
+    }
+    await db.close();
+  }
+}
+
+async function ensureManualSyncReady(res: express.Response): Promise<boolean> {
+  if (!hasSyncCapability()) {
+    res.status(503).json({
+      message: 'Sync capability is disabled',
+      status: 'disabled',
+    });
+    return false;
+  }
+
+  const running = await isSyncCurrentlyRunning();
+  if (running) {
+    res.status(409).json({
+      message: 'A sync is already running',
+      status: 'running',
+    });
+    return false;
+  }
+
+  return true;
+}
+
+const clampInitialSyncDays = (value: string | null): number => {
+  if (!value) return 180;
+  const parsed = Number(value);
+  if (!Number.isFinite(parsed) || parsed <= 0) return 180;
+  return Math.min(Math.max(Math.round(parsed), 7), 365);
+};
+
+// Manual sync fallback routes (used when adapter routes do not expose /api/sync endpoints).
+app.post('/api/sync', async (_req, res) => {
+  try {
+    if (!(await ensureManualSyncReady(res))) return;
+
+    const db = new DatabaseService();
+    let settings: SyncSettings;
+    try {
+      settings = await loadSyncSettings(db);
+    } finally {
+      await db.close();
+    }
+
+    res.status(202).json({ message: 'Sync started', status: 'started' });
+    void runSyncPipeline('activity', 'manual activity sync', settings)
+      .catch((error: any) => {
+        console.error('❌ Manual activity sync failed:', error?.message || error);
+      });
+  } catch (error: any) {
+    console.error('❌ Failed to start manual sync:', error?.message || error);
+    res.status(500).json({ message: 'Failed to start sync', status: 'error' });
+  }
+});
+
+app.post('/api/sync/full', async (_req, res) => {
+  try {
+    if (!(await ensureManualSyncReady(res))) return;
+
+    const db = new DatabaseService();
+    let settings: SyncSettings;
+    try {
+      settings = await loadSyncSettings(db);
+    } finally {
+      await db.close();
+    }
+
+    res.status(202).json({ message: 'Full sync started', status: 'started' });
+    void (async () => {
+      await runSyncPipeline('activity', 'manual full sync', settings);
+      await runSyncPipeline('backfill', 'manual full sync', settings);
+    })().catch((error: any) => {
+      console.error('❌ Manual full sync failed:', error?.message || error);
+    });
+  } catch (error: any) {
+    console.error('❌ Failed to start manual full sync:', error?.message || error);
+    res.status(500).json({ message: 'Failed to start full sync', status: 'error' });
+  }
+});
+
+app.post('/api/sync/backfill', async (_req, res) => {
+  try {
+    if (!(await ensureManualSyncReady(res))) return;
+
+    const db = new DatabaseService();
+    let settings: SyncSettings;
+    try {
+      settings = await loadSyncSettings(db);
+    } finally {
+      await db.close();
+    }
+
+    res.status(202).json({ message: 'Backfill sync started', status: 'started' });
+    void runSyncPipeline('backfill', 'manual backfill sync', settings)
+      .catch((error: any) => {
+        console.error('❌ Manual backfill sync failed:', error?.message || error);
+      });
+  } catch (error: any) {
+    console.error('❌ Failed to start manual backfill sync:', error?.message || error);
+    res.status(500).json({ message: 'Failed to start backfill sync', status: 'error' });
+  }
+});
+
+app.post('/api/sync/initial', async (_req, res) => {
+  try {
+    if (!(await ensureManualSyncReady(res))) return;
+
+    const db = new DatabaseService();
+    let context: { settings: SyncSettings; userId: number; initialDays: number; hasRefreshToken: boolean } | null = null;
+
+    try {
+      const settings = await loadSyncSettings(db);
+      const userId = await getActiveUserId(db);
+      if (!userId) {
+        res.status(400).json({ message: 'No user profile available for initial sync', status: 'error' });
+        return;
+      }
+
+      const initialDaysRaw = await getUserSetting(db, userId, 'sync_initial_days');
+      const initialDays = clampInitialSyncDays(initialDaysRaw);
+
+      const userClient = adapterRegistry.createUserClient();
+      const refreshToken = userClient
+        ? ((await userClient.getRefreshToken(userId)) || process.env.STRAVA_REFRESH_TOKEN)
+        : process.env.STRAVA_REFRESH_TOKEN;
+      context = {
+        settings,
+        userId,
+        initialDays,
+        hasRefreshToken: Boolean(refreshToken),
+      };
+    } finally {
+      await db.close();
+    }
+
+    if (!context) return;
+
+    if (!context.hasRefreshToken) {
+      res.status(400).json({ message: 'No Strava refresh token configured', status: 'error' });
+      return;
+    }
+
+    res.status(202).json({ message: 'Initial sync started', status: 'started' });
+    void runInitialSync(context.settings, context.userId, context.initialDays)
+      .catch((error: any) => {
+        console.error('❌ Manual initial sync failed:', error?.message || error);
+      });
+  } catch (error: any) {
+    console.error('❌ Failed to start manual initial sync:', error?.message || error);
+    res.status(500).json({ message: 'Failed to start initial sync', status: 'error' });
+  }
+});
+
 // Start server
 app.listen(PORT, () => {
   console.log(`🚀 Strava Tracker API running on port ${PORT}`);
