@@ -26,7 +26,7 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
       en: 'Heatmap hotspots now show location names again',
     },
     summary: {
-      de: 'Hotspot-Bereiche werden wieder mit echten Ortsnamen statt nur \"Bereich\" angezeigt.',
+      de: 'Hotspot-Bereiche werden wieder mit echten Ortsnamen statt nur "Bereich" angezeigt.',
       en: 'Hotspot areas now show real place names again instead of only “Area”.',
     },
     bullets: {
@@ -322,23 +322,23 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     date: '2026-04-06',
     tag: 'sync',
     title: {
-      de: 'Manueller Sync robuster gestartet',
-      en: 'Manual sync start made more robust',
+      de: 'Manueller Sync startet zuverlaessiger',
+      en: 'Manual sync now starts more reliably',
     },
     summary: {
-      de: 'Der manuelle Sync ist jetzt kompatibler über unterschiedliche Backend-Stände und zeigt bei laufendem Job den richtigen Status.',
-      en: 'Manual sync now works more reliably across backend variants and reports running jobs correctly.',
+      de: 'Der manuelle Sync gibt jetzt klares Feedback und vermeidet verwirrende Fehlmeldungen bei bereits laufenden Jobs.',
+      en: 'Manual sync now gives clear feedback and avoids confusing errors when a job is already running.',
     },
     bullets: {
       de: [
-        'Fallback-Routen für /api/sync wurden im Core ergänzt.',
-        'Dashboard behandelt 409 (Sync läuft bereits) jetzt gezielt statt generischem Fehler.',
-        'Full-Sync-Call nutzt bei Bedarf automatisch den /sync-Fallback.',
+        'Bei laufendem Sync erscheint ein klarer Hinweis statt Abbruchmeldung.',
+        'Der Start aus dem Dashboard funktioniert konsistenter.',
+        'Der Sync-Status ist im Alltag besser nachvollziehbar.',
       ],
       en: [
-        'Fallback routes for /api/sync were added in the core.',
-        'Dashboard now handles 409 (sync already running) explicitly instead of showing a generic error.',
-        'Full-sync call now automatically falls back to /sync when needed.',
+        'When sync is already running, users now get a clear notice instead of a hard error.',
+        'Starting sync from the dashboard works more consistently.',
+        'Sync status is easier to understand in day-to-day use.',
       ],
     },
   },
@@ -420,7 +420,7 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
     id: '2026-03-18-dashboard-and-in-app-updates',
     date: '2026-03-18',
-    tag: '9b675e4',
+    tag: 'dashboard',
     title: {
       de: 'Dashboard und In-App-Updates ausgebaut',
       en: 'Dashboard and in-app updates expanded',
@@ -470,32 +470,32 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
     id: '2026-03-17-public-core-and-private-strava',
     date: '2026-03-17',
-    tag: 'v0.9.0-beta.2',
+    tag: 'platform',
     title: {
       de: 'Public-Core sauberer von privatem Strava getrennt',
       en: 'Public core separated more cleanly from private Strava',
     },
     summary: {
-      de: 'Der öffentliche PWRX-Stand ist jetzt klarer als File-Import-Core dokumentiert und technisch entkoppelt.',
-      en: 'The public PWRX baseline is now documented and structured much more clearly as a file-import core.',
+      de: 'Der Standardweg fuer neue Nutzer ist jetzt klarer: Datei-Import als stabile Basis, optionale Strava-Wege getrennt dokumentiert.',
+      en: 'The default path for new users is now clearer: file import as the stable baseline, optional Strava paths documented separately.',
     },
     bullets: {
       de: [
-        'Privater Strava-Connector wurde in ein separates privates Adapter-Repo ausgelagert.',
-        'Public-Repo nutzt keinen lokalen Strava-Fallback mehr als normalen Pfad.',
-        'Unraid läuft weiterhin mit privatem Adapter, aber der öffentliche Support-Pfad bleibt Strava-frei.',
+        'Das Public-Repo ist fuer den normalen Start ohne API-Zugang ausgelegt.',
+        'Private Strava-Setups sind weiterhin moeglich, aber getrennt vom Standardpfad.',
+        'Die Dokumentation trennt jetzt klar zwischen Standardbetrieb und Spezialsetup.',
       ],
       en: [
-        'The private Strava connector was moved into a separate private adapter repository.',
-        'The public repo no longer uses a local Strava fallback as its normal path.',
-        'Unraid continues to run with the private adapter while the public support baseline stays Strava-free.',
+        'The public repo is now optimized for normal startup without API access.',
+        'Private Strava setups remain possible, but separate from the default path.',
+        'Documentation now clearly separates standard operation from advanced setups.',
       ],
     },
   },
   {
     id: '2026-03-17-activity-photo-lightbox',
     date: '2026-03-17',
-    tag: '550ba9b',
+    tag: 'activities',
     title: {
       de: 'Aktivitätsfotos jetzt als Lightbox',
       en: 'Activity photos now open in a lightbox',
@@ -545,25 +545,25 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
     id: '2026-03-16-local-segment-quality',
     date: '2026-03-16',
-    tag: 'matching',
+    tag: 'segments',
     title: {
       de: 'Lokales Segment-Matching robuster gemacht',
       en: 'Local segment matching made more robust',
     },
     summary: {
-      de: 'Falsche manuelle Segmenttreffer wurden reduziert und die Wartung läuft jetzt gap-basiert.',
-      en: 'False manual segment matches were reduced and maintenance now follows a gap-based model.',
+      de: 'Lokale Segmente verhalten sich jetzt treffsicherer und wirken in der Nutzung stabiler.',
+      en: 'Local segments now behave more accurately and feel more stable in daily use.',
     },
     bullets: {
       de: [
-        'Matching-Toleranz für manuelle lokale Segmente wurde verschärft.',
-        'Fehlende Segmentdaten werden im Hintergrund gezielt nachgezogen statt alles neu aufzubauen.',
-        'Der normale Rebuild-Button wurde aus dem Alltags-UI entfernt.',
+        'Weniger falsche Treffer bei manuell gepflegten Segmenten.',
+        'Fehlende Segmentdaten werden gezielt nachgezogen.',
+        'Die Alltagsoberflaeche bleibt dadurch uebersichtlicher.',
       ],
       en: [
-        'Matching tolerance for manual local segments was tightened.',
-        'Missing segment data is now backfilled selectively in the background instead of rebuilding everything.',
-        'The normal rebuild button was removed from the day-to-day UI.',
+        'Fewer false matches for manually managed segments.',
+        'Missing segment data is filled selectively in the background.',
+        'The day-to-day UI stays cleaner as a result.',
       ],
     },
   },
