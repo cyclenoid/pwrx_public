@@ -19,6 +19,7 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
   const { resolvedTheme } = useTheme()
   const colors = getChartColors(resolvedTheme === 'dark' ? 'dark' : 'light')
   const [showExplanation, setShowExplanation] = useState(false)
+  const [showAllRecommendations, setShowAllRecommendations] = useState(false)
 
   const orderedData = useMemo(
     () => [...data].sort((a, b) => a.date.localeCompare(b.date)),
@@ -260,6 +261,26 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
     return recommendations
   }, [currentCTL, currentATL, currentTSB, orderedData])
 
+  const prioritizedRecommendations = useMemo(() => {
+    const severity: Record<'warning' | 'info' | 'success' | 'tip', number> = {
+      warning: 0,
+      info: 1,
+      success: 2,
+      tip: 3,
+    }
+    return [...getTrainingRecommendations].sort((a, b) => severity[a.type] - severity[b.type])
+  }, [getTrainingRecommendations])
+
+  const visibleRecommendations = showAllRecommendations
+    ? prioritizedRecommendations
+    : prioritizedRecommendations.slice(0, 3)
+
+  const toCompactText = (text: string) => {
+    const firstSentence = text.split(/(?<=[.!?])\s+/)[0] || text
+    if (firstSentence.length <= 140) return firstSentence
+    return `${firstSentence.slice(0, 137)}...`
+  }
+
   return (
     <Card>
       <CardHeader>
@@ -305,7 +326,10 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
             <p className="text-[10px] text-muted-foreground mt-1">CTL - ATL</p>
           </div>
           <div className="text-center p-3 bg-secondary/50 rounded-lg">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">ACWR</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+              <span>ACWR</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full border border-primary/40 text-primary">NEU</span>
+            </p>
             <div className="flex items-center justify-center gap-2">
               <p className="text-2xl font-bold" style={{ color: acwrMetrics?.color || colors.textMuted }}>
                 {acwrMetrics ? acwrMetrics.value.toFixed(2) : '—'}
@@ -326,7 +350,10 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
             <p className="text-[10px] text-muted-foreground mt-1">{acwrMetrics?.hint || 'mind. 28 Tage nötig'}</p>
           </div>
           <div className="text-center p-3 bg-secondary/50 rounded-lg">
-            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1">Monotony / Strain</p>
+            <p className="text-xs text-muted-foreground uppercase tracking-wider mb-1 flex items-center justify-center gap-1">
+              <span>Monotony / Strain</span>
+              <span className="text-[9px] px-1.5 py-0.5 rounded-full border border-primary/40 text-primary">NEU</span>
+            </p>
             <div className="flex items-center justify-center gap-2">
               <p className="text-xl font-bold" style={{ color: monotonyStrainMetrics?.color || colors.textMuted }}>
                 {monotonyStrainMetrics ? monotonyStrainMetrics.monotony.toFixed(2) : '—'}
@@ -353,13 +380,24 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
         </div>
 
         {/* Training Recommendations */}
-        <div className="mb-6 space-y-3">
-          <h4 className="text-sm font-semibold flex items-center gap-2">
-            <Info size={16} className="text-primary" />
-            Trainingsempfehlungen basierend auf deinen Werten
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-            {getTrainingRecommendations.map((rec, index) => {
+        <div className="mb-6 space-y-2">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <h4 className="text-sm font-semibold flex items-center gap-2">
+              <Info size={16} className="text-primary" />
+              Trainingshinweise
+            </h4>
+            {prioritizedRecommendations.length > 3 && (
+              <button
+                type="button"
+                onClick={() => setShowAllRecommendations((prev) => !prev)}
+                className="text-xs text-muted-foreground hover:text-foreground transition-colors"
+              >
+                {showAllRecommendations ? 'Kompakt anzeigen' : `Alle anzeigen (${prioritizedRecommendations.length})`}
+              </button>
+            )}
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-2">
+            {visibleRecommendations.map((rec, index) => {
               const Icon = rec.icon
               const bgColor = rec.type === 'success' ? 'bg-green-500/10 border-green-500/30' :
                              rec.type === 'warning' ? 'bg-orange-500/10 border-orange-500/30' :
@@ -371,12 +409,14 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
                                'text-muted-foreground'
 
               return (
-                <div key={index} className={`p-3 rounded-lg border h-full ${bgColor}`}>
+                <div key={index} className={`p-2.5 rounded-lg border h-full ${bgColor}`}>
                   <div className="flex items-start gap-3">
-                    <Icon size={18} className={`mt-0.5 flex-shrink-0 ${iconColor}`} />
+                    <Icon size={16} className={`mt-0.5 flex-shrink-0 ${iconColor}`} />
                     <div className="flex-1 space-y-1">
-                      <p className="text-sm font-semibold">{rec.title}</p>
-                      <p className="text-xs text-muted-foreground leading-relaxed">{rec.text}</p>
+                      <p className="text-sm font-semibold leading-tight">{rec.title}</p>
+                      <p className="text-xs text-muted-foreground leading-snug">
+                        {showAllRecommendations ? rec.text : toCompactText(rec.text)}
+                      </p>
                     </div>
                   </div>
                 </div>
