@@ -1,5 +1,9 @@
 # Security Policy
 
+This file is public by design and intended for everyone who runs or evaluates this repository.
+It explains how to report security issues and how secrets must be handled.
+It is not a setup guide for enabling optional Strava API operation.
+
 ## Supported Versions
 
 Security fixes are provided on the `main` branch.
@@ -8,7 +12,7 @@ Security fixes are provided on the `main` branch.
 
 This project has:
 - a normal public setup (file-import based)
-- optional advanced operator variants (for example private Strava connector)
+- optional advanced operator variants (for example operator-managed Strava API connector)
 
 Security expectations apply to both, but most users only need the public setup.
 

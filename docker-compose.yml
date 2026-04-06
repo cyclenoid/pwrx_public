@@ -27,7 +27,7 @@ services:
       timeout: 5s
       retries: 5
 
-  # Strava Activity Tracker (Backend + API)
+  # Strava Activity Tracker (Backend + Import API, optional Strava API mode)
   strava-tracker:
     image: node:20-alpine
     container_name: strava-tracker
@@ -37,7 +37,14 @@ services:
       database:
         condition: service_healthy
     environment:
-      # Strava API
+      # Optional Strava API credentials.
+      # IMPORTANT:
+      # - Filling STRAVA_* alone does NOT enable Strava sync.
+      # - Public default is file-import mode with ADAPTER_STRAVA_ENABLED=false.
+      # - API sync requires all of:
+      #   1) ADAPTER_STRAVA_ENABLED=true
+      #   2) a working adapter package/module (ADAPTER_STRAVA_PACKAGE / ADAPTER_STRAVA_MODULE)
+      #   3) valid STRAVA credentials
       STRAVA_CLIENT_ID: ${STRAVA_CLIENT_ID}
       STRAVA_CLIENT_SECRET: ${STRAVA_CLIENT_SECRET}
       STRAVA_REFRESH_TOKEN: ${STRAVA_REFRESH_TOKEN}
@@ -84,7 +91,7 @@ services:
       # API Server
       API_PORT: 3001
 
-      # Schedule (täglich um 3:00 Uhr)
+      # Schedule for adapter-driven sync jobs (used only when Strava adapter mode is enabled)
       CRON_SCHEDULE: ${STRAVA_CRON_SCHEDULE}
 
       # Node Environment
