@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-heatmap-header-overlap-fix',
+    date: '2026-04-06',
+    tag: 'ui',
+    title: {
+      de: 'Heatmap-Header: Ueberlagerung von Dashboard, Titel und Sidebar-Button behoben',
+      en: 'Heatmap header: fixed overlap between dashboard link, title, and sidebar toggle',
+    },
+    summary: {
+      de: 'Der Dashboard-Shortcut bleibt links oben, ohne den Titel zu ueberdecken; der Sidebar-Toggle ist klar getrennt.',
+      en: 'The dashboard shortcut stays top-left without covering the title; sidebar toggle behavior is now separated cleanly.',
+    },
+    bullets: {
+      de: [
+        'Floating-Toggle wird nur angezeigt, wenn die Sidebar eingeklappt ist.',
+        'Innerhalb der Sidebar gibt es jetzt einen eigenen Schließen-Button im Header.',
+        'Header-Spacing angepasst, damit Dashboard-Link und Heatmap-Titel nicht kollidieren.',
+      ],
+      en: [
+        'Floating toggle is shown only when the sidebar is collapsed.',
+        'Sidebar now has its own close button in the header.',
+        'Header spacing adjusted so dashboard link and heatmap title no longer collide.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-performance-prewarm-and-heatmap-dashboard-link',
     date: '2026-04-06',
     tag: 'performance',
