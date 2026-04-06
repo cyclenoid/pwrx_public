@@ -426,7 +426,7 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
               </p>
               <p>
                 Tipp: In <strong className="text-foreground">Settings &gt; Personal &gt; Koerperdaten & Leistung</strong>
-                sollten FTP und Koerpergewicht sauber gepflegt sein.
+                sollten FTP und Koerpergewicht sauber gepflegt sein. Es gibt hierfuer keine separate Strain-Option.
               </p>
             </div>
             <Link
