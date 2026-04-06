@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-training-hints-compact-layout',
+    date: '2026-04-06',
+    tag: 'training',
+    title: {
+      de: 'Trainingshinweise kompakter und neue Kennzahlen klarer markiert',
+      en: 'Training hints made more compact and new metrics highlighted',
+    },
+    summary: {
+      de: 'Der Trainingsbereich nutzt jetzt ein platzsparenderes Hinweis-Layout, und ACWR sowie Monotony/Strain sind deutlicher als neue Kennzahlen erkennbar.',
+      en: 'The training section now uses a more space-efficient hint layout, and ACWR plus Monotony/Strain are more clearly marked as new metrics.',
+    },
+    bullets: {
+      de: [
+        'Hinweise priorisiert und standardmäßig als kompakte Karten dargestellt.',
+        'Option „Alle anzeigen“, um bei Bedarf wieder auf die vollständigen Texte zu gehen.',
+        'ACWR und Monotony/Strain mit „NEU“-Kennzeichnung in der Kennzahlenzeile.',
+      ],
+      en: [
+        'Hints are prioritized and shown as compact cards by default.',
+        '“Show all” option to expand to full texts when needed.',
+        'ACWR and Monotony/Strain now include a “NEW” marker in the metric row.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-manual-sync-start-fix',
     date: '2026-04-06',
     tag: 'sync',
