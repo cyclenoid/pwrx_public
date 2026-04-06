@@ -2,6 +2,7 @@ import { useMemo, useState } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Legend } from 'recharts'
 import { format, parseISO } from 'date-fns'
 import { de } from 'date-fns/locale'
+import { Link } from 'react-router-dom'
 import { useTheme } from '../ThemeProvider'
 import { getChartColors } from '../../lib/chartTheme'
 import type { DailyTrainingLoad } from '../../types/activity'
@@ -376,6 +377,30 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
                 ? `Strain ${Math.round(monotonyStrainMetrics.strain)}`
                 : 'mind. 7 Tage nötig'}
             </p>
+          </div>
+        </div>
+        <div className="mb-6 rounded-lg border border-primary/20 bg-primary/5 p-3">
+          <div className="flex flex-wrap items-start justify-between gap-3">
+            <div className="space-y-1 text-xs text-muted-foreground leading-relaxed">
+              <p>
+                <strong className="text-foreground">ACWR</strong> vergleicht die letzten 7 Tage mit den letzten 28 Tagen.
+                Grob gilt: <strong className="text-foreground">0.8-1.3</strong> meist stabil, deutlich darueber erhoehtes Belastungsrisiko.
+              </p>
+              <p>
+                <strong className="text-foreground">Monotony / Strain</strong> zeigt, wie gleichfoermig und wie hoch deine Wochenbelastung ist.
+                Hohe Monotony plus hoher Strain bedeutet oft zu wenig Variation.
+              </p>
+              <p>
+                Tipp: Fuer belastbare Werte in den <strong className="text-foreground">Settings</strong> mindestens
+                FTP und Koerpergewicht sauber pflegen.
+              </p>
+            </div>
+            <Link
+              to="/settings"
+              className="inline-flex h-8 items-center justify-center rounded-md border border-primary/30 bg-background/70 px-3 text-xs font-medium text-foreground hover:bg-background"
+            >
+              Zu den Settings
+            </Link>
           </div>
         </div>
 
