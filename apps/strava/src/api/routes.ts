@@ -450,6 +450,17 @@ const POWER_CURVE_ANALYSIS_CACHE_MAX_ENTRIES = Math.max(
   Number(process.env.POWER_CURVE_ANALYSIS_CACHE_MAX_ENTRIES || 20)
 );
 const powerCurveAnalysisRefreshInProgress = new Set<string>();
+type TrainingLoadCacheEntry = {
+  data: any;
+  timestamp: number;
+  refreshedDayUtc: string;
+};
+const trainingLoadCache = new Map<string, TrainingLoadCacheEntry>();
+const TRAINING_LOAD_CACHE_MAX_ENTRIES = Math.max(
+  4,
+  Number(process.env.TRAINING_LOAD_CACHE_MAX_ENTRIES || 32)
+);
+const trainingLoadRefreshInProgress = new Set<string>();
 const POWER_CURVE_SUPPORTED_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide'] as const;
 let heatmapPrewarmTimeout: NodeJS.Timeout | null = null;
 
@@ -876,6 +887,75 @@ const computePowerCurveAnalysisPayload = async (
       period_months: monthsAgo
     },
     fingerprint,
+    generationTimeMs: Date.now() - computeStart,
+  };
+};
+
+const buildTrainingLoadCacheKey = (
+  startDate: string,
+  endDate: string,
+  type: string | null
+): string => `${startDate}|${endDate}|${type || 'all'}`;
+
+const trimTrainingLoadCache = (): void => {
+  if (trainingLoadCache.size <= TRAINING_LOAD_CACHE_MAX_ENTRIES) return;
+  const sorted = Array.from(trainingLoadCache.entries())
+    .sort((a, b) => a[1].timestamp - b[1].timestamp);
+  while (sorted.length > 0 && trainingLoadCache.size > TRAINING_LOAD_CACHE_MAX_ENTRIES) {
+    const oldest = sorted.shift();
+    if (!oldest) break;
+    trainingLoadCache.delete(oldest[0]);
+  }
+};
+
+const clearTrainingLoadCache = (reason: string = 'manual'): number => {
+  const cleared = trainingLoadCache.size;
+  trainingLoadCache.clear();
+  trainingLoadRefreshInProgress.clear();
+  if (cleared > 0) {
+    console.log(`Training-load cache cleared (${cleared} entries, reason=${reason})`);
+  }
+  return cleared;
+};
+
+const setTrainingLoadCache = (
+  cacheKey: string,
+  data: any,
+  refreshedDayUtc: string = getBulkPowerMetricsUtcDayKey()
+): void => {
+  trainingLoadCache.set(cacheKey, {
+    data,
+    timestamp: Date.now(),
+    refreshedDayUtc,
+  });
+  trimTrainingLoadCache();
+};
+
+const buildEmptyTrainingLoadPayload = () => ({
+  dailyValues: [],
+  current: { ctl: 0, atl: 0, tsb: 0 },
+  insights: {
+    rampRate: null,
+    tsbInterpretation: null,
+    safeRampRate: null,
+  },
+});
+
+const computeTrainingLoadPayload = async (
+  startDate: string,
+  endDate: string,
+  type: string | null
+): Promise<{ payload: any; generationTimeMs: number }> => {
+  const computeStart = Date.now();
+  const { getTrainingLoadWithInsights } = require('../services/trainingLoadService');
+  const result = await getTrainingLoadWithInsights({
+    startDate,
+    endDate,
+    activityType: type || undefined,
+  });
+
+  return {
+    payload: result || buildEmptyTrainingLoadPayload(),
     generationTimeMs: Date.now() - computeStart,
   };
 };
@@ -6176,7 +6256,7 @@ async function refreshTechStatsCache(): Promise<void> {
 }
 
 // Export for use in index.ts after sync
-export { refreshTechStatsCache, scheduleHeatmapCachePrewarm };
+export { refreshTechStatsCache, scheduleHeatmapCachePrewarm, clearTrainingLoadCache };
 
 /**
  * GET /api/tech/cached
@@ -6300,10 +6380,12 @@ router.post('/cache/clear', async (req: Request, res: Response) => {
   techStatsCache = null;
   const powerCurveCleared = clearPowerCurveAnalysisCache('api_cache_clear');
   const bulkPowerMetricsCleared = clearBulkPowerMetricsCache('api_cache_clear');
+  const trainingLoadCleared = clearTrainingLoadCache('api_cache_clear');
   res.json({
     message: 'Cache cleared',
     power_curve_analysis_entries_cleared: powerCurveCleared,
     bulk_power_metrics_entries_cleared: bulkPowerMetricsCleared,
+    training_load_entries_cleared: trainingLoadCleared,
   });
 });
 
@@ -7054,35 +7136,64 @@ router.get('/activities/power-metrics/bulk', async (req: Request, res: Response)
  */
 router.get('/training-load', async (req: Request, res: Response) => {
   try {
-    const { startDate, endDate, type } = req.query;
+    const startDate = parseBulkPowerMetricsQueryParam(req.query.startDate);
+    const endDate = parseBulkPowerMetricsQueryParam(req.query.endDate);
+    const parsedType = parseBulkPowerMetricsQueryParam(req.query.type);
+    const type = parsedType && parsedType !== 'all' ? parsedType : null;
+    const forceRefresh = String(req.query.refresh || '').toLowerCase() === 'true';
 
     if (!startDate || !endDate) {
       res.status(400).json({ error: 'startDate and endDate are required' });
       return;
     }
 
-    const { getTrainingLoadWithInsights } = require('../services/trainingLoadService');
+    const cacheKey = buildTrainingLoadCacheKey(startDate, endDate, type);
+    const now = Date.now();
+    const todayUtc = getBulkPowerMetricsUtcDayKey();
+    const cached = trainingLoadCache.get(cacheKey);
 
-    const result = await getTrainingLoadWithInsights({
-      startDate: startDate as string,
-      endDate: endDate as string,
-      activityType: type as string | undefined,
-    });
+    if (cached && !forceRefresh) {
+      const refreshDue = cached.refreshedDayUtc !== todayUtc;
+      if (refreshDue && !trainingLoadRefreshInProgress.has(cacheKey)) {
+        trainingLoadRefreshInProgress.add(cacheKey);
+        void (async () => {
+          try {
+            const refreshed = await computeTrainingLoadPayload(startDate, endDate, type);
+            setTrainingLoadCache(cacheKey, refreshed.payload, getBulkPowerMetricsUtcDayKey());
+            console.log(`Training-load cache refreshed for ${cacheKey} in ${refreshed.generationTimeMs}ms`);
+          } catch (refreshError: any) {
+            console.warn(`Training-load background refresh failed for ${cacheKey}: ${refreshError?.message || refreshError}`);
+          } finally {
+            trainingLoadRefreshInProgress.delete(cacheKey);
+          }
+        })();
+      }
 
-    if (!result) {
       res.json({
-        dailyValues: [],
-        current: { ctl: 0, atl: 0, tsb: 0 },
-        insights: {
-          rampRate: null,
-          tsbInterpretation: null,
-          safeRampRate: null,
-        },
+        ...cached.data,
+        cached: true,
+        cache_age_seconds: Math.floor((now - cached.timestamp) / 1000),
+        stale_by_day: refreshDue,
+        refresh_in_progress: trainingLoadRefreshInProgress.has(cacheKey),
+        cache_mode: 'cache_first_daily_refresh',
       });
       return;
     }
 
-    res.json(result);
+    const computed = await computeTrainingLoadPayload(startDate, endDate, type);
+    setTrainingLoadCache(
+      cacheKey,
+      computed.payload,
+      getBulkPowerMetricsUtcDayKey()
+    );
+
+    res.json({
+      ...computed.payload,
+      cached: false,
+      generation_time_ms: computed.generationTimeMs,
+      cache_mode: 'cache_first_daily_refresh',
+      force_refresh: forceRefresh,
+    });
   } catch (error: any) {
     console.error('Error calculating training load:', error);
     res.status(500).json({ error: 'Failed to calculate training load' });
