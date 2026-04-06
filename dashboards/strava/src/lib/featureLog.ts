@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-pmc-acwr-monotony-strain',
+    date: '2026-04-06',
+    tag: 'training',
+    title: {
+      de: 'PMC um ACWR sowie Monotony/Strain erweitert',
+      en: 'PMC expanded with ACWR and Monotony/Strain',
+    },
+    summary: {
+      de: 'Die Training-Load-Karte zeigt jetzt zusätzliche Steuerungskennzahlen, um Belastungssprünge und Wochenstruktur besser einzuordnen.',
+      en: 'The training-load card now adds steering metrics to better classify load jumps and weekly structure.',
+    },
+    bullets: {
+      de: [
+        'Neue ACWR-Kachel (7-Tage-Load vs. 28-Tage-Load) mit Statusbereich.',
+        'Neue Monotony/Strain-Kachel mit Wochen-Interpretation.',
+        'Erläuterungen im PMC-Block um Formeln und Zielbereiche ergänzt.',
+      ],
+      en: [
+        'New ACWR tile (7-day load vs 28-day load) with status range.',
+        'New Monotony/Strain tile with weekly interpretation.',
+        'PMC explanation extended with formulas and target ranges.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-cached-power-vs-heart-rate',
     date: '2026-04-06',
     tag: 'cache',
