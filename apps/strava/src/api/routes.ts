@@ -442,16 +442,14 @@ type PowerCurveAnalysisCacheEntry = {
   data: any;
   timestamp: number;
   fingerprint: string;
+  refreshedDayUtc: string;
 };
 const powerCurveAnalysisCache = new Map<string, PowerCurveAnalysisCacheEntry>();
-const POWER_CURVE_ANALYSIS_CACHE_TTL_MS = Math.max(
-  60 * 1000,
-  Number(process.env.POWER_CURVE_ANALYSIS_CACHE_TTL_MS || (12 * 60 * 60 * 1000))
-);
 const POWER_CURVE_ANALYSIS_CACHE_MAX_ENTRIES = Math.max(
   4,
   Number(process.env.POWER_CURVE_ANALYSIS_CACHE_MAX_ENTRIES || 20)
 );
+const powerCurveAnalysisRefreshInProgress = new Set<string>();
 const POWER_CURVE_SUPPORTED_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide'] as const;
 let heatmapPrewarmTimeout: NodeJS.Timeout | null = null;
 
@@ -704,10 +702,26 @@ const trimPowerCurveAnalysisCache = (): void => {
 const clearPowerCurveAnalysisCache = (reason: string = 'manual'): number => {
   const cleared = powerCurveAnalysisCache.size;
   powerCurveAnalysisCache.clear();
+  powerCurveAnalysisRefreshInProgress.clear();
   if (cleared > 0) {
     console.log(`Power-curve analysis cache cleared (${cleared} entries, reason=${reason})`);
   }
   return cleared;
+};
+
+const setPowerCurveAnalysisCache = (
+  cacheKey: string,
+  data: any,
+  fingerprint: string,
+  refreshedDayUtc: string = getBulkPowerMetricsUtcDayKey()
+): void => {
+  powerCurveAnalysisCache.set(cacheKey, {
+    data,
+    timestamp: Date.now(),
+    fingerprint,
+    refreshedDayUtc,
+  });
+  trimPowerCurveAnalysisCache();
 };
 
 const buildPowerCurveAnalysisFingerprint = async (
@@ -745,6 +759,125 @@ const buildPowerCurveAnalysisFingerprint = async (
   const weight = Number.isFinite(athleteWeight) ? athleteWeight.toFixed(2) : '75.00';
 
   return `${count}|${maxActivity}|${maxStream}|${weight}`;
+};
+
+const computePowerCurveAnalysisPayload = async (
+  userId: number,
+  monthsAgo: number,
+  userWeight: number
+): Promise<{ payload: any; fingerprint: string; generationTimeMs: number }> => {
+  const computeStart = Date.now();
+  const fingerprint = await buildPowerCurveAnalysisFingerprint(userId, monthsAgo, userWeight);
+  const result = await db.query(
+    `
+      SELECT
+        a.strava_activity_id,
+        a.type,
+        a.start_date,
+        a.moving_time,
+        a.average_watts,
+        a.max_watts,
+        s.data as watts_stream
+      FROM strava.activities a
+      LEFT JOIN strava.activity_streams s
+        ON s.activity_id = a.strava_activity_id
+        AND s.stream_type = 'watts'
+      WHERE a.user_id = $1
+        AND a.average_watts IS NOT NULL
+        AND a.average_watts > 0
+        AND a.start_date >= NOW() - make_interval(months => $2)
+        AND a.type = ANY($3::text[])
+      ORDER BY a.start_date DESC
+    `,
+    [userId, monthsAgo, [...POWER_CURVE_SUPPORTED_TYPES]]
+  );
+
+  const intervals = [5, 10, 30, 60, 120, 300, 600, 1200, 1800, 3600];
+  const powerCurve: { [key: number]: number } = {};
+
+  intervals.forEach(duration => {
+    let maxPower = 0;
+
+    result.rows.forEach((activity: any) => {
+      if (!activity.watts_stream || !Array.isArray(activity.watts_stream)) return;
+
+      const watts = activity.watts_stream;
+      for (let i = 0; i <= watts.length - duration; i++) {
+        const segment = watts.slice(i, i + duration);
+        const avgPower = segment.reduce((sum: number, w: number) => sum + (w || 0), 0) / duration;
+        maxPower = Math.max(maxPower, avgPower);
+      }
+    });
+
+    powerCurve[duration] = Math.round(maxPower);
+  });
+
+  const fiveSecPower = powerCurve[5] || 0;
+  const oneMinPower = powerCurve[60] || 0;
+  const fiveMinPower = powerCurve[300] || 0;
+  const twentyMinPower = powerCurve[1200] || 0;
+  const sixtyMinPower = powerCurve[3600] || 0;
+
+  const sprintRatio = fiveSecPower / (twentyMinPower || 1);
+  const punchRatio = oneMinPower / (twentyMinPower || 1);
+  const enduranceRatio = sixtyMinPower / (twentyMinPower || 1);
+
+  let riderType = 'Allrounder';
+  const strengths = {
+    sprint: 0,
+    punch: 0,
+    climbing: 0,
+    endurance: 0,
+    time_trial: 0
+  };
+
+  const fiveMinWKg = fiveMinPower / userWeight;
+  const twentyMinWKg = twentyMinPower / userWeight;
+
+  strengths.sprint = Math.min(100, Math.max(0, (sprintRatio - 1.5) * 50));
+  strengths.punch = Math.min(100, Math.max(0, (punchRatio - 1.2) * 83.33));
+  strengths.climbing = Math.min(100, Math.max(0, (fiveMinWKg - 2.0) * 50));
+  strengths.time_trial = Math.min(100, Math.max(0, (twentyMinWKg - 1.5) * 40));
+  strengths.endurance = Math.min(100, Math.max(0, (enduranceRatio - 0.8) * 500));
+
+  const maxStrength = Math.max(...Object.values(strengths));
+
+  if (strengths.sprint === maxStrength && strengths.sprint > 70) {
+    riderType = 'Sprinter';
+  } else if (strengths.punch === maxStrength && strengths.punch > 65) {
+    riderType = 'Puncheur';
+  } else if (strengths.climbing === maxStrength && strengths.climbing > 70) {
+    riderType = 'Kletterer';
+  } else if (strengths.time_trial === maxStrength && strengths.time_trial > 65) {
+    riderType = 'Zeitfahrer';
+  } else if (strengths.endurance === maxStrength && strengths.endurance > 70) {
+    riderType = 'Ausdauerspezialist';
+  }
+
+  const curveData = intervals.map(duration => ({
+    duration_seconds: duration,
+    duration_label: duration < 60 ? `${duration}s` : duration < 3600 ? `${Math.floor(duration / 60)}min` : `${Math.floor(duration / 3600)}h`,
+    power_watts: powerCurve[duration] || 0
+  }));
+
+  return {
+    payload: {
+      rider_type: riderType,
+      strengths,
+      power_curve: curveData,
+      key_powers: {
+        '5_sec': fiveSecPower,
+        '1_min': oneMinPower,
+        '5_min': fiveMinPower,
+        '20_min': twentyMinPower,
+        '60_min': sixtyMinPower
+      },
+      activities_analyzed: result.rows.length,
+      period_months: monthsAgo
+    },
+    fingerprint,
+    generationTimeMs: Date.now() - computeStart,
+  };
 };
 
 const normalizeHeatmapHotspotLocationLabel = (value: string | null | undefined): string | null => {
@@ -5219,6 +5352,7 @@ router.get('/analytics/power-curve', async (req: Request, res: Response) => {
     const monthsAgo = Number.isFinite(parsedMonths)
       ? Math.min(60, Math.max(1, parsedMonths))
       : 12;
+    const forceRefresh = String(req.query.refresh || '').toLowerCase() === 'true';
 
     const currentProfile = await ensureDefaultSingleUserProfile();
     const activeUserId = Number(currentProfile?.id);
@@ -5239,162 +5373,56 @@ router.get('/analytics/power-curve', async (req: Request, res: Response) => {
     );
     const userWeight = userQuery.rows[0]?.value ? parseFloat(userQuery.rows[0].value) : 75; // Default 75kg
 
-    const fingerprint = await buildPowerCurveAnalysisFingerprint(activeUserId, monthsAgo, userWeight);
     const cacheKey = buildPowerCurveAnalysisCacheKey(activeUserId, monthsAgo);
     const cached = powerCurveAnalysisCache.get(cacheKey);
     const now = Date.now();
-    if (cached && cached.fingerprint === fingerprint && (now - cached.timestamp) < POWER_CURVE_ANALYSIS_CACHE_TTL_MS) {
+    const todayUtc = getBulkPowerMetricsUtcDayKey();
+    if (cached && !forceRefresh) {
+      const refreshDue = cached.refreshedDayUtc !== todayUtc;
+      if (refreshDue && !powerCurveAnalysisRefreshInProgress.has(cacheKey)) {
+        powerCurveAnalysisRefreshInProgress.add(cacheKey);
+        void (async () => {
+          try {
+            const refreshed = await computePowerCurveAnalysisPayload(activeUserId, monthsAgo, userWeight);
+            setPowerCurveAnalysisCache(
+              cacheKey,
+              refreshed.payload,
+              refreshed.fingerprint,
+              getBulkPowerMetricsUtcDayKey()
+            );
+            console.log(`Power-curve analysis cache refreshed for ${cacheKey} in ${refreshed.generationTimeMs}ms`);
+          } catch (refreshError: any) {
+            console.warn(`Power-curve analysis background refresh failed for ${cacheKey}: ${refreshError?.message || refreshError}`);
+          } finally {
+            powerCurveAnalysisRefreshInProgress.delete(cacheKey);
+          }
+        })();
+      }
+
       return res.json({
         ...cached.data,
         cached: true,
         cache_age_seconds: Math.floor((now - cached.timestamp) / 1000),
+        stale_by_day: refreshDue,
+        refresh_in_progress: powerCurveAnalysisRefreshInProgress.has(cacheKey),
+        cache_mode: 'cache_first_daily_refresh',
       });
     }
 
-    // Get all activities with power data
-    const result = await db.query(
-      `
-      SELECT
-        a.strava_activity_id,
-        a.type,
-        a.start_date,
-        a.moving_time,
-        a.average_watts,
-        a.max_watts,
-        s.data as watts_stream
-      FROM strava.activities a
-      LEFT JOIN strava.activity_streams s
-        ON s.activity_id = a.strava_activity_id
-        AND s.stream_type = 'watts'
-      WHERE a.user_id = $1
-        AND a.average_watts IS NOT NULL
-        AND a.average_watts > 0
-        AND a.start_date >= NOW() - make_interval(months => $2)
-        AND a.type = ANY($3::text[])
-      ORDER BY a.start_date DESC
-      `,
-      [activeUserId, monthsAgo, [...POWER_CURVE_SUPPORTED_TYPES]]
+    const computed = await computePowerCurveAnalysisPayload(activeUserId, monthsAgo, userWeight);
+    setPowerCurveAnalysisCache(
+      cacheKey,
+      computed.payload,
+      computed.fingerprint,
+      getBulkPowerMetricsUtcDayKey()
     );
 
-    // Time intervals to analyze (in seconds)
-    const intervals = [5, 10, 30, 60, 120, 300, 600, 1200, 1800, 3600];
-    const powerCurve: { [key: number]: number } = {};
-
-    // Calculate max power for each interval
-    intervals.forEach(duration => {
-      let maxPower = 0;
-
-      result.rows.forEach((activity: any) => {
-        if (!activity.watts_stream || !Array.isArray(activity.watts_stream)) return;
-
-        const watts = activity.watts_stream;
-
-        // Calculate rolling average for this duration
-        for (let i = 0; i <= watts.length - duration; i++) {
-          const segment = watts.slice(i, i + duration);
-          const avgPower = segment.reduce((sum: number, w: number) => sum + (w || 0), 0) / duration;
-          maxPower = Math.max(maxPower, avgPower);
-        }
-      });
-
-      powerCurve[duration] = Math.round(maxPower);
-    });
-
-    // Rider type classification based on power curve
-    const fiveSecPower = powerCurve[5] || 0;
-    const oneMinPower = powerCurve[60] || 0;
-    const fiveMinPower = powerCurve[300] || 0;
-    const twentyMinPower = powerCurve[1200] || 0;
-    const sixtyMinPower = powerCurve[3600] || 0;
-
-    // Calculate ratios for classification
-    const sprintRatio = fiveSecPower / (twentyMinPower || 1);
-    const punchRatio = oneMinPower / (twentyMinPower || 1);
-    const enduranceRatio = sixtyMinPower / (twentyMinPower || 1);
-
-    let riderType = 'Allrounder';
-    let strengths = {
-      sprint: 0,
-      punch: 0,
-      climbing: 0,
-      endurance: 0,
-      time_trial: 0
-    };
-
-    // Calculate W/kg for climbing assessment
-    const fiveMinWKg = fiveMinPower / userWeight;
-    const twentyMinWKg = twentyMinPower / userWeight;
-
-    // Calculate strength scores (0-100)
-    // Adjusted scales for amateur/recreational cyclists
-
-    // Sprint: Based on ratio to FTP (high burst power)
-    // 1.5x = 0%, 2.5x = 50%, 3.5x+ = 100%
-    strengths.sprint = Math.min(100, Math.max(0, (sprintRatio - 1.5) * 50));
-
-    // Punch: Based on 1-min power ratio (sustained efforts)
-    // 1.2x = 0%, 1.8x = 50%, 2.4x+ = 100%
-    strengths.punch = Math.min(100, Math.max(0, (punchRatio - 1.2) * 83.33));
-
-    // Climbing: Based on W/kg for 5-min power
-    // 2.0 W/kg = 0%, 3.0 W/kg = 50%, 4.0+ W/kg = 100%
-    strengths.climbing = Math.min(100, Math.max(0, (fiveMinWKg - 2.0) * 50));
-
-    // Time Trial: Based on W/kg for 20-min power
-    // 1.5 W/kg = 0%, 2.75 W/kg = 50%, 4.0+ W/kg = 100%
-    strengths.time_trial = Math.min(100, Math.max(0, (twentyMinWKg - 1.5) * 40));
-
-    // Endurance: Based on 60-min to 20-min ratio (ability to sustain)
-    // 0.80 = 0%, 0.90 = 50%, 1.0+ = 100%
-    strengths.endurance = Math.min(100, Math.max(0, (enduranceRatio - 0.8) * 500));
-
-    // Classify rider type based on strengths
-    const maxStrength = Math.max(...Object.values(strengths));
-
-    if (strengths.sprint === maxStrength && strengths.sprint > 70) {
-      riderType = 'Sprinter';
-    } else if (strengths.punch === maxStrength && strengths.punch > 65) {
-      riderType = 'Puncheur';
-    } else if (strengths.climbing === maxStrength && strengths.climbing > 70) {
-      riderType = 'Kletterer';
-    } else if (strengths.time_trial === maxStrength && strengths.time_trial > 65) {
-      riderType = 'Zeitfahrer';
-    } else if (strengths.endurance === maxStrength && strengths.endurance > 70) {
-      riderType = 'Ausdauerspezialist';
-    }
-
-    // Format power curve for chart
-    const curveData = intervals.map(duration => ({
-      duration_seconds: duration,
-      duration_label: duration < 60 ? `${duration}s` : duration < 3600 ? `${Math.floor(duration / 60)}min` : `${Math.floor(duration / 3600)}h`,
-      power_watts: powerCurve[duration] || 0
-    }));
-
-    const responseData = {
-      rider_type: riderType,
-      strengths,
-      power_curve: curveData,
-      key_powers: {
-        '5_sec': fiveSecPower,
-        '1_min': oneMinPower,
-        '5_min': fiveMinPower,
-        '20_min': twentyMinPower,
-        '60_min': sixtyMinPower
-      },
-      activities_analyzed: result.rows.length,
-      period_months: monthsAgo
-    };
-
-    powerCurveAnalysisCache.set(cacheKey, {
-      data: responseData,
-      timestamp: Date.now(),
-      fingerprint,
-    });
-    trimPowerCurveAnalysisCache();
-
     res.json({
-      ...responseData,
+      ...computed.payload,
       cached: false,
+      generation_time_ms: computed.generationTimeMs,
+      cache_mode: 'cache_first_daily_refresh',
+      force_refresh: forceRefresh,
     });
 
   } catch (error: any) {

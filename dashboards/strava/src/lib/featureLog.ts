@@ -22,12 +22,12 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     date: '2026-04-06',
     tag: 'cache',
     title: {
-      de: 'Leistung-vs-Puls jetzt cache-first',
-      en: 'Power-vs-heart-rate now cache-first',
+      de: 'Training und Fahrerprofil jetzt cache-first',
+      en: 'Training and rider profile now cache-first',
     },
     summary: {
-      de: 'Die Trainingsseite liefert Leistung-vs-Puls jetzt standardmäßig aus dem Server-Cache und aktualisiert den Datensatz einmal täglich im Hintergrund.',
-      en: 'The training page now serves power-vs-heart-rate from server cache by default and refreshes the dataset once per day in the background.',
+      de: 'Leistung-vs-Puls und Fahrerprofil werden jetzt standardmäßig aus dem Server-Cache ausgeliefert und einmal täglich im Hintergrund aktualisiert.',
+      en: 'Power-vs-heart-rate and rider profile are now served from server cache by default and refreshed once per day in the background.',
     },
     bullets: {
       de: [
