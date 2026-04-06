@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-06-dashboard-ctl-streak-card',
+    date: '2026-04-06',
+    tag: 'dashboard',
+    title: {
+      de: 'Dashboard: CTL Fitness direkt in der Wochenserie-Kachel',
+      en: 'Dashboard: CTL fitness directly in the weekly streak card',
+    },
+    summary: {
+      de: 'Die rechte Sidebar zeigt jetzt in der kompakten Streak-Kachel zusaetzlich CTL und TSB-Einordnung, ohne mehr Platz zu brauchen.',
+      en: 'The right sidebar now adds CTL and TSB form status inside the compact streak card without increasing layout footprint.',
+    },
+    bullets: {
+      de: [
+        'Wochenserie und CTL werden als 2-Spalten-Kachel kombiniert.',
+        'TSB wird mit kurzer Form-Einordnung (Frisch, Ausgeglichen, Belastet) dargestellt.',
+        'Ohne FTP erscheint ein klarer Hinweis statt leerer Werte.',
+      ],
+      en: [
+        'Weekly streak and CTL are combined in a 2-column compact card.',
+        'TSB is shown with a short form classification (Fresh, Balanced, Loaded).',
+        'Without FTP, the card shows a clear hint instead of empty values.',
+      ],
+    },
+  },
+  {
     id: '2026-04-06-heatmap-header-overlap-fix',
     date: '2026-04-06',
     tag: 'ui',
