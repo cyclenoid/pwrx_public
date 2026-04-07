@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Bike, Footprints, Activity, Flame, Dumbbell, RefreshCw, LayoutGrid, List, ChevronLeft, ChevronRight, Award, Globe, Clock, Mountain, Megaphone } from 'lucide-react'
+import { Bike, Footprints, Activity, Flame, Dumbbell, RefreshCw, LayoutGrid, List, ChevronLeft, ChevronRight, Award, Globe, Clock, Mountain, Lightbulb } from 'lucide-react'
 import {
   getActivities,
   getActivity,
@@ -37,6 +37,15 @@ import { getTrainingInsights } from '../lib/trainingInsights'
 import { buildRunningPerformanceSamples, getRecentVsPreviousRunningPerformance } from '../lib/runningMetrics'
 
 type ViewMode = 'cards' | 'table'
+type DashboardTip = {
+  id: string
+  title: string
+  body: string
+  primaryLabel: string
+  primaryTo: string
+  secondaryLabel: string
+  secondaryTo: string
+}
 
 const ITEMS_PER_PAGE = 50
 
@@ -98,6 +107,7 @@ export function Dashboard() {
   const [displayCount, setDisplayCount] = useState(ITEMS_PER_PAGE)
   const [calendarDate, setCalendarDate] = useState(new Date())
   const [goalMode, setGoalMode] = useState<'ride' | 'run'>('ride')
+  const [tipIndex, setTipIndex] = useState(0)
 
   const dateLocale = i18n.language?.startsWith('de') ? 'de-DE' : 'en-US'
   const quoteLocale = i18n.language?.startsWith('de') ? 'de' : 'en'
@@ -745,6 +755,27 @@ export function Dashboard() {
     if (!Number.isFinite(units) || units <= 0) return '—'
     return units >= 10 ? formatNumber(Math.round(units)) : formatNumber(units, 1)
   }
+
+  const dashboardTips = useMemo<DashboardTip[]>(() => ([
+    {
+      id: 'automate-data-fetch',
+      title: t('dashboard.tipsCard.automateFetch.title'),
+      body: t('dashboard.tipsCard.automateFetch.body'),
+      primaryLabel: t('dashboard.tipsCard.automateFetch.primaryAction'),
+      primaryTo: '/settings?tab=sync',
+      secondaryLabel: t('dashboard.tipsCard.automateFetch.secondaryAction'),
+      secondaryTo: '/import',
+    },
+  ]), [t])
+
+  const activeTip = dashboardTips[tipIndex] ?? dashboardTips[0] ?? null
+  const canCycleTips = dashboardTips.length > 1
+
+  useEffect(() => {
+    if (tipIndex >= dashboardTips.length) {
+      setTipIndex(0)
+    }
+  }, [tipIndex, dashboardTips.length])
 
   const formatPizzaEquivalent = (kcal: number) => formatFoodEquivalent(kcal, 1140)
 
@@ -1470,33 +1501,58 @@ export function Dashboard() {
 
         <Card className="border-orange-500/30 bg-gradient-to-br from-orange-500/10 via-card/95 to-card shadow-sm">
           <CardHeader className="pb-2">
-            <CardTitle className="flex items-center gap-2 text-sm font-semibold">
-              <Megaphone className="h-4 w-4 text-orange-400" />
-              <span>{t('dashboard.newsCard.title')}</span>
-            </CardTitle>
-            <p className="text-xs text-muted-foreground">
-              {t('dashboard.newsCard.subtitle')}
-            </p>
+            <div className="flex items-start justify-between gap-3">
+              <div>
+                <CardTitle className="flex items-center gap-2 text-sm font-semibold">
+                  <Lightbulb className="h-4 w-4 text-orange-400" />
+                  <span>{t('dashboard.tipsCard.title')}</span>
+                </CardTitle>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  {t('dashboard.tipsCard.subtitle')}
+                </p>
+              </div>
+              <div className="flex items-center gap-1">
+                <span className="text-[11px] tabular-nums text-muted-foreground">
+                  {dashboardTips.length === 0 ? '0/0' : `${tipIndex + 1}/${dashboardTips.length}`}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setTipIndex((prev) => {
+                    if (!dashboardTips.length) return 0
+                    return (prev - 1 + dashboardTips.length) % dashboardTips.length
+                  })}
+                  disabled={!canCycleTips}
+                  className="rounded border border-border/60 p-1 text-muted-foreground transition-colors hover:bg-background/70 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label={t('dashboard.tipsCard.prevTip')}
+                >
+                  <ChevronLeft className="h-3.5 w-3.5" />
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setTipIndex((prev) => {
+                    if (!dashboardTips.length) return 0
+                    return (prev + 1) % dashboardTips.length
+                  })}
+                  disabled={!canCycleTips}
+                  className="rounded border border-border/60 p-1 text-muted-foreground transition-colors hover:bg-background/70 disabled:cursor-not-allowed disabled:opacity-40"
+                  aria-label={t('dashboard.tipsCard.nextTip')}
+                >
+                  <ChevronRight className="h-3.5 w-3.5" />
+                </button>
+              </div>
+            </div>
           </CardHeader>
           <CardContent className="space-y-2 pt-0">
             <div className="rounded-lg border border-border/50 bg-background/60 p-2.5">
-              <div className="text-xs font-semibold text-foreground">{t('dashboard.newsCard.pathSingleTitle')}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{t('dashboard.newsCard.pathSingleBody')}</div>
-            </div>
-            <div className="rounded-lg border border-border/50 bg-background/60 p-2.5">
-              <div className="text-xs font-semibold text-foreground">{t('dashboard.newsCard.pathBulkTitle')}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{t('dashboard.newsCard.pathBulkBody')}</div>
-            </div>
-            <div className="rounded-lg border border-border/50 bg-background/60 p-2.5">
-              <div className="text-xs font-semibold text-foreground">{t('dashboard.newsCard.pathSidecarTitle')}</div>
-              <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{t('dashboard.newsCard.pathSidecarBody')}</div>
+              <div className="text-xs font-semibold text-foreground">{activeTip?.title || t('common.notAvailable')}</div>
+              <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{activeTip?.body || ''}</div>
             </div>
             <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-2 text-[11px]">
-              <Link to="/import" className="font-medium text-orange-400 transition-colors hover:text-orange-300">
-                {t('dashboard.newsCard.openImport')}
+              <Link to={activeTip?.primaryTo || '/import'} className="font-medium text-orange-400 transition-colors hover:text-orange-300">
+                {activeTip?.primaryLabel || t('dashboard.tipsCard.fallbackPrimaryAction')}
               </Link>
-              <Link to="/settings?tab=sync" className="font-medium text-foreground transition-colors hover:text-orange-300">
-                {t('dashboard.newsCard.openSyncSettings')}
+              <Link to={activeTip?.secondaryTo || '/settings?tab=sync'} className="font-medium text-foreground transition-colors hover:text-orange-300">
+                {activeTip?.secondaryLabel || t('dashboard.tipsCard.fallbackSecondaryAction')}
               </Link>
             </div>
           </CardContent>
