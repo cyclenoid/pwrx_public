@@ -7,6 +7,7 @@ import type {
   Stats,
   MonthlyStats,
   Gear,
+  GearDetailResponse,
   GearMaintenanceItem,
   PersonalRecords,
   StreakData,
@@ -601,8 +602,8 @@ export const createManualGear = async (payload: {
   return data
 }
 
-export const getGearById = async (id: string): Promise<Gear> => {
-  const { data } = await api.get<Gear>(`/gear/${id}`)
+export const getGearById = async (id: string): Promise<GearDetailResponse> => {
+  const { data } = await api.get<GearDetailResponse>(`/gear/${id}`)
   return data
 }
 

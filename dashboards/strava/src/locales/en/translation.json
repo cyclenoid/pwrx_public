@@ -1653,7 +1653,8 @@
       "hours": "Hours",
       "status": "Status",
       "avgSpeed": "Avg speed",
-      "rankedBikes": "Ranked bikes"
+      "rankedBikes": "Ranked bikes",
+      "hmPerKm": "Elevation per km"
     },
     "sidebar": {
       "title": "Statistics",
@@ -1661,11 +1662,21 @@
       "breakdownTitle": "Breakdown",
       "topDistance": "Top bikes by distance",
       "topElevation": "Top bikes by elevation",
-      "topSpeed": "Top bikes by avg km/h"
+      "topSpeed": "Top bikes by avg km/h",
+      "topHmPerKm": "Top bikes by elevation/km"
+    },
+    "detail": {
+      "yearTrendTitle": "Year trend",
+      "yearTrendSubtitle": "Monthly distance and elevation for this bike.",
+      "recentTitle": "Recent activities with this bike",
+      "recentEmpty": "No activities found for this bike yet.",
+      "recentActivities": "Recent activities",
+      "activeMonths": "Active months"
     },
     "manualCreate": {
       "title": "Add gear manually",
       "subtitle": "Create bikes or shoes manually.",
+      "open": "New gear",
       "submit": "Create gear",
       "creating": "Creating...",
       "error": "Failed to create gear.",

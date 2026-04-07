@@ -114,6 +114,32 @@ export interface GearMaintenanceItem {
   updated_at?: string
 }
 
+export interface GearMonthlyStat {
+  month: string
+  activity_count: number | string
+  total_distance_km: number | string
+  total_elevation_m: number | string
+  avg_speed_kmh: number | string
+}
+
+export interface GearRecentActivity {
+  strava_activity_id: number
+  name: string
+  type: string
+  start_date: string
+  distance_km: number | string
+  moving_time: number
+  total_elevation_gain: number | string
+  avg_speed_kmh: number | string
+}
+
+export interface GearDetailResponse {
+  gear: Gear
+  maintenance: GearMaintenanceItem[]
+  monthly_stats: GearMonthlyStat[]
+  recent_activities: GearRecentActivity[]
+}
+
 // Personal Records Types
 export interface RecordActivity {
   strava_activity_id: number

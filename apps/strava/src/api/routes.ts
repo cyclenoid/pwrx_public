@@ -4897,6 +4897,42 @@ router.get('/gear/:id', async (req: Request, res: Response) => {
       [id]
     );
 
+    const monthlyStatsResult = await db.query(
+      `
+      SELECT
+        TO_CHAR(DATE_TRUNC('month', start_date), 'YYYY-MM') AS month,
+        COUNT(*) AS activity_count,
+        COALESCE(SUM(distance) / 1000, 0) AS total_distance_km,
+        COALESCE(SUM(total_elevation_gain), 0) AS total_elevation_m,
+        COALESCE(AVG(average_speed) * 3.6, 0) AS avg_speed_kmh
+      FROM strava.activities
+      WHERE gear_id = $1
+        AND start_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months'
+      GROUP BY DATE_TRUNC('month', start_date)
+      ORDER BY month ASC
+      `,
+      [id]
+    );
+
+    const recentActivitiesResult = await db.query(
+      `
+      SELECT
+        strava_activity_id,
+        name,
+        type,
+        start_date,
+        COALESCE(distance, 0) / 1000.0 AS distance_km,
+        moving_time,
+        COALESCE(total_elevation_gain, 0) AS total_elevation_gain,
+        COALESCE(average_speed, 0) * 3.6 AS avg_speed_kmh
+      FROM strava.activities
+      WHERE gear_id = $1
+      ORDER BY start_date DESC
+      LIMIT 8
+      `,
+      [id]
+    );
+
     const source = (
       String(gearResult.rows[0]?.id || '').toLowerCase().startsWith('mb_')
       || String(gearResult.rows[0]?.id || '').toLowerCase().startsWith('mg_')
@@ -4911,6 +4947,8 @@ router.get('/gear/:id', async (req: Request, res: Response) => {
         source,
       },
       maintenance: maintenanceResult.rows,
+      monthly_stats: monthlyStatsResult.rows,
+      recent_activities: recentActivitiesResult.rows,
     });
   } catch (error: any) {
     console.error('Error fetching gear:', error);
