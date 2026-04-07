@@ -326,6 +326,47 @@ export class DatabaseService {
   }
 
   /**
+   * Check whether a sync currently holds the advisory lock.
+   * Uses the same lock test as the sync entrypoints.
+   */
+  async isSyncLockHeld(): Promise<boolean> {
+    const client = await this.acquireSyncLock();
+    if (!client) {
+      return true;
+    }
+
+    await this.releaseSyncLock(client);
+    return false;
+  }
+
+  /**
+   * Convert abandoned "running" sync logs into failed entries.
+   * This keeps the UI from showing a stuck sync after a crash/restart.
+   */
+  async reconcileStaleSyncLogs(): Promise<number> {
+    const syncLockHeld = await this.isSyncLockHeld();
+    if (syncLockHeld) {
+      return 0;
+    }
+
+    const result = await this.pool.query(
+      `UPDATE sync_log
+       SET
+         completed_at = COALESCE(completed_at, CURRENT_TIMESTAMP),
+         status = 'failed',
+         error_message = CASE
+           WHEN error_message IS NULL OR BTRIM(error_message) = ''
+             THEN 'Recovered stale sync log: no active sync lock found'
+           ELSE error_message
+         END
+       WHERE status = 'running'
+         AND completed_at IS NULL`
+    );
+
+    return result.rowCount || 0;
+  }
+
+  /**
    * Insert or update an activity
    */
   async upsertActivity(activity: Activity): Promise<number> {
