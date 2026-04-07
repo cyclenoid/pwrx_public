@@ -2362,7 +2362,7 @@ router.get('/activities/:id', async (req: Request, res: Response) => {
 /**
  * GET /api/activities/:id/comparable
  * Find comparable activities for the same user and sport.
- * Priority is based on shared segments, with a name+distance fallback.
+ * Matches are based on shared segments and require at least 90% overlap.
  */
 router.get('/activities/:id/comparable', async (req: Request, res: Response) => {
   try {
@@ -2434,27 +2434,6 @@ router.get('/activities/:id/comparable', async (req: Request, res: Response) => 
         WHERE se.activity_id <> $1
         GROUP BY se.activity_id
       ),
-      name_matches AS (
-        SELECT
-          a.strava_activity_id AS comparable_activity_id,
-          0::int AS overlap_count
-        FROM strava.activities a
-        JOIN base_activity ba ON a.user_id = ba.user_id AND a.type = ba.type
-        WHERE a.strava_activity_id <> $1
-          AND LOWER(TRIM(COALESCE(a.name, ''))) = ba.normalized_name
-          AND a.distance BETWEEN ba.distance * 0.9 AND ba.distance * 1.1
-      ),
-      combined_matches AS (
-        SELECT comparable_activity_id, overlap_count FROM segment_matches
-        UNION
-        SELECT nm.comparable_activity_id, nm.overlap_count
-        FROM name_matches nm
-        WHERE NOT EXISTS (
-          SELECT 1
-          FROM segment_matches sm
-          WHERE sm.comparable_activity_id = nm.comparable_activity_id
-        )
-      ),
       ranked_matches AS (
         SELECT
           a.strava_activity_id,
@@ -2470,12 +2449,9 @@ router.get('/activities/:id/comparable', async (req: Request, res: Response) => 
             WHEN bsc.total > 0 THEN ROUND((cm.overlap_count::numeric / bsc.total::numeric) * 100, 1)
             ELSE 0
           END AS overlap_pct,
-          CASE
-            WHEN cm.overlap_count > 0 THEN 'segments'
-            ELSE 'name'
-          END AS match_type,
+          'segments' AS match_type,
           ABS(COALESCE(a.distance, 0) - ba.distance) AS distance_delta_m
-        FROM combined_matches cm
+        FROM segment_matches cm
         JOIN strava.activities a ON a.strava_activity_id = cm.comparable_activity_id
         JOIN base_activity ba ON a.user_id = ba.user_id AND a.type = ba.type
         CROSS JOIN base_segment_count bsc
@@ -2494,6 +2470,7 @@ router.get('/activities/:id/comparable', async (req: Request, res: Response) => 
         overlap_pct,
         match_type
       FROM ranked_matches
+      WHERE overlap_pct >= 90
       ORDER BY overlap_count DESC, distance_delta_m ASC, start_date DESC
       LIMIT $2
       `,

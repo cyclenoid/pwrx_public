@@ -2523,7 +2523,12 @@ export function ActivityDetail() {
                         <div className="flex items-center justify-between gap-3">
                           <div className="min-w-0">
                             <div className="flex items-center gap-2">
-                              <span className="truncate text-sm font-medium">{entry.shortDate}</span>
+                              <Link
+                                to={`/activity/${entry.strava_activity_id}`}
+                                className="truncate text-sm font-medium text-foreground hover:text-primary hover:underline"
+                              >
+                                {entry.shortDate}
+                              </Link>
                               {entry.isCurrent && (
                                 <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                                   {t('activityDetail.comparable.current')}
@@ -2538,7 +2543,7 @@ export function ActivityDetail() {
                             <div className="text-sm font-semibold text-primary">
                               {Number(entry.avg_speed_kmh).toFixed(1)} {unitKmh}
                             </div>
-                            {!entry.isCurrent && entry.overlap_pct > 0 && (
+                            {!entry.isCurrent && entry.overlap_pct >= 90 && (
                               <div className="text-[11px] text-muted-foreground">
                                 {t('activityDetail.comparable.match', { percent: Number(entry.overlap_pct).toFixed(0) })}
                               </div>
