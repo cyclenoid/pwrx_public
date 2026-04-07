@@ -7,6 +7,7 @@ import {
   deleteActivity,
   getActivity,
   getActivityKmSplits,
+  getActivityPowerCurve,
   getActivityPowerMetrics,
   getActivitySegments,
   getGear,
@@ -140,8 +141,25 @@ const normalizeSelection = (selection: { startKm: number; endKm: number } | null
 }
 
 type SelectionSource = 'elevation' | 'speed' | 'heartrate' | 'power' | 'cadence' | null
+type PowerPanelView = 'summary' | 'zones' | 'curve'
 
 const RIDE_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide']
+
+const POWER_DURATION_KEYS: Record<string, string> = {
+  '5s': 's5',
+  '10s': 's10',
+  '30s': 's30',
+  '1min': 'm1',
+  '2min': 'm2',
+  '5min': 'm5',
+  '10min': 'm10',
+  '20min': 'm20',
+  '30min': 'm30',
+  '45min': 'm45',
+  '1hr': 'h1',
+  '1:30h': 'h90',
+  '2hr': 'h2',
+}
 
 
 // Compact stat component
@@ -174,6 +192,7 @@ export function ActivityDetail() {
   const [isSelecting, setIsSelecting] = useState(false)
   const [selectionSource, setSelectionSource] = useState<SelectionSource>(null)
   const [activePowerIndex, setActivePowerIndex] = useState<number | null>(null)
+  const [powerPanelView, setPowerPanelView] = useState<PowerPanelView>('summary')
   const [selectedSegmentEffortId, setSelectedSegmentEffortId] = useState<number | null>(null)
   const [activityGearId, setActivityGearId] = useState('')
   const [selectedPhotoIndex, setSelectedPhotoIndex] = useState<number | null>(null)
@@ -222,6 +241,12 @@ export function ActivityDetail() {
   })
 
   const { data: profile } = useUserProfile()
+
+  const { data: powerCurve } = useQuery({
+    queryKey: ['activity-power-curve', id],
+    queryFn: () => getActivityPowerCurve(Number(id)),
+    enabled: !!activity?.streams?.watts,
+  })
 
   const { data: powerMetrics } = useQuery({
     queryKey: ['activity-power-metrics', id],
@@ -353,6 +378,18 @@ export function ActivityDetail() {
     unitKj,
     unitWatt,
   ])
+
+  const activityPowerCurveRows = useMemo(() => (
+    (powerCurve?.durations || [])
+      .filter((duration) => duration.watts)
+      .map((duration) => {
+        const key = POWER_DURATION_KEYS[duration.label]
+        return {
+          label: key ? t(`activityDetail.bestStats.durations.${key}`) : duration.label,
+          value: `${duration.watts} ${unitWatt}`,
+        }
+      })
+  ), [powerCurve?.durations, t, unitWatt])
 
   const createManualSegmentMutation = useMutation({
     mutationFn: (input: { activityId: number; startIndex: number; endIndex: number; name?: string }) => (
@@ -2090,31 +2127,260 @@ export function ActivityDetail() {
 
         {/* Right Sidebar - Power Data */}
         <div className="lg:col-span-1 space-y-4">
+          {/* Trainingsreiz */}
+          <Card className={trainingStimulusCardClass}>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+                </svg>
+                {t('activityDetail.trainingStimulus.title')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {trainingStimulus.state === 'ok' ? (
+                <div className="space-y-2">
+                  <div className={`text-sm font-semibold ${trainingStimulus.levelClass}`}>
+                    {trainingStimulus.level}
+                  </div>
+                  <div className="text-xs text-muted-foreground">
+                    {trainingStimulus.durationLabel} · {trainingStimulus.intensityLabel}
+                  </div>
+                  {trainingStimulus.insights.state === 'ok' && (
+                    <div className="flex flex-wrap gap-1.5">
+                      {trainingStimulus.insights.zone && (
+                        <Badge variant="outline" className={trainingStimulus.insights.zone.className}>
+                          {trainingStimulus.insights.zone.label}
+                        </Badge>
+                      )}
+                      {trainingStimulus.insights.impact && (
+                        <Badge variant="outline" className={trainingStimulus.insights.impact.className}>
+                          {trainingStimulus.insights.impact.label}
+                        </Badge>
+                      )}
+                      {trainingStimulus.insights.relativeImpact && (
+                        <Badge variant="outline" className={trainingStimulus.insights.relativeImpact.className}>
+                          {trainingStimulus.insights.relativeImpact.label}
+                        </Badge>
+                      )}
+                    </div>
+                  )}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="rounded-md border border-border/50 bg-secondary/30 px-2 py-1">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.trainingStimulus.metrics.if')}</div>
+                      <div className="font-semibold">{trainingStimulus.intensityFactor.toFixed(2)}</div>
+                    </div>
+                    <div className="rounded-md border border-border/50 bg-secondary/30 px-2 py-1">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.trainingStimulus.metrics.tss')}</div>
+                      <div className="font-semibold">{trainingStimulus.tss.toFixed(0)}</div>
+                    </div>
+                    <div className="rounded-md border border-border/50 bg-secondary/30 px-2 py-1">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.trainingStimulus.metrics.np')}</div>
+                      <div className="font-semibold">{trainingStimulus.normalizedPower ? `${trainingStimulus.normalizedPower} ${unitWatt}` : notAvailable}</div>
+                    </div>
+                    <div className="rounded-md border border-border/50 bg-secondary/30 px-2 py-1">
+                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.trainingStimulus.duration')}</div>
+                      <div className="font-semibold">{trainingStimulus.durationLabel}</div>
+                    </div>
+                  </div>
+                  {trainingStimulus.insights.pmcDeltaSummary && (
+                    <div className="text-[11px] text-muted-foreground">
+                      {t('activityDetail.trainingStimulus.dailyImpact', { value: trainingStimulus.insights.pmcDeltaSummary })}
+                    </div>
+                  )}
+                  <div className="text-[11px] text-muted-foreground">
+                    {t('activityDetail.trainingStimulus.basedOn')}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-2 text-xs text-muted-foreground">
+                  {trainingStimulus.message}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+
+          {hasPower && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                  {t('activityDetail.powerSummary.title')}
+                </CardTitle>
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {(['summary', 'zones', 'curve'] as PowerPanelView[]).map((view) => (
+                    <button
+                      key={view}
+                      type="button"
+                      onClick={() => setPowerPanelView(view)}
+                      className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                        powerPanelView === view
+                          ? 'border-primary/40 bg-primary/10 text-primary'
+                          : 'border-border/60 bg-background/70 text-muted-foreground hover:text-foreground'
+                      }`}
+                    >
+                      {t(`activityDetail.powerSummary.views.${view}`)}
+                    </button>
+                  ))}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {t(`activityDetail.powerSummary.subtitles.${powerPanelView}`)}
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {powerPanelView === 'summary' && (
+                  activityPowerRows.length > 0 ? (
+                    <div className="divide-y divide-border">
+                      {activityPowerRows.map((row) => (
+                        <div key={`${row.label}-${row.value}`} className="flex items-center justify-between py-2 text-sm">
+                          <span className="text-muted-foreground">{row.label}</span>
+                          <span className="font-medium text-primary">{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-4 text-xs text-muted-foreground">
+                      {t('activityDetail.power.noData')}
+                    </div>
+                  )
+                )}
+
+                {powerPanelView === 'curve' && (
+                  activityPowerCurveRows.length > 0 ? (
+                    <div className="divide-y divide-border">
+                      {activityPowerCurveRows.map((row) => (
+                        <div key={`${row.label}-${row.value}`} className="flex items-center justify-between py-2 text-sm">
+                          <span className="text-muted-foreground">{row.label}</span>
+                          <span className="font-medium text-primary">{row.value}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="py-4 text-xs text-muted-foreground">
+                      {t('activityDetail.bestStats.empty.power')}
+                    </div>
+                  )
+                )}
+
+                {powerPanelView === 'zones' && (
+                  powerZones.length > 0 ? (
+                    <div className="flex flex-col gap-3">
+                      <div className="relative h-44">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <PieChart>
+                            <Pie
+                              data={powerZones}
+                              dataKey="value"
+                              nameKey="name"
+                              innerRadius={46}
+                              outerRadius={72}
+                              paddingAngle={1}
+                              cornerRadius={4}
+                              stroke="hsl(var(--background))"
+                              strokeWidth={2}
+                              onMouseEnter={(_, index) => setActivePowerIndex(index)}
+                              onMouseLeave={() => setActivePowerIndex(null)}
+                            >
+                              {powerZones.map((zone, index) => (
+                                <Cell
+                                  key={`power-zone-${zone.zone}`}
+                                  fill={zone.color}
+                                  opacity={activePowerIndex === null || activePowerIndex === index ? 1 : 0.45}
+                                  stroke={activePowerIndex === index ? 'hsl(var(--foreground))' : 'hsl(var(--background))'}
+                                  strokeWidth={activePowerIndex === index ? 2.5 : 1}
+                                />
+                              ))}
+                            </Pie>
+                            <Tooltip
+                              content={({ active, payload }) => {
+                                if (!active || !payload || payload.length === 0) return null
+                                const zone = payload[0].payload
+                                return (
+                                  <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
+                                    <div className="font-semibold">{`Z${zone.zone} ${zone.name}`}</div>
+                                    <div className="text-muted-foreground">{`${formatDuration(zone.value)} - ${zone.percent}%`}</div>
+                                  </div>
+                                )
+                              }}
+                            />
+                          </PieChart>
+                        </ResponsiveContainer>
+                        <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
+                          {activePowerIndex !== null && powerZones[activePowerIndex] ? (
+                            <>
+                              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{`Z${powerZones[activePowerIndex].zone}`}</div>
+                              <div className="text-xs font-semibold text-foreground">{powerZones[activePowerIndex].name}</div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {`${formatDuration(powerZones[activePowerIndex].value)} - ${powerZones[activePowerIndex].percent}%`}
+                              </div>
+                            </>
+                          ) : (
+                            <>
+                              <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.powerZones.total')}</div>
+                              <div className="text-sm font-semibold text-foreground">{formatDuration(powerZoneTotal)}</div>
+                              <div className="text-[11px] text-muted-foreground">{t('activityDetail.powerZones.subtitle')}</div>
+                            </>
+                          )}
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        {powerZones.map((zone, index) => {
+                          const isActive = activePowerIndex === index
+                          return (
+                            <div key={zone.zone} className="flex items-center gap-2 text-xs">
+                              <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
+                              <span className="w-6 font-medium">Z{zone.zone}</span>
+                              <span className={`flex-1 ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>{zone.name}</span>
+                              <span className={isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}>{zone.percent}%</span>
+                              <span className={isActive ? 'font-semibold text-foreground' : 'font-medium'}>{formatDuration(zone.value)}</span>
+                            </div>
+                          )
+                        })}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className="py-6 text-center text-xs text-muted-foreground">
+                      {t('activityDetail.powerZones.noFtp')}
+                    </div>
+                  )
+                )}
+              </CardContent>
+            </Card>
+          )}
+
           {/* Segments */}
           <Card>
             <CardHeader className="pb-2">
               <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M3 3v18h18" />
-                  <path d="m7 14 4-4 4 4 5-5" />
-                </svg>
-                {t('activityDetail.segments.title')} {segmentsData?.count ? t('activityDetail.segments.count', { count: segmentsData.count }) : ''}
+                <div className="flex items-center gap-2 min-w-0">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M9 20 3 17V4l6 3 6-3 6 3v13l-6-3-6 3Z" />
+                    <path d="M9 7v13" />
+                    <path d="M15 4v13" />
+                  </svg>
+                  <span>
+                    {t('activityDetail.segments.title')} {segmentsData?.count ? t('activityDetail.segments.count', { count: segmentsData.count }) : ''}
+                  </span>
+                </div>
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0">
               {segmentsLoading ? (
-                <div className="text-xs text-muted-foreground">{t('activityDetail.segments.loading')}</div>
-              ) : segmentEfforts.length === 0 ? (
-                <div className="text-xs text-muted-foreground">{t('activityDetail.segments.empty')}</div>
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  {t('activityDetail.segments.loading')}
+                </div>
+              ) : sortedSegments.length === 0 ? (
+                <div className="py-6 text-center text-sm text-muted-foreground">
+                  {t('activityDetail.segments.empty')}
+                </div>
               ) : (
-                <div className="space-y-2">
+                <div className="space-y-3">
                   {segmentsToShow.map((segment) => {
-                    const isDisabled = segment.start_index === null
-                      || segment.end_index === null
-                      || segment.start_index === undefined
-                      || segment.end_index === undefined
-                    const isActive = segment.effort_id === selectedSegmentEffortId
+                    const isActive = selectedSegmentEffortId === segment.effort_id
                     const isPr = segment.is_pr === true
+                    const isDisabled = segment.start_index === null || segment.end_index === null
                     const sourceTag = getSegmentSourceTag(segment)
                     const climbCategoryLabel = formatClimbCategory(segment.climb_category, {
                       source: segment.segment_source,
@@ -2206,241 +2472,6 @@ export function ActivityDetail() {
               )}
             </CardContent>
           </Card>
-          {/* Trainingsreiz */}
-          <Card className={trainingStimulusCardClass}>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
-                </svg>
-                {t('activityDetail.trainingStimulus.title')}
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {trainingStimulus.state === 'ok' ? (
-                <div className="space-y-2">
-                  <div className={`text-sm font-semibold ${trainingStimulus.levelClass}`}>
-                    {trainingStimulus.level}
-                  </div>
-                  <div className="text-xs text-muted-foreground">
-                    {trainingStimulus.durationLabel} · {trainingStimulus.intensityLabel}
-                  </div>
-                  {trainingStimulus.insights.state === 'ok' && (
-                    <div className="flex flex-wrap gap-1.5">
-                      {trainingStimulus.insights.zone && (
-                        <Badge variant="outline" className={trainingStimulus.insights.zone.className}>
-                          {trainingStimulus.insights.zone.label}
-                        </Badge>
-                      )}
-                      {trainingStimulus.insights.impact && (
-                        <Badge variant="outline" className={trainingStimulus.insights.impact.className}>
-                          {trainingStimulus.insights.impact.label}
-                        </Badge>
-                      )}
-                      {trainingStimulus.insights.relativeImpact && (
-                        <Badge variant="outline" className={trainingStimulus.insights.relativeImpact.className}>
-                          {trainingStimulus.insights.relativeImpact.label}
-                        </Badge>
-                      )}
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-2 text-xs">
-                    <div className="rounded-md border border-border/50 bg-secondary/30 px-2 py-1">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.trainingStimulus.metrics.if')}</div>
-                      <div className="font-semibold">{trainingStimulus.intensityFactor.toFixed(2)}</div>
-                    </div>
-                    <div className="rounded-md border border-border/50 bg-secondary/30 px-2 py-1">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.trainingStimulus.metrics.tss')}</div>
-                      <div className="font-semibold">{trainingStimulus.tss.toFixed(0)}</div>
-                    </div>
-                    <div className="rounded-md border border-border/50 bg-secondary/30 px-2 py-1">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.trainingStimulus.metrics.np')}</div>
-                      <div className="font-semibold">{trainingStimulus.normalizedPower ? `${trainingStimulus.normalizedPower} ${unitWatt}` : notAvailable}</div>
-                    </div>
-                    <div className="rounded-md border border-border/50 bg-secondary/30 px-2 py-1">
-                      <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.trainingStimulus.duration')}</div>
-                      <div className="font-semibold">{trainingStimulus.durationLabel}</div>
-                    </div>
-                  </div>
-                  {trainingStimulus.insights.pmcDeltaSummary && (
-                    <div className="text-[11px] text-muted-foreground">
-                      {t('activityDetail.trainingStimulus.dailyImpact', { value: trainingStimulus.insights.pmcDeltaSummary })}
-                    </div>
-                  )}
-                  <div className="text-[11px] text-muted-foreground">
-                    {t('activityDetail.trainingStimulus.basedOn')}
-                  </div>
-                </div>
-              ) : (
-                <div className="py-2 text-xs text-muted-foreground">
-                  {trainingStimulus.message}
-                </div>
-              )}
-            </CardContent>
-          </Card>
-
-          {/* Activity Power Summary */}
-          {hasPower && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
-                  </svg>
-                  {t('activityDetail.powerSummary.title')}
-                </CardTitle>
-                <div className="text-xs text-muted-foreground">
-                  {t('activityDetail.powerSummary.subtitle')}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                {activityPowerRows.length > 0 ? (
-                  <div className="divide-y divide-border">
-                    {activityPowerRows.map((row) => (
-                      <div key={`${row.label}-${row.value}`} className="flex items-center justify-between py-2 text-sm">
-                        <span className="text-muted-foreground">{row.label}</span>
-                        <span className="font-medium text-primary">{row.value}</span>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className="py-4 text-xs text-muted-foreground">
-                    {t('activityDetail.power.noData')}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Power Zones */}
-          {hasPower && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
-                  </svg>
-                  {t('activityDetail.powerZones.title')}
-                </CardTitle>
-                {powerZones.length > 0 && (
-                  <div className="text-xs text-muted-foreground">
-                    {formatDuration(powerZoneTotal)}
-                  </div>
-                )}
-              </CardHeader>
-              <CardContent className="pt-0">
-                {powerZones.length > 0 ? (
-                  <div className="flex flex-col gap-3">
-                    <div className="relative h-44">
-                      <ResponsiveContainer width="100%" height="100%">
-                        <PieChart>
-                          <Pie
-                            data={powerZones}
-                            dataKey="value"
-                            nameKey="name"
-                            innerRadius={46}
-                            outerRadius={72}
-                            paddingAngle={1}
-                            cornerRadius={4}
-                            stroke="hsl(var(--background))"
-                            strokeWidth={2}
-                            onMouseEnter={(_, index) => setActivePowerIndex(index)}
-                            onMouseLeave={() => setActivePowerIndex(null)}
-                          >
-                            {powerZones.map((zone, index) => (
-                              <Cell
-                                key={`power-zone-${zone.zone}`}
-                                fill={zone.color}
-                                opacity={activePowerIndex === null || activePowerIndex === index ? 1 : 0.45}
-                                stroke={activePowerIndex === index ? 'hsl(var(--foreground))' : 'hsl(var(--background))'}
-                                strokeWidth={activePowerIndex === index ? 2.5 : 1}
-                              />
-                            ))}
-                          </Pie>
-                          <Tooltip
-                            content={({ active, payload }) => {
-                              if (!active || !payload || payload.length === 0) return null
-                              const zone = payload[0].payload
-                              return (
-                                <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
-                                  <div className="font-semibold">{`Z${zone.zone} ${zone.name}`}</div>
-                                  <div className="text-muted-foreground">{`${formatDuration(zone.value)} - ${zone.percent}%`}</div>
-                                </div>
-                              )
-                            }}
-                          />
-                        </PieChart>
-                      </ResponsiveContainer>
-                      <div className="pointer-events-none absolute inset-0 flex flex-col items-center justify-center text-center">
-                        {activePowerIndex !== null && powerZones[activePowerIndex] ? (
-                          <>
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{`Z${powerZones[activePowerIndex].zone}`}</div>
-                            <div className="text-xs font-semibold text-foreground">{powerZones[activePowerIndex].name}</div>
-                            <div className="text-[11px] text-muted-foreground">
-                              {`${formatDuration(powerZones[activePowerIndex].value)} - ${powerZones[activePowerIndex].percent}%`}
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="text-[10px] uppercase tracking-wide text-muted-foreground">{t('activityDetail.powerZones.total')}</div>
-                            <div className="text-sm font-semibold text-foreground">{formatDuration(powerZoneTotal)}</div>
-                            <div className="text-[11px] text-muted-foreground">{t('activityDetail.powerZones.subtitle')}</div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                    <div className="space-y-2">
-                      {powerZones.map((zone, index) => {
-                        const isActive = activePowerIndex === index
-                        return (
-                          <div key={zone.zone} className="flex items-center gap-2 text-xs">
-                            <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: zone.color }} />
-                            <span className="w-6 font-medium">Z{zone.zone}</span>
-                            <span className={`flex-1 ${isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}`}>{zone.name}</span>
-                            <span className={isActive ? 'font-semibold text-foreground' : 'text-muted-foreground'}>{zone.percent}%</span>
-                            <span className={isActive ? 'font-semibold text-foreground' : 'font-medium'}>{formatDuration(zone.value)}</span>
-                          </div>
-                        )
-                      })}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="py-6 text-center text-xs text-muted-foreground">
-                    {t('activityDetail.powerZones.noFtp')}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-          )}
-
-          {/* Heart Rate Ranges */}
-          {heartRateRanges.length > 0 && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
-                  </svg>
-                  {t('activityDetail.heartRateRanges.title')}
-                </CardTitle>
-                <div className="text-xs text-muted-foreground">
-                  {formatDuration(heartRateRangeTotal)}
-                </div>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-2">
-                  {heartRateRanges.map((range) => (
-                    <div key={range.label} className="flex items-center gap-2 text-xs">
-                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: range.color }} />
-                      <span className="w-16 font-medium">{range.label} {unitBpm}</span>
-                      <span className="flex-1 text-muted-foreground">{range.percent}%</span>
-                      <span className="font-medium">{formatDuration(range.value)}</span>
-                    </div>
-                  ))}
-                </div>
-              </CardContent>
-            </Card>
-          )}
 
           {/* Gear Info */}
           <Card>
@@ -2506,6 +2537,35 @@ export function ActivityDetail() {
               </Link>
             </CardContent>
           </Card>
+
+          {/* Heart Rate Ranges */}
+          {heartRateRanges.length > 0 && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/>
+                  </svg>
+                  {t('activityDetail.heartRateRanges.title')}
+                </CardTitle>
+                <div className="text-xs text-muted-foreground">
+                  {formatDuration(heartRateRangeTotal)}
+                </div>
+              </CardHeader>
+              <CardContent className="pt-0">
+                <div className="space-y-2">
+                  {heartRateRanges.map((range) => (
+                    <div key={range.label} className="flex items-center gap-2 text-xs">
+                      <span className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: range.color }} />
+                      <span className="w-16 font-medium">{range.label} {unitBpm}</span>
+                      <span className="flex-1 text-muted-foreground">{range.percent}%</span>
+                      <span className="font-medium">{formatDuration(range.value)}</span>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>

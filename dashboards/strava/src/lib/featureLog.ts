@@ -26,18 +26,20 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
       en: 'Activity details: clearer sidebar and direct gear hint',
     },
     summary: {
-      de: 'In den Aktivitätsdetails stehen Trainingsreiz und Aktivitäts-Powerwerte jetzt klarer oben. Fehlende Rad- oder Gear-Zuordnung wird direkt in der Sidebar sichtbar.',
-      en: 'In activity details, training stimulus and activity power values now sit clearly at the top. Missing bike or gear assignment is now visible directly in the sidebar.',
+      de: 'In den Aktivitätsdetails stehen Trainingsreiz, Power, Segmente und Ausrüstung jetzt in klarer Reihenfolge. Die Power-Kachel lässt sich zwischen Werten, Zonen und Bestwerten der Aktivität umschalten.',
+      en: 'In activity details, training stimulus, power, segments, and gear now follow a clearer order. The power card can switch between activity values, zones, and best efforts.',
     },
     bullets: {
       de: [
-        'Unter dem Trainingsreiz steht jetzt eine feste Power-Werte-Kachel nur mit Werten aus dieser Aktivität.',
+        'Die Sidebar-Reihenfolge lautet jetzt: Trainingsreiz, Power, Segmente, Ausrüstung.',
+        'Die Power-Kachel bündelt Aktivitätswerte, Power-Zonen und Bestwerte je Zeitbereich in einer einzigen Ansicht.',
         'Die separate Trittfrequenz-Kachel wurde entfernt, damit die Sidebar ruhiger bleibt.',
         'Wenn bei einer Fahrt noch kein Rad zugeordnet ist, erscheint ein klarer Hinweis mit direkter Korrekturmöglichkeit.',
         'Die Sidecar-Hilfe zeigt ihre Schritte jetzt untereinander und nutzt neutrale IP-Platzhalter statt einer konkreten Server-IP.',
       ],
       en: [
-        'Below the training stimulus, there is now a fixed power-values card with values from this activity only.',
+        'The sidebar order is now: training stimulus, power, segments, gear.',
+        'The power card now combines activity values, power zones, and best efforts by duration in one place.',
         'The separate cadence card has been removed to keep the sidebar calmer.',
         'If a ride has no bike assigned yet, the sidebar now shows a direct hint and correction path.',
         'The sidecar help now shows its steps vertically and uses neutral IP placeholders instead of a specific server IP.',
