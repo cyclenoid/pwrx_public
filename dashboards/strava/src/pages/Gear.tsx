@@ -402,8 +402,11 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <Card className="max-h-[90vh] w-full max-w-5xl overflow-hidden bg-background shadow-2xl" onClick={e => e.stopPropagation()}>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+      <Card
+        className="max-h-[90vh] w-full max-w-5xl overflow-hidden border-border bg-neutral-950 text-foreground shadow-[0_28px_90px_rgba(0,0,0,0.7)]"
+        onClick={e => e.stopPropagation()}
+      >
+        <CardHeader className="flex flex-row items-center justify-between space-y-0 border-b border-border/70 bg-neutral-950 pb-2">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-full ${gearType === 'bike' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
               <GearIcon type={gear.type} className="w-6 h-6" />
@@ -433,7 +436,7 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
           </button>
         </CardHeader>
 
-        <CardContent className="space-y-6 overflow-y-auto max-h-[calc(90vh-100px)]">
+        <CardContent className="max-h-[calc(90vh-100px)] space-y-6 overflow-y-auto bg-neutral-950">
           {/* Stats */}
           <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <StatCard
@@ -463,12 +466,12 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
           </div>
 
           {gear.description && (
-            <div className="p-4 bg-secondary/30 rounded-lg">
+            <div className="rounded-lg border border-border/60 bg-neutral-900 p-4">
               <p className="text-sm">{gear.description}</p>
             </div>
           )}
 
-          <Card className="border-border/60 bg-card/40">
+          <Card className="border-border/60 bg-neutral-900">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">{t('gear.detail.yearTrendTitle')}</CardTitle>
               <p className="text-sm text-muted-foreground">{t('gear.detail.yearTrendSubtitle')}</p>
@@ -529,7 +532,7 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
             </CardContent>
           </Card>
 
-          <Card className="border-border/60 bg-card/40">
+          <Card className="border-border/60 bg-neutral-900">
             <CardHeader className="pb-2">
               <CardTitle className="text-base">{t('gear.detail.recentTitle')}</CardTitle>
             </CardHeader>
@@ -539,7 +542,7 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
                   <Link
                     key={activity.strava_activity_id}
                     to={`/activity/${activity.strava_activity_id}`}
-                    className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-sm transition-colors hover:border-primary/30 hover:bg-primary/5"
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-neutral-950 px-3 py-2 text-sm transition-colors hover:border-primary/30 hover:bg-primary/5"
                   >
                     <div className="min-w-0">
                       <div className="truncate font-medium">{activity.name}</div>
@@ -602,7 +605,7 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
                         : t('gear.maintenance.status.left', { km: formatNumber(remainingKm, 0) }))
                       : t('gear.maintenance.status.unset')
                     return (
-                      <div key={item.component_key} className="border border-border/60 rounded-lg p-4 space-y-2">
+                      <div key={item.component_key} className="rounded-lg border border-border/60 bg-neutral-900 p-4 space-y-2">
                         <div className="flex flex-wrap items-center gap-3">
                           <div className="font-medium">{item.label}</div>
                           <div className="flex items-center gap-2 text-sm text-muted-foreground">
@@ -656,7 +659,7 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
                         : t('gear.maintenance.status.left', { km: formatNumber(remainingKm, 0) }))
                       : t('gear.maintenance.status.unset')
                     return (
-                      <div key={item.component_key} className="border border-border/60 rounded-lg p-4 space-y-3">
+                      <div key={item.component_key} className="rounded-lg border border-border/60 bg-neutral-900 p-4 space-y-3">
                         <div className="grid grid-cols-1 md:grid-cols-[1fr_140px_auto_auto] gap-2 items-center">
                           <input
                             type="text"
@@ -694,7 +697,7 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
                   })
                 )}
 
-                <div className="border border-dashed border-border/60 rounded-lg p-4 space-y-2">
+                <div className="rounded-lg border border-dashed border-border/60 bg-neutral-900 p-4 space-y-2">
                   <div className="text-sm font-medium">{t('gear.maintenance.addTitle')}</div>
                   <div className="flex flex-wrap gap-2">
                     <input
