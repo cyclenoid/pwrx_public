@@ -33,14 +33,14 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
       de: [
         'Unter der Power-Kachel erscheinen jetzt nur noch vergleichbare Aktivitäten mit mindestens 90% Strecken-Match.',
         'Die Liste der Vergleichsfahrten verlinkt direkt in die jeweilige Aktivität.',
-        'Auf der Gear-Seite vergleicht die Sidebar Räder jetzt als Top-Listen nach Strecke, Höhenmetern und Ø km/h.',
-        'Statt einer Gesamtsumme siehst Du damit sofort, welches Rad in welcher Kennzahl vorne liegt.',
+        'Auf der Gear-Seite vergleicht die Sidebar Räder jetzt als kompakte Rankings nach Strecke, Höhenmetern und Ø km/h.',
+        'Die Rankings zeigen alle Räder und machen die Reihenfolge über Rang-Badges und Balken schneller lesbar.',
       ],
       en: [
         'The new card below the power section now shows only comparable efforts with at least a 90% route match.',
         'Each comparable activity in the list now links directly to its own activity page.',
-        'On the gear page, the sidebar now compares bikes as ranked lists for distance, elevation, and avg km/h.',
-        'Instead of one combined total, you can now see immediately which bike leads in each metric.',
+        'On the gear page, the sidebar now compares bikes in compact rankings for distance, elevation, and avg km/h.',
+        'The rankings now show all bikes and make the order easier to scan with rank badges and progress bars.',
       ],
     },
   },
