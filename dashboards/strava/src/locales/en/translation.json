@@ -279,7 +279,6 @@
     "title": "Understand the Strava sidecar",
     "subtitle": "The sidecar path is meant for users who want to bring Strava files into PWRX automatically on a regular basis without changing the normal file-import model.",
     "openImport": "Open import",
-    "openGuide": "Open detailed guide",
     "keyPointTitle": "Most important point",
     "keyPointBody": "Sidecar is not a toggle inside PWRX. It is a separate helper tool or script running outside PWRX. It downloads data from Strava and places files into your import folder. PWRX then imports those files like any normal file import.",
     "whatItIs": {
@@ -288,7 +287,7 @@
     },
     "whatItIsNot": {
       "title": "What sidecar is not",
-      "body": "It is not a settings switch and not a feature that starts just because you entered tokens somewhere. If you already run a direct Strava sync, you usually do not need sidecar on top."
+      "body": "It is not a settings switch and not a feature that starts just because you entered credentials somewhere. Setup happens separately outside PWRX."
     },
     "steps": {
       "title": "How it works",
@@ -306,6 +305,26 @@
         "You want new activities to arrive automatically on a regular basis.",
         "You run PWRX locally on your computer, on a server, or on a NAS.",
         "You want to stay on the public repo baseline while still adding automated retrieval."
+      ]
+    },
+    "install": {
+      "title": "How to set it up",
+      "subtitle": "The process is similar whether you run it on a PC, server, or NAS.",
+      "items": [
+        "First decide where the sidecar should run: on your computer, your server, or your NAS.",
+        "Create your own Strava app and note the client ID, client secret, and refresh token.",
+        "Configure the sidecar so it writes new files into your PWRX import folder or watch folder.",
+        "Start the sidecar manually once and then check the PWRX import page for new files or a new import run.",
+        "Once that works, schedule the sidecar to run regularly, for example with Task Scheduler, cron, or a NAS job."
+      ]
+    },
+    "check": {
+      "title": "How to tell it works",
+      "subtitle": "You do not need to enable anything inside PWRX for this.",
+      "items": [
+        "A new import run or new files show up on the import page.",
+        "The activities then appear in the dashboard and activity list.",
+        "If nothing arrives, check the sidecar job and destination folder first, not the normal PWRX settings."
       ]
     },
     "requirements": {
