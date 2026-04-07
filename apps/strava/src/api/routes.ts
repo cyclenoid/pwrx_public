@@ -6516,6 +6516,7 @@ router.get('/tech/cached', async (req: Request, res: Response) => {
 router.get('/sync-logs', async (req: Request, res: Response) => {
   try {
     const limit = parseInt(req.query.limit as string) || 50;
+    await db.reconcileStaleSyncLogs();
 
     const result = await db.query(`
       SELECT
