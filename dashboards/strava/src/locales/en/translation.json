@@ -1652,12 +1652,16 @@
       "activities": "Activities",
       "hours": "Hours",
       "status": "Status",
-      "avgSpeed": "Avg speed"
+      "avgSpeed": "Avg speed",
+      "rankedBikes": "Ranked bikes"
     },
     "sidebar": {
       "title": "Statistics",
-      "subtitle": "Your gear usage at a glance.",
-      "breakdownTitle": "Breakdown"
+      "subtitle": "Compare your bikes directly by metric.",
+      "breakdownTitle": "Breakdown",
+      "topDistance": "Top bikes by distance",
+      "topElevation": "Top bikes by elevation",
+      "topSpeed": "Top bikes by avg km/h"
     },
     "manualCreate": {
       "title": "Add gear manually",

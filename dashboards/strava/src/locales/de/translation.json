@@ -1652,12 +1652,16 @@
       "activities": "Aktivitäten",
       "hours": "Stunden",
       "status": "Status",
-      "avgSpeed": "Ø Geschwindigkeit"
+      "avgSpeed": "Ø Geschwindigkeit",
+      "rankedBikes": "Räder im Ranking"
     },
     "sidebar": {
       "title": "Statistiken",
-      "subtitle": "Deine Gear-Nutzung auf einen Blick.",
-      "breakdownTitle": "Aufteilung"
+      "subtitle": "Vergleiche Deine Räder direkt nach Kennzahl.",
+      "breakdownTitle": "Aufteilung",
+      "topDistance": "Top Räder nach Strecke",
+      "topElevation": "Top Räder nach Höhenmetern",
+      "topSpeed": "Top Räder nach Ø km/h"
     },
     "manualCreate": {
       "title": "Ausrüstung manuell erfassen",

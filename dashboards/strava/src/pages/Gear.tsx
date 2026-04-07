@@ -44,6 +44,42 @@ function StatCard({ label, value, unit, icon }: { label: string; value: string |
   )
 }
 
+function RankingCard({
+  title,
+  rows,
+  unit,
+}: {
+  title: string
+  rows: Array<{ id: string; name: string; value: number }>
+  unit?: string
+}) {
+  return (
+    <Card>
+      <CardHeader className="pb-2">
+        <CardTitle className="text-sm">{title}</CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-2">
+        {rows.length > 0 ? (
+          rows.map((row, index) => (
+            <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card/40 px-3 py-2">
+              <div className="min-w-0">
+                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">#{index + 1}</div>
+                <div className="truncate text-sm font-medium">{row.name}</div>
+              </div>
+              <div className="shrink-0 text-sm font-semibold text-primary">
+                {formatNumber(row.value, unit === 'km/h' ? 1 : 0)}
+                {unit ? ` ${unit}` : ''}
+              </div>
+            </div>
+          ))
+        ) : (
+          <div className="text-sm text-muted-foreground">--</div>
+        )}
+      </CardContent>
+    </Card>
+  )
+}
+
 const getGearDistanceKm = (gear: GearType) => {
   if (gear.gear_total_distance_km !== undefined && gear.gear_total_distance_km !== null) {
     return Number(gear.gear_total_distance_km) || 0
@@ -628,16 +664,46 @@ export function Gear() {
 
   const activeGear = (gearList || []).filter(g => !g.retired)
   const retiredGear = (gearList || []).filter(g => g.retired)
+  const bikeGear = (gearList || []).filter((g) => resolveGearType(g.type, g.id) === 'bike')
 
   // Stats
-  const totalGear = (gearList || []).length
   const totalBikes = (gearList || []).filter(g => resolveGearType(g.type, g.id) === 'bike').length
   const totalShoes = (gearList || []).filter(g => resolveGearType(g.type, g.id) === 'shoes').length
-  const totalDistance = (gearList || []).reduce((sum, g) => sum + getGearDistanceKm(g), 0)
-  const totalElevation = (gearList || []).reduce((sum, g) => sum + Number(g.total_elevation_m || 0), 0)
-  const totalHours = (gearList || []).reduce((sum, g) => sum + Number(g.total_hours || 0), 0)
-  const avgGearSpeed = totalHours > 0 ? totalDistance / totalHours : 0
   const totalActivities = (gearList || []).reduce((sum, g) => sum + Number(g.activity_count || 0), 0)
+
+  const topDistanceBikes = useMemo(() => (
+    [...bikeGear]
+      .sort((a, b) => getGearDistanceKm(b) - getGearDistanceKm(a))
+      .slice(0, 5)
+      .map((gear) => ({
+        id: gear.id,
+        name: gear.name,
+        value: getGearDistanceKm(gear),
+      }))
+  ), [bikeGear])
+
+  const topElevationBikes = useMemo(() => (
+    [...bikeGear]
+      .sort((a, b) => Number(b.total_elevation_m || 0) - Number(a.total_elevation_m || 0))
+      .slice(0, 5)
+      .map((gear) => ({
+        id: gear.id,
+        name: gear.name,
+        value: Number(gear.total_elevation_m || 0),
+      }))
+  ), [bikeGear])
+
+  const topSpeedBikes = useMemo(() => (
+    [...bikeGear]
+      .filter((gear) => Number(gear.avg_speed_kmh || 0) > 0)
+      .sort((a, b) => Number(b.avg_speed_kmh || 0) - Number(a.avg_speed_kmh || 0))
+      .slice(0, 5)
+      .map((gear) => ({
+        id: gear.id,
+        name: gear.name,
+        value: Number(gear.avg_speed_kmh || 0),
+      }))
+  ), [bikeGear])
 
   if (isError) {
     return (
@@ -815,33 +881,6 @@ export function Gear() {
             </CardHeader>
             <CardContent className="grid grid-cols-2 gap-3">
               <StatCard
-                label={t('gear.stats.totalGear')}
-                value={totalGear}
-              />
-              <StatCard
-                label={t('gear.stats.totalDistance')}
-                value={formatNumber(totalDistance, 0)}
-                unit={t('records.units.km')}
-              />
-              <StatCard
-                label={t('gear.stats.totalElevation')}
-                value={formatNumber(totalElevation, 0)}
-                unit={t('activityDetail.units.m')}
-              />
-              <StatCard
-                label={t('gear.stats.avgSpeed')}
-                value={avgGearSpeed > 0 ? formatNumber(avgGearSpeed, 1) : '--'}
-                unit={avgGearSpeed > 0 ? t('activityDetail.units.kmh') : undefined}
-              />
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm">{t('gear.sidebar.breakdownTitle')}</CardTitle>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
-              <StatCard
                 label={t('gear.stats.bikes')}
                 value={totalBikes}
                 icon={<GearIcon type="bike" className="w-5 h-5" />}
@@ -856,11 +895,27 @@ export function Gear() {
                 value={totalActivities}
               />
               <StatCard
-                label={t('gear.stats.hours')}
-                value={formatNumber(totalHours, 1)}
+                label={t('gear.stats.rankedBikes')}
+                value={bikeGear.length}
               />
             </CardContent>
           </Card>
+
+          <RankingCard
+            title={t('gear.sidebar.topDistance')}
+            rows={topDistanceBikes}
+            unit={t('records.units.km')}
+          />
+          <RankingCard
+            title={t('gear.sidebar.topElevation')}
+            rows={topElevationBikes}
+            unit={t('activityDetail.units.m')}
+          />
+          <RankingCard
+            title={t('gear.sidebar.topSpeed')}
+            rows={topSpeedBikes}
+            unit={t('activityDetail.units.kmh')}
+          />
         </aside>
       </div>
 
