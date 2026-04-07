@@ -781,7 +781,16 @@
     },
     "powerSummary": {
       "title": "Power-Werte",
-      "subtitle": "Nur Werte aus dieser Aktivität.",
+      "views": {
+        "summary": "Werte",
+        "zones": "Zonen",
+        "curve": "Bestwerte"
+      },
+      "subtitles": {
+        "summary": "Nur Werte aus dieser Aktivität.",
+        "zones": "Verteilung dieser Aktivität über Deine Power-Zonen.",
+        "curve": "Beste Leistung dieser Aktivität je Zeitbereich."
+      },
       "labels": {
         "avgPower": "Ø Leistung",
         "maxPower": "Max Leistung",

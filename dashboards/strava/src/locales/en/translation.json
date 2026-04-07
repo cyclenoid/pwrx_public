@@ -781,7 +781,16 @@
     },
     "powerSummary": {
       "title": "Power values",
-      "subtitle": "Only values from this activity.",
+      "views": {
+        "summary": "Values",
+        "zones": "Zones",
+        "curve": "Best efforts"
+      },
+      "subtitles": {
+        "summary": "Only values from this activity.",
+        "zones": "Distribution of this activity across your power zones.",
+        "curve": "Best power from this activity across key durations."
+      },
       "labels": {
         "avgPower": "Avg power",
         "maxPower": "Max power",
