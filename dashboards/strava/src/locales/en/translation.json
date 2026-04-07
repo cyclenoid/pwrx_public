@@ -311,7 +311,7 @@
             },
             {
               "label": "Server or NAS example",
-              "code": "http://<pwrx-host>:3001/api/health"
+              "code": "http://YOUR-SERVER-IP:3001/api/health"
             }
           ]
         },
@@ -779,6 +779,18 @@
         "anaerobic": "Anaerobic"
       }
     },
+    "powerSummary": {
+      "title": "Power values",
+      "subtitle": "Only values from this activity.",
+      "labels": {
+        "avgPower": "Avg power",
+        "maxPower": "Max power",
+        "np": "NP",
+        "if": "IF",
+        "vi": "VI",
+        "energy": "Energy"
+      }
+    },
     "bestStats": {
       "options": {
         "bestPower": "Best power",
@@ -847,9 +859,13 @@
       "details": "Open gear page →",
       "assign": "Assign gear",
       "saving": "Saving...",
+      "current": "Current: {{name}}",
       "unassigned": "No gear",
+      "unassignedRide": "No bike assigned",
       "noGear": "No gear available yet. Create bike/shoes first on the gear page.",
-      "assignError": "Failed to assign gear to activity."
+      "assignError": "Failed to assign gear to activity.",
+      "missingRideHint": "No bike is assigned to this ride yet. If the assignment is missing or no longer correct, you can fix it here.",
+      "missingHint": "No gear is assigned to this activity yet. If the assignment is missing or no longer correct, you can fix it here."
     },
     "power": {
       "noData": "No power data"
