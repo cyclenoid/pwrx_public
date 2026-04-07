@@ -203,17 +203,19 @@
       "yearToDate": "Year",
       "pizzaEquivalent": "≈ {{value}} pizza"
     },
-    "newsCard": {
-      "title": "Important news",
-      "subtitle": "Data import: 3 paths for existing users",
-      "pathSingleTitle": "1) Single import",
-      "pathSingleBody": "Upload individual FIT/GPX/TCX files directly.",
-      "pathBulkTitle": "2) Bulk / watch folder",
-      "pathBulkBody": "Import many files or ZIP bundles in one run.",
-      "pathSidecarTitle": "3) Sidecar (optional)",
-      "pathSidecarBody": "An external job pulls Strava data and drops files into the import folder.",
-      "openImport": "Open import",
-      "openSyncSettings": "Sync settings"
+    "tipsCard": {
+      "title": "Tips",
+      "subtitle": "Short practical tips for everyday PWRX use",
+      "prevTip": "Previous tip",
+      "nextTip": "Next tip",
+      "fallbackPrimaryAction": "Open import",
+      "fallbackSecondaryAction": "Sync settings",
+      "automateFetch": {
+        "title": "Automate your data retrieval",
+        "body": "If you regularly get new activities, use the optional sidecar path: an external job fetches data and drops it automatically into the PWRX import folder.",
+        "primaryAction": "Sync settings",
+        "secondaryAction": "Open import"
+      }
     },
     "versionCard": {
       "title": "Version",
