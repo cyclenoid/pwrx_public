@@ -4675,12 +4675,23 @@ router.get('/gear', async (req: Request, res: Response) => {
       SELECT
         gu.*,
         g.description,
+        COALESCE(gear_stats.total_elevation_m, 0) AS total_elevation_m,
+        COALESCE(gear_stats.avg_speed_kmh, 0) AS avg_speed_kmh,
         CASE
           WHEN g.id LIKE 'mb_%' OR g.id LIKE 'mg_%' THEN 'manual'
           ELSE 'synced'
         END AS source
       FROM gear_usage gu
       JOIN gear g ON g.id = gu.id
+      LEFT JOIN (
+        SELECT
+          gear_id,
+          COALESCE(SUM(total_elevation_gain), 0) AS total_elevation_m,
+          COALESCE(AVG(average_speed) * 3.6, 0) AS avg_speed_kmh
+        FROM strava.activities
+        WHERE gear_id IS NOT NULL
+        GROUP BY gear_id
+      ) gear_stats ON gear_stats.gear_id = gu.id
       ORDER BY gu.total_distance_km DESC NULLS LAST
     `);
 
@@ -4881,7 +4892,23 @@ router.get('/gear/:id', async (req: Request, res: Response) => {
     }
 
     const usageResult = await db.query(
-      'SELECT * FROM gear_usage WHERE id = $1',
+      `
+      SELECT
+        gu.*,
+        COALESCE(gear_stats.total_elevation_m, 0) AS total_elevation_m,
+        COALESCE(gear_stats.avg_speed_kmh, 0) AS avg_speed_kmh
+      FROM gear_usage gu
+      LEFT JOIN (
+        SELECT
+          gear_id,
+          COALESCE(SUM(total_elevation_gain), 0) AS total_elevation_m,
+          COALESCE(AVG(average_speed) * 3.6, 0) AS avg_speed_kmh
+        FROM strava.activities
+        WHERE gear_id IS NOT NULL
+        GROUP BY gear_id
+      ) gear_stats ON gear_stats.gear_id = gu.id
+      WHERE gu.id = $1
+      `,
       [id]
     );
 
