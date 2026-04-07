@@ -2,7 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
-import { UploadCloud, FileUp, Loader2, CheckCircle2, AlertTriangle, FileArchive } from 'lucide-react'
+import { UploadCloud, FileUp, Loader2, CheckCircle2, AlertTriangle, FileArchive, BookOpen } from 'lucide-react'
 import {
   deleteFailedImportQueueJobs,
   deleteImportQueueJob,
@@ -795,6 +795,24 @@ export default function ImportPage({ mode = 'simple' }: ImportPageProps) {
               {uploadErrorMessage}
             </div>
           )}
+        </CardContent>
+      </Card>
+
+      <Card className="border-orange-500/25 bg-gradient-to-br from-orange-500/8 via-card/95 to-card shadow-sm">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <BookOpen className="h-4 w-4 text-orange-400" />
+            {t('import.sidecarHint.title')}
+          </CardTitle>
+          <CardDescription>{t('import.sidecarHint.subtitle')}</CardDescription>
+        </CardHeader>
+        <CardContent className="flex flex-wrap items-center gap-3 text-sm">
+          <p className="max-w-3xl text-muted-foreground">
+            {t('import.sidecarHint.body')}
+          </p>
+          <Link to="/help/sidecar" className="font-medium text-orange-400 hover:text-orange-300">
+            {t('import.sidecarHint.openHelp')}
+          </Link>
         </CardContent>
       </Card>
 
