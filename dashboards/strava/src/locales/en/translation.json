@@ -876,6 +876,13 @@
       "missingRideHint": "No bike is assigned to this ride yet. If the assignment is missing or no longer correct, you can fix it here.",
       "missingHint": "No gear is assigned to this activity yet. If the assignment is missing or no longer correct, you can fix it here."
     },
+    "comparable": {
+      "title": "Comparable activities",
+      "subtitle": "Similar routes tracked over time by avg speed.",
+      "current": "Current",
+      "match": "{{percent}}% route match",
+      "empty": "No close route matches found yet. As soon as you repeat the same route more often, the comparison will appear here."
+    },
     "power": {
       "noData": "No power data"
     }
@@ -1639,10 +1646,18 @@
     "stats": {
       "bikes": "Bikes",
       "shoes": "Shoes",
+      "totalGear": "Gear",
       "totalDistance": "Total distance",
+      "totalElevation": "Elevation gain",
       "activities": "Activities",
       "hours": "Hours",
-      "status": "Status"
+      "status": "Status",
+      "avgSpeed": "Avg speed"
+    },
+    "sidebar": {
+      "title": "Statistics",
+      "subtitle": "Your gear usage at a glance.",
+      "breakdownTitle": "Breakdown"
     },
     "manualCreate": {
       "title": "Add gear manually",

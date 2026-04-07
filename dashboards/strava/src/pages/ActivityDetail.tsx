@@ -6,6 +6,7 @@ import {
   createManualLocalSegment,
   deleteActivity,
   getActivity,
+  getComparableActivities,
   getActivityKmSplits,
   getActivityPowerCurve,
   getActivityPowerMetrics,
@@ -142,6 +143,15 @@ const normalizeSelection = (selection: { startKm: number; endKm: number } | null
 
 type SelectionSource = 'elevation' | 'speed' | 'heartrate' | 'power' | 'cadence' | null
 type PowerPanelView = 'summary' | 'zones' | 'curve'
+type ComparableChartRow = {
+  dateKey: string
+  shortDate: string
+  fullDate: string
+  avgSpeed: number
+  movingTime: number
+  overlapPct: number
+  isCurrent: boolean
+}
 
 const RIDE_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide']
 
@@ -252,6 +262,12 @@ export function ActivityDetail() {
     queryKey: ['activity-power-metrics', id],
     queryFn: () => getActivityPowerMetrics(Number(id)),
     enabled: !!activity?.streams?.watts,
+  })
+
+  const { data: comparableActivitiesData } = useQuery({
+    queryKey: ['activity-comparable', id],
+    queryFn: () => getComparableActivities(Number(id), 8),
+    enabled: !!activity,
   })
 
   const { data: kmSplits } = useQuery({
@@ -390,6 +406,76 @@ export function ActivityDetail() {
         }
       })
   ), [powerCurve?.durations, t, unitWatt])
+
+  const comparableActivityRows = useMemo(() => {
+    if (!activity) return []
+
+    const shortFormatter = new Intl.DateTimeFormat(dateLocale, {
+      day: '2-digit',
+      month: '2-digit',
+      year: '2-digit',
+    })
+    const fullFormatter = new Intl.DateTimeFormat(dateLocale, {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: '2-digit',
+    })
+
+    const currentRow = {
+      strava_activity_id: activity.strava_activity_id,
+      name: activity.name,
+      start_date: activity.start_date,
+      moving_time: activity.moving_time,
+      elapsed_time: activity.elapsed_time,
+      distance_km: safeNumber(activity.distance_km),
+      avg_speed_kmh: safeNumber(activity.avg_speed_kmh),
+      total_elevation_gain: safeNumber(activity.total_elevation_gain),
+      overlap_count: 0,
+      overlap_pct: 100,
+      match_type: 'segments' as const,
+      isCurrent: true,
+    }
+
+    const others = (comparableActivitiesData?.activities || [])
+      .filter((entry) => entry.strava_activity_id !== currentRow.strava_activity_id)
+      .map((entry) => ({ ...entry, isCurrent: false }))
+
+    const rows = [currentRow, ...others]
+      .filter((entry) => entry.avg_speed_kmh > 0)
+      .sort((a, b) => new Date(a.start_date).getTime() - new Date(b.start_date).getTime())
+
+    return rows.map((entry) => ({
+      ...entry,
+      shortDate: shortFormatter.format(new Date(entry.start_date)),
+      fullDate: fullFormatter.format(new Date(entry.start_date)),
+    }))
+  }, [activity, comparableActivitiesData?.activities, dateLocale])
+
+  const comparableChartRows = useMemo<ComparableChartRow[]>(() => (
+    comparableActivityRows.map((entry) => ({
+      dateKey: entry.start_date,
+      shortDate: entry.shortDate,
+      fullDate: entry.fullDate,
+      avgSpeed: Number(entry.avg_speed_kmh),
+      movingTime: entry.moving_time,
+      overlapPct: Number(entry.overlap_pct || 0),
+      isCurrent: entry.isCurrent,
+    }))
+  ), [comparableActivityRows])
+
+  const comparableListRows = useMemo(() => (
+    [...comparableActivityRows].sort((a, b) => {
+      if (a.isCurrent !== b.isCurrent) return a.isCurrent ? -1 : 1
+      return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
+    })
+  ), [comparableActivityRows])
+
+  const currentComparablePoint = useMemo(() => (
+    comparableChartRows.find((entry) => entry.isCurrent) ?? null
+  ), [comparableChartRows])
 
   const createManualSegmentMutation = useMutation({
     mutationFn: (input: { activityId: number; startIndex: number; endIndex: number; name?: string }) => (
@@ -2349,6 +2435,127 @@ export function ActivityDetail() {
               </CardContent>
             </Card>
           )}
+
+          <Card>
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <path d="M3 3v18h18" />
+                  <path d="m7 15 4-4 3 3 4-6" />
+                </svg>
+                {t('activityDetail.comparable.title')}
+              </CardTitle>
+              <div className="text-xs text-muted-foreground">
+                {t('activityDetail.comparable.subtitle')}
+              </div>
+            </CardHeader>
+            <CardContent className="pt-0">
+              {comparableChartRows.length > 1 ? (
+                <div className="space-y-4">
+                  <div className="h-36">
+                    <ResponsiveContainer width="100%" height="100%">
+                      <AreaChart data={comparableChartRows} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
+                        <CartesianGrid strokeDasharray="3 3" stroke={chartColors.grid} opacity={0.35} />
+                        <XAxis
+                          dataKey="dateKey"
+                          tickFormatter={(value) => {
+                            const row = comparableChartRows.find((entry) => entry.dateKey === value)
+                            return row?.shortDate || ''
+                          }}
+                          tick={{ fontSize: 10, fill: chartColors.text }}
+                          tickLine={false}
+                          axisLine={false}
+                        />
+                        <YAxis
+                          tick={{ fontSize: 10, fill: chartColors.text }}
+                          tickLine={false}
+                          axisLine={false}
+                          width={34}
+                          tickFormatter={(value) => `${Number(value).toFixed(0)}`}
+                        />
+                        <Tooltip
+                          content={({ active, payload }) => {
+                            if (!active || !payload || payload.length === 0) return null
+                            const point = payload[0].payload as ComparableChartRow
+                            return (
+                              <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-semibold">{point.fullDate}</span>
+                                  {point.isCurrent && (
+                                    <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                      {t('activityDetail.comparable.current')}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-muted-foreground">
+                                  {`${point.avgSpeed.toFixed(1)} ${unitKmh} · ${formatDuration(point.movingTime)}`}
+                                </div>
+                              </div>
+                            )
+                          }}
+                        />
+                        <Area
+                          type="monotone"
+                          dataKey="avgSpeed"
+                          stroke="hsl(var(--primary))"
+                          fill="hsl(var(--primary))"
+                          fillOpacity={0.16}
+                          strokeWidth={2.5}
+                          activeDot={{ r: 4 }}
+                        />
+                        {currentComparablePoint && (
+                          <ReferenceDot
+                            x={currentComparablePoint.dateKey}
+                            y={currentComparablePoint.avgSpeed}
+                            r={5}
+                            fill="#f59e0b"
+                            stroke="hsl(var(--background))"
+                            strokeWidth={2}
+                          />
+                        )}
+                      </AreaChart>
+                    </ResponsiveContainer>
+                  </div>
+
+                  <div className="space-y-2">
+                    {comparableListRows.map((entry) => (
+                      <div key={entry.strava_activity_id} className="rounded-lg border border-border/60 bg-card/40 px-3 py-2.5">
+                        <div className="flex items-center justify-between gap-3">
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <span className="truncate text-sm font-medium">{entry.shortDate}</span>
+                              {entry.isCurrent && (
+                                <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
+                                  {t('activityDetail.comparable.current')}
+                                </span>
+                              )}
+                            </div>
+                            <div className="text-[11px] text-muted-foreground">
+                              {formatDuration(entry.moving_time)}
+                            </div>
+                          </div>
+                          <div className="shrink-0 text-right">
+                            <div className="text-sm font-semibold text-primary">
+                              {Number(entry.avg_speed_kmh).toFixed(1)} {unitKmh}
+                            </div>
+                            {!entry.isCurrent && entry.overlap_pct > 0 && (
+                              <div className="text-[11px] text-muted-foreground">
+                                {t('activityDetail.comparable.match', { percent: Number(entry.overlap_pct).toFixed(0) })}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="py-4 text-xs text-muted-foreground">
+                  {t('activityDetail.comparable.empty')}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Segments */}
           <Card>

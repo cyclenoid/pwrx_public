@@ -147,6 +147,33 @@ export const getActivity = async (id: number): Promise<ActivityWithStreams> => {
   return data
 }
 
+export interface ComparableActivity {
+  strava_activity_id: number
+  name: string
+  start_date: string
+  moving_time: number
+  elapsed_time: number
+  distance_km: number
+  avg_speed_kmh: number
+  total_elevation_gain: number
+  overlap_count: number
+  overlap_pct: number
+  match_type: 'segments' | 'name'
+}
+
+export interface ComparableActivitiesResponse {
+  activity_id: number
+  count: number
+  activities: ComparableActivity[]
+}
+
+export const getComparableActivities = async (id: number, limit: number = 8): Promise<ComparableActivitiesResponse> => {
+  const { data } = await api.get<ComparableActivitiesResponse>(`/activities/${id}/comparable`, {
+    params: { limit },
+  })
+  return data
+}
+
 export interface DeleteActivityResponse {
   success: boolean
   deleted_activity_id: number
