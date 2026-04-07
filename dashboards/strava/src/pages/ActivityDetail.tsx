@@ -21,7 +21,7 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { formatClimbCategory, formatDuration, formatElevation, formatDistance } from '../lib/utils'
 import { ActivityMap } from '../components/ActivityMap'
-import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceDot, ReferenceArea, CartesianGrid, PieChart, Pie, Cell } from 'recharts'
+import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceDot, ReferenceArea, CartesianGrid, PieChart, Pie, Cell, Line } from 'recharts'
 import { useTheme } from '../components/ThemeProvider'
 import { getChartColors, getHeartRateZoneColors, getPowerZoneColors } from '../lib/chartTheme'
 import { useUserProfile } from '../hooks/useUserProfile'
@@ -148,6 +148,7 @@ type ComparableChartRow = {
   shortDate: string
   fullDate: string
   avgSpeed: number
+  trendSpeed: number
   movingTime: number
   overlapPct: number
   isCurrent: boolean
@@ -454,8 +455,8 @@ export function ActivityDetail() {
     }))
   }, [activity, comparableActivitiesData?.activities, dateLocale])
 
-  const comparableChartRows = useMemo<ComparableChartRow[]>(() => (
-    comparableActivityRows.map((entry) => ({
+  const comparableChartRows = useMemo<ComparableChartRow[]>(() => {
+    const baseRows = comparableActivityRows.map((entry) => ({
       dateKey: entry.start_date,
       shortDate: entry.shortDate,
       fullDate: entry.fullDate,
@@ -464,7 +465,25 @@ export function ActivityDetail() {
       overlapPct: Number(entry.overlap_pct || 0),
       isCurrent: entry.isCurrent,
     }))
-  ), [comparableActivityRows])
+
+    if (baseRows.length <= 1) {
+      return baseRows.map((entry) => ({ ...entry, trendSpeed: entry.avgSpeed }))
+    }
+
+    const n = baseRows.length
+    const sumX = baseRows.reduce((sum, _, index) => sum + index, 0)
+    const sumY = baseRows.reduce((sum, row) => sum + row.avgSpeed, 0)
+    const sumXY = baseRows.reduce((sum, row, index) => sum + (index * row.avgSpeed), 0)
+    const sumXX = baseRows.reduce((sum, _, index) => sum + (index * index), 0)
+    const denominator = (n * sumXX) - (sumX * sumX)
+    const slope = denominator !== 0 ? ((n * sumXY) - (sumX * sumY)) / denominator : 0
+    const intercept = (sumY - (slope * sumX)) / n
+
+    return baseRows.map((row, index) => ({
+      ...row,
+      trendSpeed: intercept + (slope * index),
+    }))
+  }, [comparableActivityRows])
 
   const comparableListRows = useMemo(() => (
     [...comparableActivityRows].sort((a, b) => {
@@ -476,6 +495,16 @@ export function ActivityDetail() {
   const currentComparablePoint = useMemo(() => (
     comparableChartRows.find((entry) => entry.isCurrent) ?? null
   ), [comparableChartRows])
+
+  const comparableChartDomain = useMemo<[number, number]>(() => {
+    if (comparableChartRows.length === 0) return [0, 1]
+    const values = comparableChartRows.flatMap((entry) => [entry.avgSpeed, entry.trendSpeed])
+    const minValue = Math.min(...values)
+    const maxValue = Math.max(...values)
+    const span = Math.max(maxValue - minValue, 0.8)
+    const padding = Math.max(span * 0.18, 0.25)
+    return [Math.max(minValue - padding, 0), maxValue + padding]
+  }, [comparableChartRows])
 
   const createManualSegmentMutation = useMutation({
     mutationFn: (input: { activityId: number; startIndex: number; endIndex: number; name?: string }) => (
@@ -2467,11 +2496,12 @@ export function ActivityDetail() {
                           axisLine={false}
                         />
                         <YAxis
+                          domain={comparableChartDomain}
                           tick={{ fontSize: 10, fill: chartColors.text }}
                           tickLine={false}
                           axisLine={false}
                           width={34}
-                          tickFormatter={(value) => `${Number(value).toFixed(0)}`}
+                          tickFormatter={(value) => `${Number(value).toFixed(1)}`}
                         />
                         <Tooltip
                           content={({ active, payload }) => {
@@ -2502,6 +2532,15 @@ export function ActivityDetail() {
                           fillOpacity={0.16}
                           strokeWidth={2.5}
                           activeDot={{ r: 4 }}
+                        />
+                        <Line
+                          type="monotone"
+                          dataKey="trendSpeed"
+                          stroke="#f59e0b"
+                          strokeWidth={2}
+                          strokeDasharray="5 4"
+                          dot={false}
+                          activeDot={false}
                         />
                         {currentComparablePoint && (
                           <ReferenceDot

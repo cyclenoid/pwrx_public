@@ -1653,7 +1653,8 @@
       "hours": "Stunden",
       "status": "Status",
       "avgSpeed": "Ø Geschwindigkeit",
-      "rankedBikes": "Räder im Ranking"
+      "rankedBikes": "Räder im Ranking",
+      "hmPerKm": "HM pro km"
     },
     "sidebar": {
       "title": "Statistiken",
@@ -1661,11 +1662,21 @@
       "breakdownTitle": "Aufteilung",
       "topDistance": "Top Räder nach Strecke",
       "topElevation": "Top Räder nach Höhenmetern",
-      "topSpeed": "Top Räder nach Ø km/h"
+      "topSpeed": "Top Räder nach Ø km/h",
+      "topHmPerKm": "Top Räder nach HM/km"
+    },
+    "detail": {
+      "yearTrendTitle": "Jahresverlauf",
+      "yearTrendSubtitle": "Monatliche Distanz und Höhenmeter dieses Rads.",
+      "recentTitle": "Letzte Aktivitäten mit diesem Rad",
+      "recentEmpty": "Noch keine Aktivitäten mit diesem Rad gefunden.",
+      "recentActivities": "Letzte Aktivitäten",
+      "activeMonths": "Aktive Monate"
     },
     "manualCreate": {
       "title": "Ausrüstung manuell erfassen",
       "subtitle": "Lege Bikes oder Schuhe manuell an.",
+      "open": "Neue Ausrüstung",
       "submit": "Ausrüstung anlegen",
       "creating": "Lege an...",
       "error": "Ausrüstung konnte nicht angelegt werden.",

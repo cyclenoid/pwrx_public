@@ -1,10 +1,12 @@
 import { useEffect, useMemo, useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { createManualGear, getGear, getGearById, getGearMaintenance, updateGearMaintenance } from '../lib/api'
+import { Link } from 'react-router-dom'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { formatNumber } from '../lib/formatters'
-import type { Gear as GearType, GearMaintenanceItem } from '../types/activity'
+import type { Gear as GearType, GearDetailResponse, GearMaintenanceItem } from '../types/activity'
 import { useTranslation } from 'react-i18next'
+import { ResponsiveContainer, AreaChart, Area, Line, XAxis, YAxis, CartesianGrid, Tooltip } from 'recharts'
 
 // Icon for gear types
 function GearIcon({ type, className = '' }: { type?: string; className?: string }) {
@@ -121,6 +123,18 @@ const getGearDistanceKm = (gear: GearType) => {
     return Number(gear.distance) / 1000
   }
   return 0
+}
+
+const formatMonthLabel = (month: string, locale: string) => {
+  const [year, monthPart] = String(month).split('-')
+  const parsedYear = Number(year)
+  const parsedMonth = Number(monthPart)
+  if (!parsedYear || !parsedMonth) return month
+  try {
+    return new Intl.DateTimeFormat(locale, { month: 'short' }).format(new Date(parsedYear, parsedMonth - 1, 1))
+  } catch {
+    return month
+  }
 }
 
 const getUsedKm = (currentKm: number, lastResetKm?: number | null) => {
@@ -285,7 +299,7 @@ const resolveGearType = (type?: string, id?: string) => {
 
 // Detail modal/panel for gear
 function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }) {
-  const { t } = useTranslation()
+  const { t, i18n } = useTranslation()
   const queryClient = useQueryClient()
   const [maintenanceItems, setMaintenanceItems] = useState<GearMaintenanceItem[]>([])
   const [newComponentLabel, setNewComponentLabel] = useState('')
@@ -296,14 +310,14 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
   })
 
   useEffect(() => {
-    const maintenance = (data as any)?.maintenance || []
+    const maintenance = data?.maintenance || []
     setMaintenanceItems(maintenance)
   }, [data])
 
   if (isLoading) {
     return (
-      <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center">
-        <Card className="w-full max-w-2xl mx-4">
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/65 p-4">
+        <Card className="mx-4 w-full max-w-2xl bg-background shadow-2xl">
           <CardContent className="p-8 text-center">
             <p className="text-muted-foreground">{t('common.loading')}</p>
           </CardContent>
@@ -316,11 +330,26 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
     return null
   }
 
-  const gear = (data as any).gear
+  const detailData = data as GearDetailResponse
+  const gear = detailData.gear
   const gearType = resolveGearType(gear?.type, gear?.id)
   const gearSource = resolveGearSource(gear)
   const currentKm = getGearDistanceKm(gear)
   const activityCount = Number(gear?.activity_count || 0)
+  const totalElevation = Number(gear?.total_elevation_m || 0)
+  const avgSpeed = Number(gear?.avg_speed_kmh || 0)
+  const totalHours = Number(gear?.total_hours || 0)
+  const hmPerKm = currentKm > 0 ? totalElevation / currentKm : 0
+  const locale = i18n.language?.startsWith('de') ? 'de-DE' : 'en-US'
+  const monthlyStats = detailData.monthly_stats || []
+  const recentActivities = detailData.recent_activities || []
+  const yearTrend = monthlyStats.map((item) => ({
+    month: item.month,
+    monthLabel: formatMonthLabel(item.month, locale),
+    distanceKm: Number(item.total_distance_km || 0),
+    elevationM: Number(item.total_elevation_m || 0),
+    activityCount: Number(item.activity_count || 0),
+  }))
 
   const saveMaintenance = async (items: GearMaintenanceItem[]) => {
     const response = await updateGearMaintenance(gearId, items.map((item) => ({
@@ -372,8 +401,8 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
   }
 
   return (
-    <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={onClose}>
-      <Card className="w-full max-w-3xl max-h-[90vh] overflow-hidden" onClick={e => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
+      <Card className="max-h-[90vh] w-full max-w-5xl overflow-hidden bg-background shadow-2xl" onClick={e => e.stopPropagation()}>
         <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
           <div className="flex items-center gap-3">
             <div className={`p-2 rounded-full ${gearType === 'bike' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
@@ -406,7 +435,7 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
 
         <CardContent className="space-y-6 overflow-y-auto max-h-[calc(90vh-100px)]">
           {/* Stats */}
-          <div className="grid grid-cols-3 gap-4">
+          <div className="grid grid-cols-2 gap-3 md:grid-cols-5">
             <StatCard
               label={t('gear.stats.totalDistance')}
               value={formatNumber(currentKm, 0)}
@@ -417,8 +446,19 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
               value={activityCount}
             />
             <StatCard
-              label={t('gear.stats.status')}
-              value={gear.retired ? t('gear.status.retired') : t('gear.status.active')}
+              label={t('gear.stats.totalElevation')}
+              value={formatNumber(totalElevation, 0)}
+              unit={t('activityDetail.units.m')}
+            />
+            <StatCard
+              label={t('gear.stats.avgSpeed')}
+              value={avgSpeed > 0 ? formatNumber(avgSpeed, 1) : '--'}
+              unit={avgSpeed > 0 ? t('activityDetail.units.kmh') : undefined}
+            />
+            <StatCard
+              label={t('gear.stats.hmPerKm')}
+              value={hmPerKm > 0 ? formatNumber(hmPerKm, 1) : '--'}
+              unit={hmPerKm > 0 ? 'HM/km' : undefined}
             />
           </div>
 
@@ -427,6 +467,95 @@ function GearDetail({ gearId, onClose }: { gearId: string; onClose: () => void }
               <p className="text-sm">{gear.description}</p>
             </div>
           )}
+
+          <Card className="border-border/60 bg-card/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{t('gear.detail.yearTrendTitle')}</CardTitle>
+              <p className="text-sm text-muted-foreground">{t('gear.detail.yearTrendSubtitle')}</p>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                <StatCard label={t('gear.stats.hours')} value={formatNumber(totalHours, 1)} />
+                <StatCard label={t('gear.stats.status')} value={gear.retired ? t('gear.status.retired') : t('gear.status.active')} />
+                <StatCard label={t('gear.detail.recentActivities')} value={recentActivities.length} />
+                <StatCard label={t('gear.detail.activeMonths')} value={yearTrend.filter((month) => month.activityCount > 0).length} />
+              </div>
+              <div className="h-64">
+                <ResponsiveContainer width="100%" height="100%">
+                  <AreaChart data={yearTrend} margin={{ top: 10, right: 10, left: -18, bottom: 0 }}>
+                    <defs>
+                      <linearGradient id="gearDistanceFill" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="5%" stopColor="hsl(var(--primary))" stopOpacity={0.35} />
+                        <stop offset="95%" stopColor="hsl(var(--primary))" stopOpacity={0.03} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35} />
+                    <XAxis dataKey="monthLabel" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} />
+                    <YAxis yAxisId="distance" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} width={38} />
+                    <YAxis yAxisId="elevation" orientation="right" tick={{ fontSize: 11, fill: 'hsl(var(--muted-foreground))' }} tickLine={false} axisLine={false} width={44} />
+                    <Tooltip
+                      content={({ active, payload }) => {
+                        if (!active || !payload || payload.length === 0) return null
+                        const row = payload[0].payload as { month: string; distanceKm: number; elevationM: number; activityCount: number }
+                        return (
+                          <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
+                            <div className="font-semibold">{row.month}</div>
+                            <div className="text-muted-foreground">{`${formatNumber(row.distanceKm, 1)} ${t('records.units.km')} · ${formatNumber(row.elevationM, 0)} ${t('activityDetail.units.m')}`}</div>
+                            <div className="text-muted-foreground">{t('gear.stats.activities')}: {row.activityCount}</div>
+                          </div>
+                        )
+                      }}
+                    />
+                    <Area
+                      yAxisId="distance"
+                      type="monotone"
+                      dataKey="distanceKm"
+                      stroke="hsl(var(--primary))"
+                      fill="url(#gearDistanceFill)"
+                      strokeWidth={2.5}
+                    />
+                    <Line
+                      yAxisId="elevation"
+                      type="monotone"
+                      dataKey="elevationM"
+                      stroke="#f59e0b"
+                      strokeWidth={2}
+                      dot={{ r: 2.5, fill: '#f59e0b' }}
+                      activeDot={{ r: 4 }}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card className="border-border/60 bg-card/40">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-base">{t('gear.detail.recentTitle')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-2">
+              {recentActivities.length > 0 ? (
+                recentActivities.map((activity) => (
+                  <Link
+                    key={activity.strava_activity_id}
+                    to={`/activity/${activity.strava_activity_id}`}
+                    className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-background/60 px-3 py-2 text-sm transition-colors hover:border-primary/30 hover:bg-primary/5"
+                  >
+                    <div className="min-w-0">
+                      <div className="truncate font-medium">{activity.name}</div>
+                      <div className="text-xs text-muted-foreground">{new Intl.DateTimeFormat(locale, { day: '2-digit', month: '2-digit', year: '2-digit' }).format(new Date(activity.start_date))}</div>
+                    </div>
+                    <div className="shrink-0 text-right text-xs text-muted-foreground">
+                      <div>{formatNumber(Number(activity.distance_km || 0), 1)} {t('records.units.km')}</div>
+                      <div>{formatNumber(Number(activity.total_elevation_gain || 0), 0)} {t('activityDetail.units.m')}</div>
+                    </div>
+                  </Link>
+                ))
+              ) : (
+                <div className="text-sm text-muted-foreground">{t('gear.detail.recentEmpty')}</div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Wear tracker */}
           <div className="space-y-3">
@@ -616,6 +745,7 @@ export function Gear() {
   const { t } = useTranslation()
   const queryClient = useQueryClient()
   const [selectedGearId, setSelectedGearId] = useState<string | null>(null)
+  const [isCreateGearOpen, setIsCreateGearOpen] = useState(false)
   const [formError, setFormError] = useState<string | null>(null)
   const [manualGearForm, setManualGearForm] = useState({
     name: '',
@@ -662,6 +792,7 @@ export function Gear() {
     },
     onSuccess: async () => {
       setFormError(null)
+      setIsCreateGearOpen(false)
       setManualGearForm({
         name: '',
         type: 'bike',
@@ -702,10 +833,6 @@ export function Gear() {
   const bikeGear = (gearList || []).filter((g) => resolveGearType(g.type, g.id) === 'bike')
 
   // Stats
-  const totalBikes = (gearList || []).filter(g => resolveGearType(g.type, g.id) === 'bike').length
-  const totalShoes = (gearList || []).filter(g => resolveGearType(g.type, g.id) === 'shoes').length
-  const totalActivities = (gearList || []).reduce((sum, g) => sum + Number(g.activity_count || 0), 0)
-
   const topDistanceBikes = useMemo(() => (
     [...bikeGear]
       .sort((a, b) => getGearDistanceKm(b) - getGearDistanceKm(a))
@@ -737,6 +864,17 @@ export function Gear() {
       }))
   ), [bikeGear])
 
+  const topHmPerKmBikes = useMemo(() => (
+    [...bikeGear]
+      .filter((gear) => getGearDistanceKm(gear) > 0 && Number(gear.total_elevation_m || 0) > 0)
+      .sort((a, b) => (Number(b.total_elevation_m || 0) / getGearDistanceKm(b)) - (Number(a.total_elevation_m || 0) / getGearDistanceKm(a)))
+      .map((gear) => ({
+        id: gear.id,
+        name: gear.name,
+        value: Number(gear.total_elevation_m || 0) / getGearDistanceKm(gear),
+      }))
+  ), [bikeGear])
+
   if (isError) {
     return (
       <div className="flex flex-col items-center justify-center h-96 gap-4">
@@ -754,97 +892,26 @@ export function Gear() {
   return (
     <div className="space-y-6">
       {/* Header */}
-      <div>
-        <h1 className="text-2xl font-bold tracking-tight">{t('gear.title')}</h1>
-        <p className="text-sm text-muted-foreground">
-          {t('gear.subtitle')}
-        </p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">{t('gear.title')}</h1>
+          <p className="text-sm text-muted-foreground">
+            {t('gear.subtitle')}
+          </p>
+        </div>
+        <button
+          type="button"
+          onClick={() => {
+            setFormError(null)
+            setIsCreateGearOpen(true)
+          }}
+          className={primaryActionButtonClass}
+        >
+          {t('gear.manualCreate.open')}
+        </button>
       </div>
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_320px]">
         <div className="space-y-6">
-          <Card>
-            <CardHeader>
-              <CardTitle>{t('gear.manualCreate.title')}</CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <input
-                  type="text"
-                  value={manualGearForm.name}
-                  onChange={(event) => setManualGearForm((prev) => ({ ...prev, name: event.target.value }))}
-                  placeholder={t('gear.manualCreate.fields.name')}
-                  className="px-3 py-2 rounded-md bg-background border border-border text-sm"
-                />
-                <select
-                  value={manualGearForm.type}
-                  onChange={(event) => {
-                    const nextType = event.target.value === 'shoes' ? 'shoes' : 'bike'
-                    setManualGearForm((prev) => ({ ...prev, type: nextType }))
-                  }}
-                  className="px-3 py-2 rounded-md bg-background border border-border text-foreground text-sm"
-                  style={{ color: 'hsl(var(--foreground))', backgroundColor: 'hsl(var(--popover))' }}
-                >
-                  <option value="bike" style={{ backgroundColor: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}>
-                    {t('gear.manualCreate.types.bike')}
-                  </option>
-                  <option value="shoes" style={{ backgroundColor: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}>
-                    {t('gear.manualCreate.types.shoes')}
-                  </option>
-                </select>
-                <input
-                  type="text"
-                  value={manualGearForm.brandName}
-                  onChange={(event) => setManualGearForm((prev) => ({ ...prev, brandName: event.target.value }))}
-                  placeholder={t('gear.manualCreate.fields.brand')}
-                  className="px-3 py-2 rounded-md bg-background border border-border text-sm"
-                />
-                <input
-                  type="text"
-                  value={manualGearForm.modelName}
-                  onChange={(event) => setManualGearForm((prev) => ({ ...prev, modelName: event.target.value }))}
-                  placeholder={t('gear.manualCreate.fields.model')}
-                  className="px-3 py-2 rounded-md bg-background border border-border text-sm"
-                />
-                <input
-                  type="number"
-                  min={0}
-                  value={manualGearForm.distanceKm}
-                  onChange={(event) => setManualGearForm((prev) => ({ ...prev, distanceKm: event.target.value }))}
-                  placeholder={t('gear.manualCreate.fields.startDistanceKm')}
-                  className="px-3 py-2 rounded-md bg-background border border-border text-sm"
-                />
-                <label className="flex items-center gap-2 text-sm text-muted-foreground px-1">
-                  <input
-                    type="checkbox"
-                    checked={manualGearForm.retired}
-                    onChange={(event) => setManualGearForm((prev) => ({ ...prev, retired: event.target.checked }))}
-                  />
-                  {t('gear.manualCreate.fields.retired')}
-                </label>
-              </div>
-              <textarea
-                value={manualGearForm.description}
-                onChange={(event) => setManualGearForm((prev) => ({ ...prev, description: event.target.value }))}
-                placeholder={t('gear.manualCreate.fields.description')}
-                rows={3}
-                className="w-full px-3 py-2 rounded-md bg-background border border-border text-sm"
-              />
-              <div className="flex flex-wrap items-center gap-3">
-                <button
-                  type="button"
-                  disabled={createManualGearMutation.isPending}
-                  onClick={() => createManualGearMutation.mutate()}
-                  className={primaryActionButtonClass}
-                >
-                  {createManualGearMutation.isPending
-                    ? t('gear.manualCreate.creating')
-                    : t('gear.manualCreate.submit')}
-                </button>
-                {formError && <span className="text-sm text-red-500">{formError}</span>}
-              </div>
-            </CardContent>
-          </Card>
-
           {isLoading ? (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[1, 2, 3, 4].map((i) => (
@@ -905,34 +972,11 @@ export function Gear() {
           )}
         </div>
 
-        <aside className="space-y-4 xl:sticky xl:top-24 self-start">
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-base">{t('gear.sidebar.title')}</CardTitle>
-              <p className="text-sm text-muted-foreground">{t('gear.sidebar.subtitle')}</p>
-            </CardHeader>
-            <CardContent className="grid grid-cols-2 gap-3">
-              <StatCard
-                label={t('gear.stats.bikes')}
-                value={totalBikes}
-                icon={<GearIcon type="bike" className="w-5 h-5" />}
-              />
-              <StatCard
-                label={t('gear.stats.shoes')}
-                value={totalShoes}
-                icon={<GearIcon type="shoes" className="w-5 h-5" />}
-              />
-              <StatCard
-                label={t('gear.stats.activities')}
-                value={totalActivities}
-              />
-              <StatCard
-                label={t('gear.stats.rankedBikes')}
-                value={bikeGear.length}
-              />
-            </CardContent>
-          </Card>
-
+        <aside className="space-y-4 self-start xl:sticky xl:top-24">
+          <div className="space-y-1 px-1">
+            <div className="text-sm font-semibold">{t('gear.sidebar.title')}</div>
+            <div className="text-xs text-muted-foreground">{t('gear.sidebar.subtitle')}</div>
+          </div>
           <RankingCard
             title={t('gear.sidebar.topDistance')}
             rows={topDistanceBikes}
@@ -949,8 +993,114 @@ export function Gear() {
             unit={t('activityDetail.units.kmh')}
             decimals={1}
           />
+          <RankingCard
+            title={t('gear.sidebar.topHmPerKm')}
+            rows={topHmPerKmBikes}
+            unit="HM/km"
+            decimals={1}
+          />
         </aside>
       </div>
+
+      {isCreateGearOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setIsCreateGearOpen(false)}>
+          <Card className="w-full max-w-2xl bg-background shadow-2xl" onClick={(event) => event.stopPropagation()}>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0">
+              <div>
+                <CardTitle>{t('gear.manualCreate.title')}</CardTitle>
+                <p className="mt-1 text-sm text-muted-foreground">{t('gear.manualCreate.subtitle')}</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCreateGearOpen(false)}
+                className="rounded-full p-2 transition-colors hover:bg-secondary"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18 6 6 18" />
+                  <path d="m6 6 12 12" />
+                </svg>
+              </button>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                <input
+                  type="text"
+                  value={manualGearForm.name}
+                  onChange={(event) => setManualGearForm((prev) => ({ ...prev, name: event.target.value }))}
+                  placeholder={t('gear.manualCreate.fields.name')}
+                  className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+                <select
+                  value={manualGearForm.type}
+                  onChange={(event) => {
+                    const nextType = event.target.value === 'shoes' ? 'shoes' : 'bike'
+                    setManualGearForm((prev) => ({ ...prev, type: nextType }))
+                  }}
+                  className="rounded-md border border-border bg-background px-3 py-2 text-sm text-foreground"
+                  style={{ color: 'hsl(var(--foreground))', backgroundColor: 'hsl(var(--popover))' }}
+                >
+                  <option value="bike" style={{ backgroundColor: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}>
+                    {t('gear.manualCreate.types.bike')}
+                  </option>
+                  <option value="shoes" style={{ backgroundColor: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}>
+                    {t('gear.manualCreate.types.shoes')}
+                  </option>
+                </select>
+                <input
+                  type="text"
+                  value={manualGearForm.brandName}
+                  onChange={(event) => setManualGearForm((prev) => ({ ...prev, brandName: event.target.value }))}
+                  placeholder={t('gear.manualCreate.fields.brand')}
+                  className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+                <input
+                  type="text"
+                  value={manualGearForm.modelName}
+                  onChange={(event) => setManualGearForm((prev) => ({ ...prev, modelName: event.target.value }))}
+                  placeholder={t('gear.manualCreate.fields.model')}
+                  className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+                <input
+                  type="number"
+                  min={0}
+                  value={manualGearForm.distanceKm}
+                  onChange={(event) => setManualGearForm((prev) => ({ ...prev, distanceKm: event.target.value }))}
+                  placeholder={t('gear.manualCreate.fields.startDistanceKm')}
+                  className="rounded-md border border-border bg-background px-3 py-2 text-sm"
+                />
+                <label className="flex items-center gap-2 px-1 text-sm text-muted-foreground">
+                  <input
+                    type="checkbox"
+                    checked={manualGearForm.retired}
+                    onChange={(event) => setManualGearForm((prev) => ({ ...prev, retired: event.target.checked }))}
+                  />
+                  {t('gear.manualCreate.fields.retired')}
+                </label>
+              </div>
+              <textarea
+                value={manualGearForm.description}
+                onChange={(event) => setManualGearForm((prev) => ({ ...prev, description: event.target.value }))}
+                placeholder={t('gear.manualCreate.fields.description')}
+                rows={3}
+                className="w-full rounded-md border border-border bg-background px-3 py-2 text-sm"
+              />
+              <div className="flex flex-wrap items-center gap-3">
+                <button
+                  type="button"
+                  disabled={createManualGearMutation.isPending}
+                  onClick={() => createManualGearMutation.mutate()}
+                  className={primaryActionButtonClass}
+                >
+                  {createManualGearMutation.isPending
+                    ? t('gear.manualCreate.creating')
+                    : t('gear.manualCreate.submit')}
+                </button>
+                {formError && <span className="text-sm text-red-500">{formError}</span>}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
       {/* Detail Modal */}
       {selectedGearId && (
