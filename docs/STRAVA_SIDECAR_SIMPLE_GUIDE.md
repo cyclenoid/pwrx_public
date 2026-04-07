@@ -28,7 +28,7 @@ http://127.0.0.1:3001/api/health
 Server/NAS example:
 
 ```text
-http://10.10.10.129:3001/api/health
+http://YOUR-SERVER-IP:3001/api/health
 ```
 
 ### 2. Create `.env.sidecar`

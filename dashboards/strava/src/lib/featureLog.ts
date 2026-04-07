@@ -18,6 +18,33 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-07-activity-detail-sidebar-power-gear',
+    date: '2026-04-07',
+    tag: 'ui',
+    title: {
+      de: 'Aktivitätsdetails: Sidebar klarer und Gear-Hinweis direkter',
+      en: 'Activity details: clearer sidebar and direct gear hint',
+    },
+    summary: {
+      de: 'In den Aktivitätsdetails stehen Trainingsreiz und Aktivitäts-Powerwerte jetzt klarer oben. Fehlende Rad- oder Gear-Zuordnung wird direkt in der Sidebar sichtbar.',
+      en: 'In activity details, training stimulus and activity power values now sit clearly at the top. Missing bike or gear assignment is now visible directly in the sidebar.',
+    },
+    bullets: {
+      de: [
+        'Unter dem Trainingsreiz steht jetzt eine feste Power-Werte-Kachel nur mit Werten aus dieser Aktivität.',
+        'Die separate Trittfrequenz-Kachel wurde entfernt, damit die Sidebar ruhiger bleibt.',
+        'Wenn bei einer Fahrt noch kein Rad zugeordnet ist, erscheint ein klarer Hinweis mit direkter Korrekturmöglichkeit.',
+        'Die Sidecar-Hilfe zeigt ihre Schritte jetzt untereinander und nutzt neutrale IP-Platzhalter statt einer konkreten Server-IP.',
+      ],
+      en: [
+        'Below the training stimulus, there is now a fixed power-values card with values from this activity only.',
+        'The separate cadence card has been removed to keep the sidebar calmer.',
+        'If a ride has no bike assigned yet, the sidebar now shows a direct hint and correction path.',
+        'The sidecar help now shows its steps vertically and uses neutral IP placeholders instead of a specific server IP.',
+      ],
+    },
+  },
+  {
     id: '2026-04-07-dashboard-tips-card',
     date: '2026-04-07',
     tag: 'dashboard',

@@ -98,7 +98,7 @@ export default function HelpSidecar() {
           <CardDescription>{t('helpSidecar.quickStart.subtitle')}</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 xl:grid-cols-2">
+          <div className="space-y-4">
             {quickStart.map((step, index) => (
               <div
                 key={step.title}

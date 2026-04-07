@@ -7,7 +7,6 @@ import {
   deleteActivity,
   getActivity,
   getActivityKmSplits,
-  getActivityPowerCurve,
   getActivityPowerMetrics,
   getActivitySegments,
   getGear,
@@ -141,25 +140,8 @@ const normalizeSelection = (selection: { startKm: number; endKm: number } | null
 }
 
 type SelectionSource = 'elevation' | 'speed' | 'heartrate' | 'power' | 'cadence' | null
-type BestStatsType = 'best_power' | 'best_wkg' | 'best_np' | 'best_xpower' | 'best_tempo' | 'max_hr' | 'best_vam'
 
 const RIDE_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide']
-
-const POWER_DURATION_KEYS: Record<string, string> = {
-  '5s': 's5',
-  '10s': 's10',
-  '30s': 's30',
-  '1min': 'm1',
-  '2min': 'm2',
-  '5min': 'm5',
-  '10min': 'm10',
-  '20min': 'm20',
-  '30min': 'm30',
-  '45min': 'm45',
-  '1hr': 'h1',
-  '1:30h': 'h90',
-  '2hr': 'h2',
-}
 
 
 // Compact stat component
@@ -191,7 +173,6 @@ export function ActivityDetail() {
   const [analysisRange, setAnalysisRange] = useState<{ startKm: number; endKm: number } | null>(null)
   const [isSelecting, setIsSelecting] = useState(false)
   const [selectionSource, setSelectionSource] = useState<SelectionSource>(null)
-  const [bestStatsType, setBestStatsType] = useState<BestStatsType>('best_power')
   const [activePowerIndex, setActivePowerIndex] = useState<number | null>(null)
   const [selectedSegmentEffortId, setSelectedSegmentEffortId] = useState<number | null>(null)
   const [activityGearId, setActivityGearId] = useState('')
@@ -205,7 +186,6 @@ export function ActivityDetail() {
   const unitMinPerKm = t('activityDetail.units.minPerKm')
   const unitBpm = t('activityDetail.units.bpm')
   const unitWatt = t('activityDetail.units.watt')
-  const unitWattPerKg = t('activityDetail.units.wattPerKg')
   const unitRpm = t('activityDetail.units.rpm')
   const unitKj = t('activityDetail.units.kj')
   const unitVam = t('activityDetail.units.vam')
@@ -242,12 +222,6 @@ export function ActivityDetail() {
   })
 
   const { data: profile } = useUserProfile()
-
-  const { data: powerCurve } = useQuery({
-    queryKey: ['activity-power-curve', id],
-    queryFn: () => getActivityPowerCurve(Number(id)),
-    enabled: !!activity?.streams?.watts,
-  })
 
   const { data: powerMetrics } = useQuery({
     queryKey: ['activity-power-metrics', id],
@@ -342,6 +316,43 @@ export function ActivityDetail() {
   useEffect(() => {
     setActivityGearId(activity?.gear_id || '')
   }, [activity?.gear_id])
+
+  const currentGear = useMemo(() => (
+    gearList.find((gear) => gear.id === activity?.gear_id) ?? null
+  ), [activity?.gear_id, gearList])
+
+  const activityPowerRows = useMemo(() => {
+    const rows: Array<{ label: string; value: string }> = []
+    const averagePower = powerMetrics?.metrics?.average_power ?? (safeNumber(activity?.average_watts) > 0 ? Math.round(safeNumber(activity?.average_watts)) : null)
+    const maxPower = powerMetrics?.metrics?.max_power ?? (safeNumber(activity?.max_watts) > 0 ? Math.round(safeNumber(activity?.max_watts)) : null)
+    const normalizedPower = powerMetrics?.metrics?.normalized_power ?? (safeNumber(activity?.normalized_power) > 0 ? Math.round(safeNumber(activity?.normalized_power)) : null)
+    const variabilityIndex = powerMetrics?.metrics?.variability_index ?? null
+    const intensityFactor = powerMetrics?.metrics?.intensity_factor ?? (safeNumber(activity?.intensity_factor) > 0 ? safeNumber(activity?.intensity_factor) : null)
+    const kilojoules = safeNumber(activity?.kilojoules) > 0 ? Math.round(safeNumber(activity?.kilojoules)) : null
+
+    if (averagePower) rows.push({ label: t('activityDetail.powerSummary.labels.avgPower'), value: `${averagePower} ${unitWatt}` })
+    if (maxPower) rows.push({ label: t('activityDetail.powerSummary.labels.maxPower'), value: `${maxPower} ${unitWatt}` })
+    if (normalizedPower) rows.push({ label: t('activityDetail.powerSummary.labels.np'), value: `${normalizedPower} ${unitWatt}` })
+    if (intensityFactor) rows.push({ label: t('activityDetail.powerSummary.labels.if'), value: intensityFactor.toFixed(2) })
+    if (variabilityIndex) rows.push({ label: t('activityDetail.powerSummary.labels.vi'), value: variabilityIndex.toFixed(2) })
+    if (kilojoules) rows.push({ label: t('activityDetail.powerSummary.labels.energy'), value: `${kilojoules} ${unitKj}` })
+
+    return rows
+  }, [
+    activity?.average_watts,
+    activity?.intensity_factor,
+    activity?.kilojoules,
+    activity?.max_watts,
+    activity?.normalized_power,
+    powerMetrics?.metrics?.average_power,
+    powerMetrics?.metrics?.intensity_factor,
+    powerMetrics?.metrics?.max_power,
+    powerMetrics?.metrics?.normalized_power,
+    powerMetrics?.metrics?.variability_index,
+    t,
+    unitKj,
+    unitWatt,
+  ])
 
   const createManualSegmentMutation = useMutation({
     mutationFn: (input: { activityId: number; startIndex: number; endIndex: number; name?: string }) => (
@@ -448,6 +459,12 @@ export function ActivityDetail() {
 
   const isRun = activity?.type === 'Run' || activity?.type === 'TrailRun' || activity?.type === 'VirtualRun'
   const isRideType = activity ? RIDE_TYPES.includes(activity.type) : false
+  const gearMissingHint = useMemo(() => {
+    if (activity?.gear_id) return null
+    return isRideType
+      ? t('activityDetail.gear.missingRideHint')
+      : t('activityDetail.gear.missingHint')
+  }, [activity?.gear_id, isRideType, t])
   const segmentEfforts = segmentsData?.segments || []
   const selectedSegment = useMemo(() => (
     selectedSegmentEffortId !== null
@@ -734,125 +751,6 @@ export function ActivityDetail() {
     if (tss >= 30) return 'bg-gradient-to-br from-sky-500/20 via-sky-500/10 to-background border-sky-500/30'
     return 'bg-gradient-to-br from-slate-500/20 via-slate-500/10 to-background border-slate-500/30'
   }, [trainingStimulus])
-
-  const bestStatsOptions = useMemo<Array<{ id: BestStatsType; label: string }>>(() => ([
-    { id: 'best_power', label: t('activityDetail.bestStats.options.bestPower') },
-    { id: 'best_wkg', label: t('activityDetail.bestStats.options.bestWkg') },
-    { id: 'best_np', label: t('activityDetail.bestStats.options.bestNp') },
-    { id: 'best_xpower', label: t('activityDetail.bestStats.options.bestXpower') },
-    { id: 'best_tempo', label: t('activityDetail.bestStats.options.bestTempo') },
-    { id: 'max_hr', label: t('activityDetail.bestStats.options.maxHr') },
-    { id: 'best_vam', label: t('activityDetail.bestStats.options.bestVam') },
-  ]), [t])
-
-  const bestStatsData = useMemo(() => {
-    const powerRows = (powerCurve?.durations || []).map((d) => {
-      const key = POWER_DURATION_KEYS[d.label]
-      return {
-        label: key ? t(`activityDetail.bestStats.durations.${key}`) : d.label,
-        value: d.watts ? `${d.watts} ${unitWatt}` : notAvailable,
-      }
-    })
-
-    const weight = parseSettingNumber(profile?.settings?.athlete_weight)
-    const powerWkgRows = weight && weight > 0
-      ? (powerCurve?.durations || []).map((d) => {
-          const key = POWER_DURATION_KEYS[d.label]
-          return {
-            label: key ? t(`activityDetail.bestStats.durations.${key}`) : d.label,
-            value: d.watts ? `${(d.watts / weight).toFixed(2)} ${unitWattPerKg}` : notAvailable,
-          }
-        })
-      : []
-
-    const npRows: Array<{ label: string; value: string }> = []
-    const normalizedPower = powerMetrics?.metrics?.normalized_power ?? null
-    const intensityFactor = powerMetrics?.metrics?.intensity_factor ?? null
-    const variabilityIndex = powerMetrics?.metrics?.variability_index ?? null
-    const trainingStress = powerMetrics?.metrics?.training_stress_score ?? null
-    if (normalizedPower) npRows.push({ label: t('activityDetail.bestStats.labels.np'), value: `${normalizedPower} ${unitWatt}` })
-    if (intensityFactor) npRows.push({ label: t('activityDetail.bestStats.labels.if'), value: intensityFactor.toFixed(2) })
-    if (variabilityIndex) npRows.push({ label: t('activityDetail.bestStats.labels.vi'), value: variabilityIndex.toFixed(2) })
-    if (trainingStress) npRows.push({ label: t('activityDetail.bestStats.labels.tss'), value: trainingStress.toFixed(1) })
-
-    const tempoRows: Array<{ label: string; value: string }> = []
-    if (isRun && kmSplits?.splits?.length) {
-      const parsePaceSeconds = (pace: string) => {
-        const [min, sec] = pace.split(':').map(Number)
-        return min * 60 + sec
-      }
-      const fullKmSplits = kmSplits.splits.filter((split) => Number.isInteger(split.km))
-      const paceCandidates = fullKmSplits.length > 0 ? fullKmSplits : kmSplits.splits
-      const bestSplit = paceCandidates.reduce((best, split) => (
-        parsePaceSeconds(split.pace) < parsePaceSeconds(best.pace) ? split : best
-      ), paceCandidates[0])
-      tempoRows.push({ label: t('activityDetail.bestStats.labels.bestKm'), value: bestSplit.pace })
-    } else if (!isRun && safeNumber(activity?.max_speed_kmh) > 0) {
-      tempoRows.push({ label: t('activityDetail.bestStats.labels.maxSpeed'), value: `${safeNumber(activity?.max_speed_kmh).toFixed(1)} ${unitKmh}` })
-    }
-
-    const hrStream = activity?.streams?.heartrate || []
-    const hrStreamMax = hrStream.length > 0
-      ? Math.max(...hrStream.filter((rate) => typeof rate === 'number' && rate > 0))
-      : 0
-    const maxHrValue = Math.max(safeNumber(activity?.max_heartrate), hrStreamMax)
-    const maxHrRows = maxHrValue > 0 ? [{ label: t('activityDetail.bestStats.labels.maxHr'), value: `${Math.round(maxHrValue)} ${unitBpm}` }] : []
-
-    const vamRows = vamData?.vam && vamData.vam > 0
-      ? [{ label: t('activityDetail.bestStats.labels.vam'), value: `${vamData.vam} ${unitVam}` }]
-      : []
-
-    return {
-      best_power: {
-        rows: powerRows,
-        emptyMessage: t('activityDetail.bestStats.empty.power'),
-      },
-      best_wkg: {
-        rows: powerWkgRows,
-        emptyMessage: weight ? t('activityDetail.bestStats.empty.power') : t('activityDetail.bestStats.empty.weightMissing'),
-      },
-      best_np: {
-        rows: npRows,
-        emptyMessage: t('activityDetail.bestStats.empty.np'),
-      },
-      best_xpower: {
-        rows: [],
-        emptyMessage: t('activityDetail.bestStats.empty.xpower'),
-      },
-      best_tempo: {
-        rows: tempoRows,
-        emptyMessage: t('activityDetail.bestStats.empty.tempo'),
-      },
-      max_hr: {
-        rows: maxHrRows,
-        emptyMessage: t('activityDetail.bestStats.empty.hr'),
-      },
-      best_vam: {
-        rows: vamRows,
-        emptyMessage: t('activityDetail.bestStats.empty.vam'),
-      },
-    } satisfies Record<BestStatsType, { rows: Array<{ label: string; value: string }>; emptyMessage: string }>
-  }, [
-    powerCurve?.durations,
-    profile?.settings?.athlete_weight,
-    powerMetrics?.metrics?.normalized_power,
-    powerMetrics?.metrics?.intensity_factor,
-    powerMetrics?.metrics?.variability_index,
-    powerMetrics?.metrics?.training_stress_score,
-    isRun,
-    kmSplits?.splits,
-    activity?.max_speed_kmh,
-    activity?.max_heartrate,
-    activity?.streams?.heartrate,
-    vamData?.vam,
-    notAvailable,
-    t,
-    unitBpm,
-    unitKmh,
-    unitVam,
-    unitWatt,
-    unitWattPerKg,
-  ])
 
   // Convert speed to pace for runs (min/km)
   const calculatePace = (speedKmh: number): string => {
@@ -2381,44 +2279,38 @@ export function ActivityDetail() {
             </CardContent>
           </Card>
 
-          {/* Best Stats Dropdown */}
-          <Card>
-            <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
-                </svg>
-                <select
-                  value={bestStatsType}
-                  onChange={(event) => setBestStatsType(event.target.value as BestStatsType)}
-                  className="px-2 py-1 text-xs border border-border rounded-md bg-background"
-                  style={{ color: 'hsl(var(--foreground))', backgroundColor: 'hsl(var(--popover))' }}
-                >
-                  {bestStatsOptions.map((option) => (
-                    <option key={option.id} value={option.id} style={{ backgroundColor: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}>
-                      {option.label}
-                    </option>
-                  ))}
-                </select>
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="pt-0">
-              {bestStatsData[bestStatsType].rows.length > 0 ? (
-                <div className="divide-y divide-border">
-                  {bestStatsData[bestStatsType].rows.map((row, index) => (
-                    <div key={`${bestStatsType}-${index}`} className="flex items-center justify-between py-2 text-sm">
-                      <span className="text-muted-foreground">{row.label}</span>
-                      <span className="font-medium text-primary">{row.value}</span>
-                    </div>
-                  ))}
+          {/* Activity Power Summary */}
+          {hasPower && (
+            <Card>
+              <CardHeader className="pb-2">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+                  </svg>
+                  {t('activityDetail.powerSummary.title')}
+                </CardTitle>
+                <div className="text-xs text-muted-foreground">
+                  {t('activityDetail.powerSummary.subtitle')}
                 </div>
-              ) : (
-                <div className="py-6 text-center text-xs text-muted-foreground">
-                  {bestStatsData[bestStatsType].emptyMessage}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+              </CardHeader>
+              <CardContent className="pt-0">
+                {activityPowerRows.length > 0 ? (
+                  <div className="divide-y divide-border">
+                    {activityPowerRows.map((row) => (
+                      <div key={`${row.label}-${row.value}`} className="flex items-center justify-between py-2 text-sm">
+                        <span className="text-muted-foreground">{row.label}</span>
+                        <span className="font-medium text-primary">{row.value}</span>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="py-4 text-xs text-muted-foreground">
+                    {t('activityDetail.power.noData')}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          )}
 
           {/* Power Zones */}
           {hasPower && (
@@ -2550,29 +2442,6 @@ export function ActivityDetail() {
             </Card>
           )}
 
-          {/* Cadence Summary */}
-          {activity.average_cadence && (
-            <Card>
-              <CardHeader className="pb-2">
-                <CardTitle className="text-sm font-medium flex items-center gap-2">
-                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                    <circle cx="12" cy="12" r="10"/>
-                    <polyline points="12 6 12 12 16 14"/>
-                  </svg>
-                  {t('activityDetail.charts.cadence')}
-                </CardTitle>
-              </CardHeader>
-              <CardContent className="pt-0">
-                <div className="space-y-1">
-                  <div className="flex justify-between items-center text-sm">
-                    <span className="text-muted-foreground">{t('activityDetail.stats.average')}</span>
-                    <span className="font-medium">{Math.round(safeNumber(activity.average_cadence))} {unitRpm}</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          )}
-
           {/* Gear Info */}
           <Card>
             <CardHeader className="pb-2">
@@ -2585,6 +2454,16 @@ export function ActivityDetail() {
               </CardTitle>
             </CardHeader>
             <CardContent className="pt-0 space-y-3">
+              {currentGear && (
+                <div className="text-xs text-muted-foreground">
+                  {t('activityDetail.gear.current', { name: currentGear.name })}
+                </div>
+              )}
+              {gearMissingHint && (
+                <div className="rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+                  {gearMissingHint}
+                </div>
+              )}
               {gearList.length > 0 ? (
                 <>
                   <select
@@ -2594,7 +2473,7 @@ export function ActivityDetail() {
                     style={{ color: 'hsl(var(--foreground))', backgroundColor: 'hsl(var(--popover))' }}
                   >
                     <option value="" style={{ backgroundColor: 'hsl(var(--popover))', color: 'hsl(var(--popover-foreground))' }}>
-                      {t('activityDetail.gear.unassigned')}
+                      {isRideType ? t('activityDetail.gear.unassignedRide') : t('activityDetail.gear.unassigned')}
                     </option>
                     {gearList.map((gear) => (
                       <option
@@ -2627,18 +2506,6 @@ export function ActivityDetail() {
               </Link>
             </CardContent>
           </Card>
-
-          {/* No power data message */}
-          {!hasPower && (
-            <Card>
-              <CardContent className="py-6 text-center">
-                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-2 text-muted-foreground opacity-50">
-                  <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
-                </svg>
-                <p className="text-xs text-muted-foreground">{t('activityDetail.power.noData')}</p>
-              </CardContent>
-            </Card>
-          )}
         </div>
       </div>
     </div>

@@ -311,7 +311,7 @@
             },
             {
               "label": "Server oder NAS Beispiel",
-              "code": "http://10.10.10.129:3001/api/health"
+              "code": "http://DEINE-SERVER-IP:3001/api/health"
             }
           ]
         },
@@ -779,6 +779,18 @@
         "anaerobic": "Anaerob"
       }
     },
+    "powerSummary": {
+      "title": "Power-Werte",
+      "subtitle": "Nur Werte aus dieser Aktivität.",
+      "labels": {
+        "avgPower": "Ø Leistung",
+        "maxPower": "Max Leistung",
+        "np": "NP",
+        "if": "IF",
+        "vi": "VI",
+        "energy": "Energie"
+      }
+    },
     "bestStats": {
       "options": {
         "bestPower": "Beste Leistung",
@@ -847,9 +859,13 @@
       "details": "Zur Gear-Seite →",
       "assign": "Ausrüstung zuweisen",
       "saving": "Speichere...",
+      "current": "Aktuell: {{name}}",
       "unassigned": "Keine Ausrüstung",
+      "unassignedRide": "Kein Rad zugeordnet",
       "noGear": "Keine Ausrüstung vorhanden. Lege zuerst ein Bike/Schuhe auf der Gear-Seite an.",
-      "assignError": "Ausrüstung konnte nicht zur Aktivität zugewiesen werden."
+      "assignError": "Ausrüstung konnte nicht zur Aktivität zugewiesen werden.",
+      "missingRideHint": "Für diese Fahrt ist noch kein Rad zugeordnet. Wenn die Zuordnung fehlt oder nicht mehr passt, kannst Du sie hier korrigieren.",
+      "missingHint": "Für diese Aktivität ist noch keine Ausrüstung zugeordnet. Wenn die Zuordnung fehlt oder nicht mehr passt, kannst Du sie hier korrigieren."
     },
     "power": {
       "noData": "Keine Powerdaten"
