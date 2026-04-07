@@ -208,12 +208,12 @@
       "subtitle": "Short practical tips for everyday PWRX use",
       "prevTip": "Previous tip",
       "nextTip": "Next tip",
-      "fallbackPrimaryAction": "Open import",
-      "fallbackSecondaryAction": "Sync settings",
+      "fallbackPrimaryAction": "Open sidecar help",
+      "fallbackSecondaryAction": "Open import",
       "automateFetch": {
         "title": "Automate your data retrieval",
-        "body": "If you regularly get new activities, use the optional sidecar path: an external job fetches data and drops it automatically into the PWRX import folder.",
-        "primaryAction": "Sync settings",
+        "body": "If you regularly get new activities, use the optional sidecar path. It is a separate helper outside PWRX that fetches data and drops it into your import folder.",
+        "primaryAction": "Open sidecar help",
         "secondaryAction": "Open import"
       }
     },
@@ -272,6 +272,49 @@
     "data": {
       "title": "No data available",
       "description": "There is no data for this period."
+    }
+  },
+  "helpSidecar": {
+    "badge": "Internal help",
+    "title": "Understand the Strava sidecar",
+    "subtitle": "The sidecar path is meant for users who want to bring Strava files into PWRX automatically on a regular basis without changing the normal file-import model.",
+    "openImport": "Open import",
+    "openGuide": "Open detailed guide",
+    "keyPointTitle": "Most important point",
+    "keyPointBody": "Sidecar is not a toggle inside PWRX. It is a separate helper tool or script running outside PWRX. It downloads data from Strava and places files into your import folder. PWRX then imports those files like any normal file import.",
+    "whatItIs": {
+      "title": "What sidecar is",
+      "body": "A separate helper for automatic file retrieval. It is useful when you want regular automatic imports but still keep the public baseline file-based."
+    },
+    "whatItIsNot": {
+      "title": "What sidecar is not",
+      "body": "It is not a settings switch and not a feature that starts just because you entered tokens somewhere. If you already run a direct Strava sync, you usually do not need sidecar on top."
+    },
+    "steps": {
+      "title": "How it works",
+      "subtitle": "Conceptually simple, even if the one-time setup needs a bit of preparation.",
+      "items": [
+        "You set up a sidecar script or small job outside PWRX.",
+        "That helper authenticates with your own Strava app and downloads new activity files.",
+        "Those files are written into your PWRX import folder or watch folder.",
+        "PWRX then imports them just like FIT, GPX, TCX, or ZIP file imports."
+      ]
+    },
+    "useCases": {
+      "title": "When sidecar makes sense",
+      "items": [
+        "You want new activities to arrive automatically on a regular basis.",
+        "You run PWRX locally on your computer, on a server, or on a NAS.",
+        "You want to stay on the public repo baseline while still adding automated retrieval."
+      ]
+    },
+    "requirements": {
+      "title": "What you need",
+      "items": [
+        "Your own Strava app with valid credentials.",
+        "A place where the sidecar can run: PC, server, or NAS.",
+        "An import folder or watch folder that PWRX already reads."
+      ]
     }
   },
   "language": {
@@ -1923,6 +1966,12 @@
         "resumed": "Resume detected: {{sent}} were already uploaded.",
         "processing": "Upload complete. Server is filtering the ZIP (relevant Strava files only) and creating the import run..."
       }
+    },
+    "sidecarHint": {
+      "title": "Strava sidecar",
+      "subtitle": "Automatic retrieval as a file path, not as a switch inside PWRX.",
+      "body": "If you want Strava data to be placed into your import folder automatically, use the optional sidecar path. Setup happens outside PWRX; after that, PWRX imports the files as usual.",
+      "openHelp": "Open sidecar help"
     },
     "selected": "{{count}} file(s) selected · {{size}}",
     "actions": {

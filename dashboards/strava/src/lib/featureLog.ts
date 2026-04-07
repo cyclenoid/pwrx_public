@@ -22,23 +22,23 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     date: '2026-04-07',
     tag: 'dashboard',
     title: {
-      de: 'Dashboard: Tipps-Kachel mit durchklickbaren Hinweisen',
-      en: 'Dashboard: tips card with clickable hint navigation',
+      de: 'Dashboard: Tipps-Kachel mit Sidecar-Hilfe',
+      en: 'Dashboard: tips card with sidecar help',
     },
     summary: {
-      de: 'Ueber der Versionskachel steht jetzt eine Tipps-Kachel. Sie startet mit dem Hinweis zum optionalen Sidecar-Weg und ist fuer weitere Tipps vorbereitet.',
-      en: 'Above the version card there is now a tips card. It starts with an optional sidecar hint and is ready for more tips.',
+      de: 'Die Tipps-Kachel verweist jetzt auf eine interne Sidecar-Hilfeseite statt auf irrefuehrende Sync-Einstellungen. Auf der Import-Seite gibt es denselben Einstiegspunkt.',
+      en: 'The tips card now links to an internal sidecar help page instead of misleading sync settings. The import page now includes the same entry point.',
     },
     bullets: {
       de: [
         'Der erste Tipp lautet: „Automatisiere Deinen Datenabruf“.',
-        'Navigation per Vor/Zurueck ist bereits eingebaut, auch wenn aktuell ein Tipp aktiv ist.',
-        'Direktlinks zu Sync-Einstellungen und Import sind in der Kachel enthalten.',
+        'Die neue Hilfeseite erklaert klar, dass Sidecar ein externes Hilfstool und kein Schalter in PWRX ist.',
+        'Die Import-Seite verweist ebenfalls sichtbar auf die Sidecar-Hilfe.',
       ],
       en: [
         'The first tip reads: “Automate your data retrieval”.',
-        'Previous/next navigation is already wired, even with one active tip.',
-        'Direct links to sync settings and import are included in the card.',
+        'The new help page explains clearly that sidecar is an external helper, not a toggle inside PWRX.',
+        'The import page now also points visibly to the sidecar help.',
       ],
     },
   },

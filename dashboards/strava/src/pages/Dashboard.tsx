@@ -762,7 +762,7 @@ export function Dashboard() {
       title: t('dashboard.tipsCard.automateFetch.title'),
       body: t('dashboard.tipsCard.automateFetch.body'),
       primaryLabel: t('dashboard.tipsCard.automateFetch.primaryAction'),
-      primaryTo: '/settings?tab=sync',
+      primaryTo: '/help/sidecar',
       secondaryLabel: t('dashboard.tipsCard.automateFetch.secondaryAction'),
       secondaryTo: '/import',
     },
@@ -1548,10 +1548,10 @@ export function Dashboard() {
               <div className="mt-1 text-[11px] leading-relaxed text-muted-foreground">{activeTip?.body || ''}</div>
             </div>
             <div className="flex items-center justify-between gap-2 border-t border-border/50 pt-2 text-[11px]">
-              <Link to={activeTip?.primaryTo || '/import'} className="font-medium text-orange-400 transition-colors hover:text-orange-300">
+              <Link to={activeTip?.primaryTo || '/help/sidecar'} className="font-medium text-orange-400 transition-colors hover:text-orange-300">
                 {activeTip?.primaryLabel || t('dashboard.tipsCard.fallbackPrimaryAction')}
               </Link>
-              <Link to={activeTip?.secondaryTo || '/settings?tab=sync'} className="font-medium text-foreground transition-colors hover:text-orange-300">
+              <Link to={activeTip?.secondaryTo || '/import'} className="font-medium text-foreground transition-colors hover:text-orange-300">
                 {activeTip?.secondaryLabel || t('dashboard.tipsCard.fallbackSecondaryAction')}
               </Link>
             </div>
