@@ -277,62 +277,115 @@
   "helpSidecar": {
     "badge": "Internal help",
     "title": "Understand the Strava sidecar",
-    "subtitle": "The sidecar path is meant for users who want to bring Strava files into PWRX automatically on a regular basis without changing the normal file-import model.",
+    "subtitle": "Sidecar is the optional path for getting Strava data into your normal PWRX file import automatically.",
     "openImport": "Open import",
-    "keyPointTitle": "Most important point",
-    "keyPointBody": "Sidecar is not a toggle inside PWRX. It is a separate helper tool or script running outside PWRX. It downloads data from Strava and places files into your import folder. PWRX then imports those files like any normal file import.",
-    "whatItIs": {
-      "title": "What sidecar is",
-      "body": "A separate helper for automatic file retrieval. It is useful when you want regular automatic imports but still keep the public baseline file-based."
-    },
-    "whatItIsNot": {
-      "title": "What sidecar is not",
-      "body": "It is not a settings switch and not a feature that starts just because you entered credentials somewhere. Setup happens separately outside PWRX."
-    },
-    "steps": {
-      "title": "How it works",
-      "subtitle": "Conceptually simple, even if the one-time setup needs a bit of preparation.",
+    "keyPointTitle": "Important",
+    "keyPointBody": "Sidecar is not a toggle inside PWRX. It is a separate script outside PWRX. Automatic imports only start once that script is actually running.",
+    "quickFacts": {
+      "title": "In short",
       "items": [
-        "You set up a sidecar script or small job outside PWRX.",
-        "That helper authenticates with your own Strava app and downloads new activity files.",
-        "Those files are written into your PWRX import folder or watch folder.",
-        "PWRX then imports them just like FIT, GPX, TCX, or ZIP file imports."
-      ]
-    },
-    "useCases": {
-      "title": "When sidecar makes sense",
-      "items": [
-        "You want new activities to arrive automatically on a regular basis.",
-        "You run PWRX locally on your computer, on a server, or on a NAS.",
-        "You want to stay on the public repo baseline while still adding automated retrieval."
-      ]
-    },
-    "install": {
-      "title": "How to set it up",
-      "subtitle": "The process is similar whether you run it on a PC, server, or NAS.",
-      "items": [
-        "First decide where the sidecar should run: on your computer, your server, or your NAS.",
-        "Create your own Strava app and note the client ID, client secret, and refresh token.",
-        "Configure the sidecar so it writes new files into your PWRX import folder or watch folder.",
-        "Start the sidecar manually once and then check the PWRX import page for new files or a new import run.",
-        "Once that works, schedule the sidecar to run regularly, for example with Task Scheduler, cron, or a NAS job."
-      ]
-    },
-    "check": {
-      "title": "How to tell it works",
-      "subtitle": "You do not need to enable anything inside PWRX for this.",
-      "items": [
-        "A new import run or new files show up on the import page.",
-        "The activities then appear in the dashboard and activity list.",
-        "If nothing arrives, check the sidecar job and destination folder first, not the normal PWRX settings."
+        "Sidecar runs outside PWRX.",
+        "It fetches Strava activities and creates import files for PWRX.",
+        "You do not need to enable anything extra inside PWRX."
       ]
     },
     "requirements": {
       "title": "What you need",
       "items": [
-        "Your own Strava app with valid credentials.",
-        "A place where the sidecar can run: PC, server, or NAS.",
-        "An import folder or watch folder that PWRX already reads."
+        "Your own Strava app with client ID, client secret, and refresh token.",
+        "A place where the sidecar can run: computer, server, or NAS.",
+        "A running PWRX instance with a reachable API or watch folder."
+      ]
+    },
+    "quickStart": {
+      "title": "Quick start in 5 steps",
+      "subtitle": "The in-app help and the Git guide now use the same flow.",
+      "steps": [
+        {
+          "title": "Check the PWRX API",
+          "body": "Open the health URL of your PWRX instance first. If that responds, the sidecar can import later.",
+          "commands": [
+            {
+              "label": "Local",
+              "code": "http://127.0.0.1:3001/api/health"
+            },
+            {
+              "label": "Server or NAS example",
+              "code": "http://10.10.10.129:3001/api/health"
+            }
+          ]
+        },
+        {
+          "title": "Create .env.sidecar",
+          "body": "Create the sidecar env file on the machine or server where the script will run.",
+          "commands": [
+            {
+              "label": "Bash",
+              "code": "cp scripts/strava-sidecar.env.example .env.sidecar"
+            },
+            {
+              "label": "Windows CMD",
+              "code": "copy scripts\\strava-sidecar.env.example .env.sidecar"
+            },
+            {
+              "label": "PowerShell",
+              "code": "Copy-Item .\\scripts\\strava-sidecar.env.example .\\.env.sidecar"
+            }
+          ]
+        },
+        {
+          "title": "Enter credentials",
+          "body": "Then open `.env.sidecar` and set these three values from your own Strava app.",
+          "bullets": [
+            "STRAVA_CLIENT_ID",
+            "STRAVA_CLIENT_SECRET",
+            "STRAVA_REFRESH_TOKEN"
+          ]
+        },
+        {
+          "title": "Run a safe test",
+          "body": "This validates the setup without triggering a real import into PWRX.",
+          "commands": [
+            {
+              "label": "Node",
+              "code": "node scripts/strava-sidecar.mjs --mock --dry-run"
+            }
+          ]
+        },
+        {
+          "title": "Start a real import",
+          "body": "For most users, `import_api` is the easiest path. Use `watch_folder` only if you deliberately want PWRX to import from a watched folder.",
+          "commands": [
+            {
+              "label": "Bash",
+              "code": "node scripts/strava-sidecar.mjs --mode import_api --api-base http://127.0.0.1:3001/api"
+            },
+            {
+              "label": "PowerShell",
+              "code": "node .\\scripts\\strava-sidecar.mjs --mode import_api --api-base http://127.0.0.1:3001/api"
+            }
+          ]
+        }
+      ]
+    },
+    "control": {
+      "title": "Control amount and time range",
+      "subtitle": "Optional, if you do not want to fetch everything at once.",
+      "items": [
+        "`--lookback-days`: how many days back the script should check.",
+        "`--max-activities`: maximum number of activities per run.",
+        "`--delay-ms`: pause between API requests."
+      ],
+      "exampleLabel": "Example",
+      "exampleCode": "node scripts/strava-sidecar.mjs --mode import_api --lookback-days 14 --max-activities 100 --delay-ms 150"
+    },
+    "check": {
+      "title": "How to tell it works",
+      "subtitle": "If these points are true, the sidecar is working correctly.",
+      "items": [
+        "A new import run or new files appear on the import page.",
+        "The activities then show up in the dashboard and activity list.",
+        "If nothing arrives, check the sidecar job, `.env.sidecar`, and API URL first."
       ]
     }
   },

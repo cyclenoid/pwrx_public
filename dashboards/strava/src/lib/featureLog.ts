@@ -22,25 +22,25 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     date: '2026-04-07',
     tag: 'dashboard',
     title: {
-      de: 'Dashboard: Tipps-Kachel mit Sidecar-Hilfe',
-      en: 'Dashboard: tips card with sidecar help',
+      de: 'Dashboard: Tipps-Kachel mit kompakter Sidecar-Hilfe',
+      en: 'Dashboard: tips card with compact sidecar help',
     },
     summary: {
-      de: 'Die Tipps-Kachel verweist jetzt auf eine interne Sidecar-Hilfeseite mit eigenem Installationsablauf. Auf der Import-Seite gibt es denselben Einstiegspunkt.',
-      en: 'The tips card now links to an internal sidecar help page with its own setup flow. The import page now includes the same entry point.',
+      de: 'Die Tipps-Kachel verweist jetzt auf eine interne Sidecar-Hilfe mit klaren Installationsschritten und direkten Befehlen. Die Git-Doku folgt demselben kompakten Aufbau.',
+      en: 'The tips card now links to an internal sidecar help page with direct setup commands. The Git guide now follows the same compact structure.',
     },
     bullets: {
       de: [
         'Der erste Tipp lautet: „Automatisiere Deinen Datenabruf“.',
         'Die neue Hilfeseite erklaert klar, dass Sidecar ein externes Hilfstool und kein Schalter in PWRX ist.',
-        'Der Installationsablauf steht jetzt direkt in der App und nicht nur in Git-Dokumenten.',
-        'Die Import-Seite verweist ebenfalls sichtbar auf die Sidecar-Hilfe.',
+        'Der Installationsablauf steht direkt in der App mit Health-Check, `.env.sidecar` und Startbefehlen.',
+        'Die Git-Kurzanleitung und die interne Hilfe verwenden jetzt dieselbe Reihenfolge und dieselben Kernbefehle.',
       ],
       en: [
         'The first tip reads: “Automate your data retrieval”.',
         'The new help page explains clearly that sidecar is an external helper, not a toggle inside PWRX.',
-        'The setup flow is now documented directly inside the app instead of only in Git docs.',
-        'The import page now also points visibly to the sidecar help.',
+        'The setup flow now lives directly inside the app with health check, `.env.sidecar`, and start commands.',
+        'The Git quick guide and the in-app help now use the same order and core commands.',
       ],
     },
   },

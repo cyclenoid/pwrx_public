@@ -1,100 +1,89 @@
-# Strava Sidecar explained simply (for users)
-
-This page explains the sidecar path without deep technical detail.
+# Strava sidecar quick guide
 
 ## In short
 
-The sidecar is a small helper script.
+- Sidecar runs **outside PWRX**.
+- It fetches Strava activities and turns them into import files for PWRX.
+- Inside PWRX itself, you do **not** need to enable anything for this.
 
-On each run it:
-1. pulls activities from Strava
-2. builds GPX files from them
-3. imports those files into PWRX
+## What you need
 
-PWRX itself still stays file-import based.
+- Your own Strava app with:
+  - `STRAVA_CLIENT_ID`
+  - `STRAVA_CLIENT_SECRET`
+  - `STRAVA_REFRESH_TOKEN`
+- A computer, server, or NAS where the script can run
+- A running PWRX instance with API or watch folder
 
-## When this is useful
+## Quick start in 5 steps
 
-- you want to keep the normal PWRX import workflow
-- you want activities to be fetched from Strava automatically
-- you accept that this is an advanced operator path
+### 1. Check the PWRX API
 
-If you just want to get started, stay on normal file import (FIT/GPX/TCX, ZIP).
-
-## What gets imported?
-
-Current sidecar scope:
-- activity list (within a time window)
-- per-activity streams (time, GPS, elevation, heart rate, cadence, temperature, watts)
-- GPX output for PWRX import
-
-Not covered by this script today:
-- photo download
-- native Strava segment-effort synchronization
-
-Note: PWRX can still build local segments from imported GPS data.
-
-## Setup in 5 steps
-
-1. Start PWRX and check API:
+Local:
 
 ```text
 http://127.0.0.1:3001/api/health
 ```
 
-If PWRX runs on a server, use the server address instead of `127.0.0.1`, for example:
+Server/NAS example:
 
 ```text
 http://10.10.10.129:3001/api/health
 ```
 
-2. Create sidecar env file:
+### 2. Create `.env.sidecar`
 
 ```bash
 cp scripts/strava-sidecar.env.example .env.sidecar
 ```
 
-Windows (CMD):
+Windows CMD:
 
 ```bat
 copy scripts\strava-sidecar.env.example .env.sidecar
 ```
 
-Windows (PowerShell):
+PowerShell:
 
 ```powershell
 Copy-Item .\scripts\strava-sidecar.env.example .\.env.sidecar
 ```
 
-3. Set values in `.env.sidecar`:
+### 3. Enter credentials
+
+Set these values in `.env.sidecar`:
+
 - `STRAVA_CLIENT_ID`
 - `STRAVA_CLIENT_SECRET`
 - `STRAVA_REFRESH_TOKEN`
 
-4. Run a safe test first:
+### 4. Run a safe test
 
 ```bash
 node scripts/strava-sidecar.mjs --mock --dry-run
 ```
 
-5. Run real import into local API:
+### 5. Start a real import
+
+For most users, `import_api` is the easiest path.
 
 ```bash
 node scripts/strava-sidecar.mjs --mode import_api --api-base http://127.0.0.1:3001/api
 ```
 
-Windows (PowerShell):
+PowerShell:
 
 ```powershell
 node .\scripts\strava-sidecar.mjs --mode import_api --api-base http://127.0.0.1:3001/api
 ```
 
+You only need `watch_folder` if you deliberately want to work through a watched folder.
+
 ## Control amount and time range
 
-Key options:
-- `--lookback-days` (for example 7, 14, 30)
-- `--max-activities` (maximum activities per run)
-- `--delay-ms` (pause between API requests)
+- `--lookback-days`: how many days back to check
+- `--max-activities`: maximum activities per run
+- `--delay-ms`: pause between API requests
 
 Example:
 
@@ -102,29 +91,12 @@ Example:
 node scripts/strava-sidecar.mjs --mode import_api --lookback-days 14 --max-activities 100 --delay-ms 150
 ```
 
-## Two operation modes
+## How to tell it works
 
-- `watch_folder`: writes GPX files to a folder PWRX can watch
-- `import_api`: writes GPX and posts them directly to the PWRX import API
+- A new import run or new files appear on the import page.
+- The activities then show up in the dashboard and activity list.
+- If nothing arrives, check the sidecar job, `.env.sidecar`, and the API URL first.
 
-For most users, `import_api` is easier.
+## Note
 
-## Local vs server: does it matter?
-
-Yes, but mostly operationally:
-
-- The sidecar logic is the same.
-- What changes is where the script runs and which API base URL you use.
-- Local setup: usually `http://127.0.0.1:3001/api`.
-- Server/NAS/Unraid setup: server IP or DNS, for example `http://10.10.10.129:3001/api`.
-- In `watch_folder` mode, the target folder must be reachable by PWRX (same host or mounted path).
-
-## Important API policy note
-
-- The sidecar script is published as a technical reference.
-- It is not an official public default support path.
-- Operation and compliance remain with the operator (own app, credentials, limits/review).
-
-See also:
-- `docs/STRAVA_CONNECTIVITY.md`
-- `docs/STRAVA_SIDECAR_QUICKSTART.md`
+Sidecar is an optional advanced path. Running it and configuring the Strava API remains the responsibility of the operator of that installation.
