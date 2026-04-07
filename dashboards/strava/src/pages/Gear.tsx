@@ -33,13 +33,13 @@ function GearIcon({ type, className = '' }: { type?: string; className?: string 
 // Stat card component
 function StatCard({ label, value, unit, icon }: { label: string; value: string | number; unit?: string; icon?: React.ReactNode }) {
   return (
-    <div className="bg-secondary/50 rounded-lg p-4 text-center">
-      {icon && <div className="flex justify-center mb-2 text-muted-foreground">{icon}</div>}
-      <p className="text-2xl font-bold">
+    <div className="rounded-xl border border-border/60 bg-secondary/35 p-3 text-center">
+      {icon && <div className="mb-1.5 flex justify-center text-muted-foreground">{icon}</div>}
+      <p className="text-xl font-bold leading-none">
         {value}
-        {unit && <span className="text-sm font-normal text-muted-foreground ml-1">{unit}</span>}
+        {unit && <span className="ml-1 text-xs font-normal text-muted-foreground">{unit}</span>}
       </p>
-      <p className="text-xs text-muted-foreground uppercase tracking-wider">{label}</p>
+      <p className="mt-1 text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{label}</p>
     </div>
   )
 }
@@ -48,27 +48,57 @@ function RankingCard({
   title,
   rows,
   unit,
+  decimals = 0,
 }: {
   title: string
   rows: Array<{ id: string; name: string; value: number }>
   unit?: string
+  decimals?: number
 }) {
+  const topValue = rows[0]?.value || 0
+
+  const getRankBadgeClass = (rank: number) => {
+    if (rank === 0) return 'border-amber-400/50 bg-amber-400/15 text-amber-300'
+    if (rank === 1) return 'border-slate-300/50 bg-slate-300/10 text-slate-200'
+    if (rank === 2) return 'border-orange-500/50 bg-orange-500/10 text-orange-300'
+    return 'border-border/60 bg-background/70 text-muted-foreground'
+  }
+
   return (
-    <Card>
-      <CardHeader className="pb-2">
-        <CardTitle className="text-sm">{title}</CardTitle>
+    <Card className="overflow-hidden border-primary/15">
+      <CardHeader className="border-b border-border/50 bg-gradient-to-r from-primary/12 via-primary/5 to-transparent pb-3">
+        <CardTitle className="text-sm font-semibold tracking-wide">{title}</CardTitle>
       </CardHeader>
       <CardContent className="space-y-2">
         {rows.length > 0 ? (
           rows.map((row, index) => (
-            <div key={row.id} className="flex items-center justify-between gap-3 rounded-lg border border-border/60 bg-card/40 px-3 py-2">
-              <div className="min-w-0">
-                <div className="text-[11px] uppercase tracking-wide text-muted-foreground">#{index + 1}</div>
-                <div className="truncate text-sm font-medium">{row.name}</div>
-              </div>
-              <div className="shrink-0 text-sm font-semibold text-primary">
-                {formatNumber(row.value, unit === 'km/h' ? 1 : 0)}
-                {unit ? ` ${unit}` : ''}
+            <div key={row.id} className="rounded-xl border border-border/60 bg-card/40 px-3 py-2.5 transition-colors hover:border-primary/25 hover:bg-primary/5">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-full border text-xs font-semibold ${getRankBadgeClass(index)}`}>
+                    #{index + 1}
+                  </div>
+                  <div className="min-w-0">
+                    <div className="truncate text-sm font-medium">{row.name}</div>
+                    <div className="mt-1 h-1.5 w-full rounded-full bg-secondary/80">
+                      <div
+                        className="h-1.5 rounded-full bg-gradient-to-r from-primary to-orange-400"
+                        style={{ width: `${topValue > 0 ? Math.max((row.value / topValue) * 100, 8) : 0}%` }}
+                      />
+                    </div>
+                  </div>
+                </div>
+                <div className="shrink-0 text-right">
+                  <div className="text-sm font-semibold text-primary">
+                    {formatNumber(row.value, decimals)}
+                    {unit ? ` ${unit}` : ''}
+                  </div>
+                  {topValue > 0 && (
+                    <div className="text-[11px] text-muted-foreground">
+                      {formatNumber((row.value / topValue) * 100, 0)}%
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
           ))
@@ -151,14 +181,14 @@ function GearCard({
       className={`cursor-pointer transition-all hover:shadow-lg hover:border-primary/30 ${gear.retired ? 'opacity-60' : ''}`}
       onClick={onClick}
     >
-      <CardContent className="p-6">
-        <div className="flex items-start gap-4">
-          <div className={`p-3 rounded-full ${gearType === 'bike' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
-            <GearIcon type={gear.type} className="w-8 h-8" />
+      <CardContent className="p-4">
+        <div className="flex items-start gap-3">
+          <div className={`rounded-full p-2.5 ${gearType === 'bike' ? 'bg-blue-500/10 text-blue-500' : 'bg-green-500/10 text-green-500'}`}>
+            <GearIcon type={gear.type} className="h-6 w-6" />
           </div>
           <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2">
-              <h3 className="font-semibold text-lg truncate">{gear.name}</h3>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="truncate text-base font-semibold">{gear.name}</h3>
               <span className="px-2 py-0.5 text-[10px] uppercase tracking-wide rounded-full border border-border text-muted-foreground">
                 {gearSource === 'manual' ? t('gear.source.manual') : t('gear.source.synced')}
               </span>
@@ -174,37 +204,37 @@ function GearCard({
               </p>
             )}
             {gear.description && (
-              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">{gear.description}</p>
+              <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{gear.description}</p>
             )}
 
-            <div className="flex flex-wrap gap-4 mt-4 text-sm">
-              <div>
-                <span className="font-semibold">{formatNumber(distanceKm, 0)}</span>
-                <span className="text-muted-foreground ml-1">{t('records.units.km')}</span>
+            <div className="mt-3 grid grid-cols-2 gap-2 text-xs sm:grid-cols-3">
+              <div className="rounded-lg border border-border/50 bg-secondary/25 px-2.5 py-2">
+                <div className="font-semibold">{formatNumber(distanceKm, 0)}</div>
+                <div className="text-muted-foreground">{t('records.units.km')}</div>
               </div>
-              <div>
-                <span className="font-semibold">{activityCount}</span>
-                <span className="text-muted-foreground ml-1">{t('gear.stats.activities')}</span>
+              <div className="rounded-lg border border-border/50 bg-secondary/25 px-2.5 py-2">
+                <div className="font-semibold">{activityCount}</div>
+                <div className="text-muted-foreground">{t('gear.stats.activities')}</div>
               </div>
               {hours > 0 && (
-                <div>
-                  <span className="font-semibold">{formatNumber(hours, 1)}</span>
-                  <span className="text-muted-foreground ml-1">{t('gear.stats.hours')}</span>
+                <div className="rounded-lg border border-border/50 bg-secondary/25 px-2.5 py-2">
+                  <div className="font-semibold">{formatNumber(hours, 1)}</div>
+                  <div className="text-muted-foreground">{t('gear.stats.hours')}</div>
                 </div>
               )}
             </div>
 
-            <div className="mt-5 space-y-2">
-              <div className="text-xs uppercase tracking-wider text-muted-foreground">
+            <div className="mt-3 space-y-2">
+              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                 {t('gear.maintenance.title')}
               </div>
               {maintenanceItems.length === 0 ? (
-                <div className="text-xs text-muted-foreground">
+                <div className="text-[11px] text-muted-foreground">
                   {t('gear.maintenance.empty')}
                 </div>
               ) : (
-                <div className="space-y-3">
-                  {maintenanceItems.slice(0, 3).map((item) => {
+                <div className="space-y-2">
+                  {maintenanceItems.slice(0, 2).map((item) => {
                     const targetKm = Number(item.target_km || 0)
                     const usedKm = getUsedKm(currentKm, item.last_reset_km)
                     const remainingKm = targetKm > 0 ? targetKm - usedKm : 0
@@ -215,17 +245,22 @@ function GearCard({
                       : t('gear.maintenance.status.unset')
                     return (
                       <div key={item.component_key} className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
+                        <div className="flex items-center justify-between gap-2 text-[11px]">
                           <span className="font-medium">{item.label}</span>
                           <span className="text-muted-foreground">
                             {formatNumber(usedKm, 0)} / {formatNumber(targetKm, 0)} {t('records.units.km')}
                           </span>
                         </div>
                         <MaintenanceBar usedKm={usedKm} targetKm={targetKm} />
-                        <div className="text-[11px] text-muted-foreground">{statusLabel}</div>
+                        <div className="text-[10px] text-muted-foreground">{statusLabel}</div>
                       </div>
                     )
                   })}
+                  {maintenanceItems.length > 2 && (
+                    <div className="text-[10px] uppercase tracking-[0.14em] text-muted-foreground">
+                      +{maintenanceItems.length - 2}
+                    </div>
+                  )}
                 </div>
               )}
             </div>
@@ -674,7 +709,6 @@ export function Gear() {
   const topDistanceBikes = useMemo(() => (
     [...bikeGear]
       .sort((a, b) => getGearDistanceKm(b) - getGearDistanceKm(a))
-      .slice(0, 5)
       .map((gear) => ({
         id: gear.id,
         name: gear.name,
@@ -685,7 +719,6 @@ export function Gear() {
   const topElevationBikes = useMemo(() => (
     [...bikeGear]
       .sort((a, b) => Number(b.total_elevation_m || 0) - Number(a.total_elevation_m || 0))
-      .slice(0, 5)
       .map((gear) => ({
         id: gear.id,
         name: gear.name,
@@ -697,7 +730,6 @@ export function Gear() {
     [...bikeGear]
       .filter((gear) => Number(gear.avg_speed_kmh || 0) > 0)
       .sort((a, b) => Number(b.avg_speed_kmh || 0) - Number(a.avg_speed_kmh || 0))
-      .slice(0, 5)
       .map((gear) => ({
         id: gear.id,
         name: gear.name,
@@ -915,6 +947,7 @@ export function Gear() {
             title={t('gear.sidebar.topSpeed')}
             rows={topSpeedBikes}
             unit={t('activityDetail.units.kmh')}
+            decimals={1}
           />
         </aside>
       </div>
