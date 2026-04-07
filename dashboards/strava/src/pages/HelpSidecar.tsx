@@ -1,15 +1,13 @@
 import { Link } from 'react-router-dom'
-import { BookOpen, FolderInput, Info, Link2, ServerCog } from 'lucide-react'
+import { BookOpen, FolderInput, Info, ServerCog, CheckCircle2 } from 'lucide-react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { useTranslation } from 'react-i18next'
 
 export default function HelpSidecar() {
-  const { t, i18n } = useTranslation()
-  const guideUrl = i18n.language?.startsWith('de')
-    ? 'https://github.com/cyclenoid/pwrx_public/blob/main/docs/STRAVA_SIDECAR_SIMPLE_GUIDE.de.md'
-    : 'https://github.com/cyclenoid/pwrx_public/blob/main/docs/STRAVA_SIDECAR_SIMPLE_GUIDE.md'
-
+  const { t } = useTranslation()
   const steps = t('helpSidecar.steps.items', { returnObjects: true }) as string[]
+  const installSteps = t('helpSidecar.install.items', { returnObjects: true }) as string[]
+  const checkSteps = t('helpSidecar.check.items', { returnObjects: true }) as string[]
   const useCases = t('helpSidecar.useCases.items', { returnObjects: true }) as string[]
   const requirements = t('helpSidecar.requirements.items', { returnObjects: true }) as string[]
 
@@ -34,15 +32,6 @@ export default function HelpSidecar() {
             <FolderInput className="h-4 w-4" />
             {t('helpSidecar.openImport')}
           </Link>
-          <a
-            href={guideUrl}
-            target="_blank"
-            rel="noreferrer"
-            className="inline-flex items-center gap-2 rounded-lg border border-orange-500/40 bg-orange-500/10 px-4 py-2 text-sm font-medium text-orange-300 transition-colors hover:bg-orange-500/15"
-          >
-            <Link2 className="h-4 w-4" />
-            {t('helpSidecar.openGuide')}
-          </a>
         </div>
       </div>
 
@@ -128,6 +117,47 @@ export default function HelpSidecar() {
             </CardContent>
           </Card>
         </div>
+      </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card className="border-border/60 bg-card/95 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">{t('helpSidecar.install.title')}</CardTitle>
+            <CardDescription>{t('helpSidecar.install.subtitle')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ol className="space-y-3 text-sm">
+              {installSteps.map((step, index) => (
+                <li key={step} className="flex gap-3">
+                  <span className="mt-0.5 inline-flex h-6 w-6 shrink-0 items-center justify-center rounded-full border border-orange-500/40 bg-orange-500/10 text-xs font-semibold text-orange-300">
+                    {index + 1}
+                  </span>
+                  <span className="leading-relaxed text-foreground/90">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </CardContent>
+        </Card>
+
+        <Card className="border-border/60 bg-card/95 shadow-sm">
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <CheckCircle2 className="h-4 w-4 text-orange-400" />
+              {t('helpSidecar.check.title')}
+            </CardTitle>
+            <CardDescription>{t('helpSidecar.check.subtitle')}</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ul className="space-y-3 text-sm">
+              {checkSteps.map((step) => (
+                <li key={step} className="flex gap-2">
+                  <span className="mt-1 h-1.5 w-1.5 shrink-0 rounded-full bg-orange-500" />
+                  <span className="leading-relaxed text-foreground/90">{step}</span>
+                </li>
+              ))}
+            </ul>
+          </CardContent>
+        </Card>
       </div>
     </div>
   )

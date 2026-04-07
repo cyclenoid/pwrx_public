@@ -26,18 +26,20 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
       en: 'Dashboard: tips card with sidecar help',
     },
     summary: {
-      de: 'Die Tipps-Kachel verweist jetzt auf eine interne Sidecar-Hilfeseite statt auf irrefuehrende Sync-Einstellungen. Auf der Import-Seite gibt es denselben Einstiegspunkt.',
-      en: 'The tips card now links to an internal sidecar help page instead of misleading sync settings. The import page now includes the same entry point.',
+      de: 'Die Tipps-Kachel verweist jetzt auf eine interne Sidecar-Hilfeseite mit eigenem Installationsablauf. Auf der Import-Seite gibt es denselben Einstiegspunkt.',
+      en: 'The tips card now links to an internal sidecar help page with its own setup flow. The import page now includes the same entry point.',
     },
     bullets: {
       de: [
         'Der erste Tipp lautet: „Automatisiere Deinen Datenabruf“.',
         'Die neue Hilfeseite erklaert klar, dass Sidecar ein externes Hilfstool und kein Schalter in PWRX ist.',
+        'Der Installationsablauf steht jetzt direkt in der App und nicht nur in Git-Dokumenten.',
         'Die Import-Seite verweist ebenfalls sichtbar auf die Sidecar-Hilfe.',
       ],
       en: [
         'The first tip reads: “Automate your data retrieval”.',
         'The new help page explains clearly that sidecar is an external helper, not a toggle inside PWRX.',
+        'The setup flow is now documented directly inside the app instead of only in Git docs.',
         'The import page now also points visibly to the sidecar help.',
       ],
     },

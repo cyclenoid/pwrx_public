@@ -279,7 +279,6 @@
     "title": "Strava Sidecar verstehen",
     "subtitle": "Der Sidecar-Weg ist für Nutzer gedacht, die Strava-Dateien regelmäßig automatisch in PWRX übernehmen möchten, ohne den normalen Datei-Import zu verändern.",
     "openImport": "Import öffnen",
-    "openGuide": "Ausführliche Anleitung",
     "keyPointTitle": "Wichtigster Punkt",
     "keyPointBody": "Sidecar ist kein Schalter in PWRX. Es ist ein separates Hilfsprogramm oder Skript, das außerhalb von PWRX läuft. Es lädt Daten von Strava und legt sie als Dateien im Importordner ab. PWRX importiert diese Dateien danach wie jeden normalen Datei-Import.",
     "whatItIs": {
@@ -288,7 +287,7 @@
     },
     "whatItIsNot": {
       "title": "Was Sidecar nicht ist",
-      "body": "Kein Knopf in den Einstellungen und keine Funktion, die allein durch das Eintragen von Tokens aktiv wird. Wenn bei Dir bereits ein direkter Strava-Sync installiert ist, brauchst Du Sidecar in der Regel nicht zusätzlich."
+      "body": "Kein Knopf in den Einstellungen und keine Funktion, die allein durch das Eintragen von Zugangsdaten aktiv wird. Die Einrichtung passiert separat außerhalb von PWRX."
     },
     "steps": {
       "title": "So läuft es ab",
@@ -306,6 +305,26 @@
         "Du willst neue Aktivitäten regelmäßig automatisch übernehmen.",
         "Du nutzt PWRX lokal auf Deinem Rechner, auf einem Server oder auf einem NAS.",
         "Du möchtest beim Public-Standard des Repos bleiben und trotzdem einen automatischen Abruf aufbauen."
+      ]
+    },
+    "install": {
+      "title": "So richtest Du es ein",
+      "subtitle": "Der Ablauf ist immer ähnlich, egal ob auf PC, Server oder NAS.",
+      "items": [
+        "Lege zuerst fest, wo der Sidecar laufen soll: auf Deinem Rechner, auf Deinem Server oder auf Deinem NAS.",
+        "Erstelle in Strava Deine eigene App und notiere Client-ID, Client-Secret und Refresh-Token.",
+        "Richte den Sidecar so ein, dass er neue Dateien in Deinen PWRX-Importordner oder Watch Folder schreibt.",
+        "Starte den Sidecar einmal manuell und prüfe danach in PWRX auf der Import-Seite, ob neue Dateien oder ein Importlauf auftauchen.",
+        "Wenn das funktioniert, lasse den Sidecar regelmäßig laufen, zum Beispiel über Aufgabenplanung, Cron oder einen NAS-Job."
+      ]
+    },
+    "check": {
+      "title": "Woran Du erkennst, dass es funktioniert",
+      "subtitle": "Du musst dafür nichts in PWRX aktivieren.",
+      "items": [
+        "Auf der Import-Seite erscheint ein neuer Importlauf oder neue Dateien im Verlauf.",
+        "Die Aktivitäten sind danach im Dashboard und in der Aktivitätsliste sichtbar.",
+        "Wenn nichts ankommt, prüfst Du zuerst den Sidecar-Job und den Zielordner, nicht die normalen PWRX-Einstellungen."
       ]
     },
     "requirements": {
