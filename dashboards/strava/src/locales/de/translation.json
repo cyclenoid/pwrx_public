@@ -876,6 +876,13 @@
       "missingRideHint": "Für diese Fahrt ist noch kein Rad zugeordnet. Wenn die Zuordnung fehlt oder nicht mehr passt, kannst Du sie hier korrigieren.",
       "missingHint": "Für diese Aktivität ist noch keine Ausrüstung zugeordnet. Wenn die Zuordnung fehlt oder nicht mehr passt, kannst Du sie hier korrigieren."
     },
+    "comparable": {
+      "title": "Vergleichbare Aktivitäten",
+      "subtitle": "Ähnliche Strecken nach Ø Geschwindigkeit im Zeitverlauf.",
+      "current": "Aktuell",
+      "match": "{{percent}}% Streckenmatch",
+      "empty": "Noch keine ausreichend ähnlichen Aktivitäten gefunden. Sobald dieselbe Strecke öfter gefahren wurde, erscheint hier der Vergleich."
+    },
     "power": {
       "noData": "Keine Powerdaten"
     }
@@ -1639,10 +1646,18 @@
     "stats": {
       "bikes": "Bikes",
       "shoes": "Schuhe",
+      "totalGear": "Gear",
       "totalDistance": "Total Distanz",
+      "totalElevation": "Höhenmeter",
       "activities": "Aktivitäten",
       "hours": "Stunden",
-      "status": "Status"
+      "status": "Status",
+      "avgSpeed": "Ø Geschwindigkeit"
+    },
+    "sidebar": {
+      "title": "Statistiken",
+      "subtitle": "Deine Gear-Nutzung auf einen Blick.",
+      "breakdownTitle": "Aufteilung"
     },
     "manualCreate": {
       "title": "Ausrüstung manuell erfassen",

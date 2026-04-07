@@ -2360,6 +2360,158 @@ router.get('/activities/:id', async (req: Request, res: Response) => {
 });
 
 /**
+ * GET /api/activities/:id/comparable
+ * Find comparable activities for the same user and sport.
+ * Priority is based on shared segments, with a name+distance fallback.
+ */
+router.get('/activities/:id/comparable', async (req: Request, res: Response) => {
+  try {
+    const activityId = Number(req.params.id);
+    if (!Number.isInteger(activityId)) {
+      return res.status(400).json({ error: 'Invalid activity id' });
+    }
+
+    const requestedLimit = Number(req.query.limit || 8);
+    const limit = Number.isFinite(requestedLimit)
+      ? Math.min(Math.max(Math.round(requestedLimit), 1), 12)
+      : 8;
+
+    const baseActivityResult = await db.query(
+      `
+      SELECT
+        strava_activity_id,
+        user_id,
+        type,
+        COALESCE(distance, 0) AS distance,
+        LOWER(TRIM(COALESCE(name, ''))) AS normalized_name
+      FROM strava.activities
+      WHERE strava_activity_id = $1
+      LIMIT 1
+      `,
+      [activityId]
+    );
+
+    if (baseActivityResult.rows.length === 0) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+
+    const result = await db.query(
+      `
+      WITH base_activity AS (
+        SELECT
+          strava_activity_id,
+          user_id,
+          type,
+          distance,
+          normalized_name
+        FROM (
+          SELECT
+            strava_activity_id,
+            user_id,
+            type,
+            COALESCE(distance, 0) AS distance,
+            LOWER(TRIM(COALESCE(name, ''))) AS normalized_name
+          FROM strava.activities
+          WHERE strava_activity_id = $1
+          LIMIT 1
+        ) src
+      ),
+      base_segments AS (
+        SELECT DISTINCT se.segment_id
+        FROM strava.segment_efforts se
+        WHERE se.activity_id = $1
+      ),
+      base_segment_count AS (
+        SELECT COUNT(*)::int AS total
+        FROM base_segments
+      ),
+      segment_matches AS (
+        SELECT
+          se.activity_id AS comparable_activity_id,
+          COUNT(DISTINCT se.segment_id)::int AS overlap_count
+        FROM strava.segment_efforts se
+        JOIN base_segments bs ON bs.segment_id = se.segment_id
+        WHERE se.activity_id <> $1
+        GROUP BY se.activity_id
+      ),
+      name_matches AS (
+        SELECT
+          a.strava_activity_id AS comparable_activity_id,
+          0::int AS overlap_count
+        FROM strava.activities a
+        JOIN base_activity ba ON a.user_id = ba.user_id AND a.type = ba.type
+        WHERE a.strava_activity_id <> $1
+          AND LOWER(TRIM(COALESCE(a.name, ''))) = ba.normalized_name
+          AND a.distance BETWEEN ba.distance * 0.9 AND ba.distance * 1.1
+      ),
+      combined_matches AS (
+        SELECT comparable_activity_id, overlap_count FROM segment_matches
+        UNION
+        SELECT nm.comparable_activity_id, nm.overlap_count
+        FROM name_matches nm
+        WHERE NOT EXISTS (
+          SELECT 1
+          FROM segment_matches sm
+          WHERE sm.comparable_activity_id = nm.comparable_activity_id
+        )
+      ),
+      ranked_matches AS (
+        SELECT
+          a.strava_activity_id,
+          a.name,
+          a.start_date,
+          a.moving_time,
+          a.elapsed_time,
+          COALESCE(a.distance, 0) / 1000.0 AS distance_km,
+          COALESCE(a.average_speed, 0) * 3.6 AS avg_speed_kmh,
+          COALESCE(a.total_elevation_gain, 0) AS total_elevation_gain,
+          cm.overlap_count,
+          CASE
+            WHEN bsc.total > 0 THEN ROUND((cm.overlap_count::numeric / bsc.total::numeric) * 100, 1)
+            ELSE 0
+          END AS overlap_pct,
+          CASE
+            WHEN cm.overlap_count > 0 THEN 'segments'
+            ELSE 'name'
+          END AS match_type,
+          ABS(COALESCE(a.distance, 0) - ba.distance) AS distance_delta_m
+        FROM combined_matches cm
+        JOIN strava.activities a ON a.strava_activity_id = cm.comparable_activity_id
+        JOIN base_activity ba ON a.user_id = ba.user_id AND a.type = ba.type
+        CROSS JOIN base_segment_count bsc
+        WHERE a.distance BETWEEN ba.distance * 0.75 AND ba.distance * 1.25
+      )
+      SELECT
+        strava_activity_id,
+        name,
+        start_date,
+        moving_time,
+        elapsed_time,
+        distance_km,
+        avg_speed_kmh,
+        total_elevation_gain,
+        overlap_count,
+        overlap_pct,
+        match_type
+      FROM ranked_matches
+      ORDER BY overlap_count DESC, distance_delta_m ASC, start_date DESC
+      LIMIT $2
+      `,
+      [activityId, limit]
+    );
+
+    return res.json({
+      activity_id: activityId,
+      count: result.rows.length,
+      activities: result.rows,
+    });
+  } catch (error: any) {
+    console.error('Error fetching comparable activities:', error);
+    return res.status(500).json({ error: 'Failed to fetch comparable activities' });
+  }
+});
+
+/**
  * PATCH /api/activities/:id/gear
  * Assign or clear gear on an activity.
  * Body: { gear_id?: string | null } (alias: gearId)

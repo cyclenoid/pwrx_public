@@ -18,6 +18,33 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: '2026-04-07-comparable-activities-and-gear-sidebar',
+    date: '2026-04-07',
+    tag: 'analysis',
+    title: {
+      de: 'Aktivitäten vergleichen und Gear-Statistiken schneller erfassen',
+      en: 'Compare activities and read gear stats faster',
+    },
+    summary: {
+      de: 'Aktivitätsdetails zeigen jetzt ähnliche Strecken mit Verlauf der Ø Geschwindigkeit. Die Gear-Seite hat zusätzlich eine Statistik-Sidebar für Distanz, Höhenmeter und Ø km/h.',
+      en: 'Activity details now show similar routes with an avg-speed trend over time. The gear page also gets a stats sidebar for distance, elevation, and avg speed.',
+    },
+    bullets: {
+      de: [
+        'Unter der Power-Kachel erscheinen jetzt vergleichbare Aktivitäten derselben Strecke mit Kurve und kompakter Liste aus Zeit und km/h.',
+        'Der Vergleich priorisiert echte Streckenähnlichkeit über gemeinsame Segmente und ergänzt notfalls passende Fahrten mit gleichem Namen und ähnlicher Distanz.',
+        'Auf der Gear-Seite sitzt rechts jetzt eine feste Statistik-Sidebar mit Gear-Anzahl, Gesamt-km, Höhenmetern und Ø km/h.',
+        'Zusätzliche Kacheln zeigen weiterhin die Verteilung nach Bikes, Schuhen, Aktivitäten und Stunden.',
+      ],
+      en: [
+        'A new card below the power section now shows comparable route efforts with a trend chart and a compact time/kmh list.',
+        'Matching prioritizes real route similarity via shared segments and falls back to same-name rides with similar distance when needed.',
+        'The gear page now includes a dedicated stats sidebar for total gear, total km, elevation gain, and avg km/h.',
+        'Additional cards still summarize bikes, shoes, activities, and hours at a glance.',
+      ],
+    },
+  },
+  {
     id: '2026-04-07-activity-detail-sidebar-power-gear',
     date: '2026-04-07',
     tag: 'ui',

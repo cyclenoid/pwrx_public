@@ -97,6 +97,8 @@ export interface Gear {
   activity_count?: number | string
   total_distance_km?: number | string
   total_hours?: number | string
+  total_elevation_m?: number | string
+  avg_speed_kmh?: number | string
   gear_total_distance_km?: number | string
 }
 
