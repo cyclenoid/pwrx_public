@@ -1027,9 +1027,11 @@
         "date": "Date",
         "activity": "Activity",
         "distance": "Distance",
+        "elevation": "Elev",
         "pace": "Pace",
         "duration": "Time",
-        "avgHr": "Avg HR"
+        "avgHr": "Avg HR",
+        "efficiency": "Efficiency"
       }
     },
     "runPerformance": {

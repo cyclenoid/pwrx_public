@@ -414,6 +414,15 @@ export function Training() {
     return `${normalizedMinutes}:${normalizedSeconds.toString().padStart(2, '0')}`
   }
 
+  const formatRunningEfficiencyValue = (paceMinPerKm: number | null, avgHr: number | null) => {
+    if (!paceMinPerKm || !avgHr || !Number.isFinite(paceMinPerKm) || !Number.isFinite(avgHr) || paceMinPerKm <= 0 || avgHr <= 0) {
+      return '—'
+    }
+
+    const speedMetersPerMinute = 1000 / paceMinPerKm
+    return (speedMetersPerMinute / avgHr).toFixed(2)
+  }
+
   const formatPowerValue = (power: number | null) => {
     if (!power || !Number.isFinite(power)) return '—'
     return Math.round(power).toString()
@@ -1318,9 +1327,11 @@ export function Training() {
                           <th className="px-2 py-2 text-left">{t('training.recentRuns.table.date')}</th>
                           <th className="px-2 py-2 text-left">{t('training.recentRuns.table.activity')}</th>
                           <th className="px-2 py-2 text-right">{t('training.recentRuns.table.distance')}</th>
+                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.elevation')}</th>
                           <th className="px-2 py-2 text-right">{t('training.recentRuns.table.pace')}</th>
                           <th className="px-2 py-2 text-right">{t('training.recentRuns.table.duration')}</th>
                           <th className="px-2 py-2 text-right">{t('training.recentRuns.table.avgHr')}</th>
+                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.efficiency')}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -1335,12 +1346,20 @@ export function Training() {
                             <td className="px-2 py-2 text-right tabular-nums">
                               {activity.distance_km.toFixed(2)} {t('records.units.km')}
                             </td>
+                            <td className="px-2 py-2 text-right tabular-nums">
+                              {activity.total_elevation_gain} {t('records.units.m')}
+                            </td>
                             <td className="px-2 py-2 text-right tabular-nums font-medium text-orange-500">
                               {activity.avg_pace} {t('training.units.pace')}
                             </td>
                             <td className="px-2 py-2 text-right tabular-nums">{formatDurationShort(activity.moving_time)}</td>
                             <td className="px-2 py-2 text-right tabular-nums">
                               {activity.avg_hr ? t('activity.units.bpm', { value: activity.avg_hr }) : t('common.notAvailable')}
+                            </td>
+                            <td className="px-2 py-2 text-right tabular-nums">
+                              {activity.avg_hr
+                                ? `${formatRunningEfficiencyValue(activity.avg_pace_decimal, activity.avg_hr)} ${t('training.runPerformance.units.efficiency')}`
+                                : t('common.notAvailable')}
                             </td>
                           </tr>
                         ))}

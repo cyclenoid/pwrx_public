@@ -1027,9 +1027,11 @@
         "date": "Datum",
         "activity": "Aktivität",
         "distance": "Distanz",
+        "elevation": "HM",
         "pace": "Pace",
         "duration": "Zeit",
-        "avgHr": "Ø HF"
+        "avgHr": "Ø HF",
+        "efficiency": "Effizienz"
       }
     },
     "runPerformance": {
