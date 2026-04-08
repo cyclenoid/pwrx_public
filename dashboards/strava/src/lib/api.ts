@@ -1660,6 +1660,8 @@ export interface RunningActivity {
   date: string
   distance_km: number
   moving_time: number
+  total_elevation_gain: number
+  avg_speed_kmh: number
   avg_pace_decimal: number
   avg_pace: string
   avg_hr: number | null

@@ -33,12 +33,12 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
       de: [
         "Unter den Lauf-Charts erscheint jetzt ein eigener Block mit den letzten Läufen.",
         "Jeder Eintrag verlinkt direkt in die jeweilige Aktivität.",
-        "Die Liste zeigt Datum, Name, Distanz, Pace, Dauer und Ø Herzfrequenz in einer kompakten Übersicht.",
+        "Die Liste zeigt Datum, Name, Distanz, Höhenmeter, Pace, Dauer, Ø Herzfrequenz und eine einfache Effizienzkennzahl in einer kompakten Übersicht.",
       ],
       en: [
         "A dedicated recent-runs block now appears below the running charts.",
         "Each row links directly to the matching activity.",
-        "The list shows date, name, distance, pace, duration, and avg heart rate in one compact overview.",
+        "The list shows date, name, distance, elevation, pace, duration, avg heart rate, and a simple efficiency metric in one compact overview.",
       ],
     },
   },

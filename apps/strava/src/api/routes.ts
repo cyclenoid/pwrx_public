@@ -4371,6 +4371,7 @@ router.get('/running-activities', async (req: Request, res: Response) => {
         a.start_date,
         a.distance / 1000 as distance_km,
         a.moving_time,
+        a.total_elevation_gain,
         a.average_speed * 3.6 as avg_speed_kmh,
         a.average_heartrate,
         a.type
@@ -4392,6 +4393,8 @@ router.get('/running-activities', async (req: Request, res: Response) => {
         date: row.start_date,
         distance_km: parseFloat(row.distance_km),
         moving_time: row.moving_time,
+        total_elevation_gain: row.total_elevation_gain ? Math.round(parseFloat(row.total_elevation_gain)) : 0,
+        avg_speed_kmh: Number.isFinite(avgSpeedKmh) ? avgSpeedKmh : 0,
         avg_pace_decimal: avgPaceMinPerKm,
         avg_pace: `${Math.floor(avgPaceMinPerKm)}:${Math.round((avgPaceMinPerKm - Math.floor(avgPaceMinPerKm)) * 60).toString().padStart(2, '0')}`,
         avg_hr: row.average_heartrate ? Math.round(parseFloat(row.average_heartrate)) : null,
