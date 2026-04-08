@@ -18,6 +18,33 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-08-gear-history-visibility",
+    date: "2026-04-08",
+    tag: "gear",
+    title: {
+      de: "Gear-Verlauf zeigt Inaktivität und Zeitfenster klarer",
+      en: "Gear history shows inactivity and time windows more clearly",
+    },
+    summary: {
+      de: "Die Gear-Detailseite macht jetzt sichtbarer, wann ein Rad wirklich genutzt wurde und wann nicht. Zeitfilter und Achse orientieren sich klarer an der vorhandenen Historie.",
+      en: "The gear detail page now makes it clearer when a bike was actually used and when it was not. Time filters and the axis now reflect the available history more clearly.",
+    },
+    bullets: {
+      de: [
+        "Inaktive Monate werden bis heute im Verlauf mitgeführt, damit längere Nutzungslücken sofort sichtbar sind.",
+        "Die Zeitachse markiert Jahreswechsel klarer statt nur lose Monatskürzel anzuzeigen.",
+        "Im Chart-Header steht jetzt sowohl der echte Aktivitätsdaten-Bereich als auch das aktuell angezeigte Zeitfenster.",
+        "Die festen Filter Alle, 2J, 1J, 6M und 3M bleiben erhalten, beziehen sich aber jetzt transparenter auf die vorhandene Historie des gewählten Rads.",
+      ],
+      en: [
+        "Inactive months are now carried through to today so longer usage gaps become visible immediately.",
+        "The time axis highlights year changes more clearly instead of showing only loose month labels.",
+        "The chart header now shows both the real activity-data range and the currently displayed time window.",
+        "The fixed All, 2Y, 1Y, 6M, and 3M filters remain, but now relate much more transparently to the selected bike's available history.",
+      ],
+    },
+  },
+  {
     id: "2026-04-07-comparable-activities-and-gear-sidebar",
     date: "2026-04-07",
     tag: "analysis",
