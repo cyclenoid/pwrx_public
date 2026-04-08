@@ -1677,6 +1677,7 @@
       "historyRange": "History",
       "rangeLabel": "View",
       "monthlyPeak": "Peak month",
+      "rangeSummary": "Activity data: {{active}} · Displayed: {{visible}}",
       "rangeOptions": {
         "all": "All",
         "2y": "2Y",
