@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-08-training-recent-runs",
+    date: "2026-04-08",
+    tag: "training",
+    title: {
+      de: "Training: Laufansicht zeigt jetzt auch die letzten Läufe",
+      en: "Training: running view now also shows recent runs",
+    },
+    summary: {
+      de: "Auf der Laufansicht in Training gibt es jetzt zusätzlich eine direkte Liste der letzten Läufe. Damit liegt die aktuelle Trainingspraxis für Laufen ähnlich greifbar vor wie bisher schon auf der Radseite.",
+      en: "The running view in Training now also includes a direct list of recent runs. That makes current run activity easier to scan, similar to the cycling side.",
+    },
+    bullets: {
+      de: [
+        "Unter den Lauf-Charts erscheint jetzt ein eigener Block mit den letzten Läufen.",
+        "Jeder Eintrag verlinkt direkt in die jeweilige Aktivität.",
+        "Die Liste zeigt Datum, Name, Distanz, Pace, Dauer und Ø Herzfrequenz in einer kompakten Übersicht.",
+      ],
+      en: [
+        "A dedicated recent-runs block now appears below the running charts.",
+        "Each row links directly to the matching activity.",
+        "The list shows date, name, distance, pace, duration, and avg heart rate in one compact overview.",
+      ],
+    },
+  },
+  {
     id: "2026-04-08-gear-history-visibility",
     date: "2026-04-08",
     tag: "gear",
