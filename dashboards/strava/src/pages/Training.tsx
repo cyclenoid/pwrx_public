@@ -423,6 +423,33 @@ export function Training() {
     return (speedMetersPerMinute / avgHr).toFixed(2)
   }
 
+  const getRunTerrainBadge = (distanceKm: number, elevationGain: number) => {
+    if (!distanceKm || distanceKm <= 0) {
+      return {
+        label: t('training.recentRuns.terrain.flat'),
+        className: 'border-border/50 bg-background/60 text-muted-foreground',
+      }
+    }
+
+    const elevationPerKm = elevationGain / distanceKm
+    if (elevationPerKm >= 20) {
+      return {
+        label: t('training.recentRuns.terrain.hilly'),
+        className: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+      }
+    }
+    if (elevationPerKm >= 8) {
+      return {
+        label: t('training.recentRuns.terrain.rolling'),
+        className: 'border-orange-500/30 bg-orange-500/10 text-orange-300',
+      }
+    }
+    return {
+      label: t('training.recentRuns.terrain.flat'),
+      className: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+    }
+  }
+
   const formatPowerValue = (power: number | null) => {
     if (!power || !Number.isFinite(power)) return '—'
     return Math.round(power).toString()
@@ -1320,51 +1347,69 @@ export function Training() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="pt-0">
-                  <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                      <thead>
-                        <tr className="border-b text-muted-foreground">
-                          <th className="px-2 py-2 text-left">{t('training.recentRuns.table.date')}</th>
-                          <th className="px-2 py-2 text-left">{t('training.recentRuns.table.activity')}</th>
-                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.distance')}</th>
-                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.elevation')}</th>
-                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.pace')}</th>
-                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.duration')}</th>
-                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.avgHr')}</th>
-                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.efficiency')}</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {recentRunningActivities.map((activity) => (
-                          <tr key={activity.activity_id} className="border-b hover:bg-muted/50">
-                            <td className="px-2 py-2 text-muted-foreground">{formatDayMonth(activity.date)}</td>
-                            <td className="px-2 py-2">
-                              <Link to={`/activity/${activity.activity_id}`} className="hover:text-primary hover:underline">
+                  <div className="space-y-3">
+                    {recentRunningActivities.map((activity) => {
+                      const terrainBadge = getRunTerrainBadge(activity.distance_km, activity.total_elevation_gain)
+                      const efficiencyValue = activity.avg_hr
+                        ? formatRunningEfficiencyValue(activity.avg_pace_decimal, activity.avg_hr)
+                        : null
+
+                      return (
+                        <div
+                          key={activity.activity_id}
+                          className="rounded-xl border border-border/60 bg-background/60 p-4 shadow-sm transition-colors hover:border-orange-500/30 hover:bg-background/80"
+                        >
+                          <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                            <div className="min-w-0 space-y-2">
+                              <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-medium text-muted-foreground">
+                                  {formatLongDate(activity.date)}
+                                </span>
+                                <span className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[11px] font-semibold ${terrainBadge.className}`}>
+                                  {terrainBadge.label}
+                                </span>
+                              </div>
+                              <Link to={`/activity/${activity.activity_id}`} className="block text-base font-semibold leading-tight hover:text-primary hover:underline">
                                 {activity.name}
                               </Link>
-                            </td>
-                            <td className="px-2 py-2 text-right tabular-nums">
-                              {activity.distance_km.toFixed(2)} {t('records.units.km')}
-                            </td>
-                            <td className="px-2 py-2 text-right tabular-nums">
-                              {activity.total_elevation_gain} {t('records.units.m')}
-                            </td>
-                            <td className="px-2 py-2 text-right tabular-nums font-medium text-orange-500">
-                              {activity.avg_pace} {t('training.units.pace')}
-                            </td>
-                            <td className="px-2 py-2 text-right tabular-nums">{formatDurationShort(activity.moving_time)}</td>
-                            <td className="px-2 py-2 text-right tabular-nums">
-                              {activity.avg_hr ? t('activity.units.bpm', { value: activity.avg_hr }) : t('common.notAvailable')}
-                            </td>
-                            <td className="px-2 py-2 text-right tabular-nums">
-                              {activity.avg_hr
-                                ? `${formatRunningEfficiencyValue(activity.avg_pace_decimal, activity.avg_hr)} ${t('training.runPerformance.units.efficiency')}`
-                                : t('common.notAvailable')}
-                            </td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                            </div>
+                            <div className="grid min-w-[17rem] grid-cols-2 gap-2 sm:grid-cols-4">
+                              <div className="rounded-lg border border-border/50 bg-card px-3 py-2">
+                                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{t('training.recentRuns.table.distance')}</div>
+                                <div className="mt-1 text-lg font-semibold tabular-nums">{activity.distance_km.toFixed(1)} <span className="text-sm font-medium text-muted-foreground">{t('records.units.km')}</span></div>
+                              </div>
+                              <div className="rounded-lg border border-border/50 bg-card px-3 py-2">
+                                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{t('training.recentRuns.table.elevation')}</div>
+                                <div className="mt-1 text-lg font-semibold tabular-nums">{activity.total_elevation_gain} <span className="text-sm font-medium text-muted-foreground">{t('records.units.m')}</span></div>
+                              </div>
+                              <div className="rounded-lg border border-orange-500/20 bg-orange-500/5 px-3 py-2">
+                                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{t('training.recentRuns.table.pace')}</div>
+                                <div className="mt-1 text-lg font-semibold tabular-nums text-orange-500">{activity.avg_pace}</div>
+                              </div>
+                              <div className="rounded-lg border border-border/50 bg-card px-3 py-2">
+                                <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{t('training.recentRuns.table.duration')}</div>
+                                <div className="mt-1 text-lg font-semibold tabular-nums">{formatDurationShort(activity.moving_time)}</div>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex flex-wrap items-center gap-2 text-xs">
+                            <span className="inline-flex items-center rounded-full border border-border/50 bg-muted/20 px-2.5 py-1 text-muted-foreground">
+                              {t('training.recentRuns.table.avgHr')}: <span className="ml-1 font-semibold text-foreground">{activity.avg_hr ? t('activity.units.bpm', { value: activity.avg_hr }) : t('common.notAvailable')}</span>
+                            </span>
+                            <span className={`inline-flex items-center rounded-full border px-2.5 py-1 ${
+                              efficiencyValue && Number(efficiencyValue) >= 0.52
+                                ? 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300'
+                                : efficiencyValue && Number(efficiencyValue) >= 0.42
+                                  ? 'border-amber-500/30 bg-amber-500/10 text-amber-300'
+                                  : 'border-border/50 bg-muted/20 text-muted-foreground'
+                            }`}>
+                              {t('training.recentRuns.table.efficiency')}: <span className="ml-1 font-semibold">{efficiencyValue ? `${efficiencyValue} ${t('training.runPerformance.units.efficiency')}` : t('common.notAvailable')}</span>
+                            </span>
+                          </div>
+                        </div>
+                      )
+                    })}
                   </div>
                 </CardContent>
               </Card>

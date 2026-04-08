@@ -119,11 +119,13 @@
       "ctlLabel": "CTL Fitness",
       "tsbLabel": "TSB",
       "ctlNoData": "CTL ohne FTP nicht verfügbar",
+      "ctlTrend7d": "7-Tage-Trend",
+      "ctlTrendNoData": "Noch kein 7-Tage-Trend",
       "formFresh": "Frisch",
       "formBalanced": "Ausgeglichen",
       "formTired": "Belastet",
       "streakSubShort": "Wochen aktiv",
-      "ctlSubShort": "Formstatus"
+      "ctlSubShort": "Aktuelle Fitness"
     },
     "calendar": {
       "prevMonth": "Vorheriger Monat",
@@ -1023,6 +1025,11 @@
     "recentRuns": {
       "title": "Letzte Läufe",
       "subtitle": "Die letzten {{count}} Einheiten im Überblick",
+      "terrain": {
+        "flat": "Flach",
+        "rolling": "Wellig",
+        "hilly": "Bergig"
+      },
       "table": {
         "date": "Datum",
         "activity": "Aktivität",
