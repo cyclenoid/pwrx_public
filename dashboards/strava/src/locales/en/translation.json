@@ -398,7 +398,9 @@
   },
   "footer": {
     "poweredBy": "PWRX — Power Explorer for Training Data",
-    "poweredByLine": "powered by"
+    "poweredByLine": "powered by",
+    "supportText": "I spend a lot of time improving and evolving PWRX. The product stays free, so I appreciate any voluntary support.",
+    "supportLink": "Buy me a coffee"
   },
   "segment": {
     "list": {

@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-09-footer-support-cta",
+    date: "2026-04-09",
+    tag: "ui",
+    title: {
+      de: "Footer macht Support fuer das kostenlose Projekt sichtbarer",
+      en: "Footer makes support for the free project more visible",
+    },
+    summary: {
+      de: "Im Footer steht jetzt klarer, dass viel Zeit in Weiterentwicklung und Verbesserungen fliesst und PWRX trotzdem kostenlos bleibt. Der Support-Link ist dadurch sichtbarer und wirkt weniger wie eine nackte URL.",
+      en: "The footer now explains more clearly that a lot of time goes into ongoing improvements while PWRX stays free. The support link is more visible and no longer looks like a bare URL.",
+    },
+    bullets: {
+      de: [
+        "Der Footer enthaelt jetzt einen kurzen Support-Hinweis direkt unter dem Produktnamen.",
+        "Die Botschaft macht klar, dass PWRX kostenlos bleibt und freiwilliger Support willkommen ist.",
+        "Der Buy-me-a-coffee-Link erscheint als sichtbarer Button mit Coffee-Icon statt nur als schlichte URL.",
+      ],
+      en: [
+        "The footer now includes a short support note directly below the product name.",
+        "The message makes it clear that PWRX stays free and voluntary support is welcome.",
+        "The Buy Me a Coffee link now appears as a visible button with a coffee icon instead of a plain URL.",
+      ],
+    },
+  },
+  {
     id: "2026-04-08-training-recent-runs",
     date: "2026-04-08",
     tag: "training",

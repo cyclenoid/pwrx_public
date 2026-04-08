@@ -2,7 +2,7 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
 import { ThemeToggle } from './ThemeToggle'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, Trophy, Map, Activity, Zap, Bike, Settings, Flag, FileUp, Users } from 'lucide-react'
+import { LayoutDashboard, Trophy, Map, Activity, Zap, Bike, Settings, Flag, FileUp, Users, Coffee } from 'lucide-react'
 import { useCapabilities } from '../hooks/useCapabilities'
 
 export function Layout() {
@@ -161,14 +161,23 @@ export function Layout() {
       <footer className="border-t py-6">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p className="mb-1">{t('footer.poweredBy')}</p>
+          <p className="mx-auto mb-3 max-w-2xl text-xs leading-6 text-muted-foreground">
+            {t('footer.supportText')}
+          </p>
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
             <span>{t('footer.poweredByLine')}</span>
             <a href="https://cyclenoid.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
               cyclenoid.com
             </a>
             <span className="text-muted-foreground/50">|</span>
-            <a href="https://buymeacoffee.com/cyclenoid" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">
-              buymeacoffee.com/cyclenoid
+            <a
+              href="https://buymeacoffee.com/cyclenoid"
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex items-center gap-1.5 rounded-full border border-border px-3 py-1.5 text-xs text-muted-foreground transition-colors hover:border-primary/40 hover:text-primary"
+            >
+              <Coffee size={14} />
+              <span>{t('footer.supportLink')}</span>
             </a>
           </div>
         </div>
