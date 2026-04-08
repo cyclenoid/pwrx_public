@@ -1674,7 +1674,16 @@
       "activeMonths": "Active months",
       "lastRide": "Last ride",
       "historyEmpty": "No monthly data is available for this bike yet.",
-      "historyRange": "History"
+      "historyRange": "History",
+      "rangeLabel": "View",
+      "monthlyPeak": "Peak month",
+      "rangeOptions": {
+        "all": "All",
+        "2y": "2Y",
+        "1y": "1Y",
+        "6m": "6M",
+        "3m": "3M"
+      }
     },
     "manualCreate": {
       "title": "Add gear manually",

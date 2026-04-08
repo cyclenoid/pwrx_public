@@ -1674,7 +1674,16 @@
       "activeMonths": "Aktive Monate",
       "lastRide": "Letzte Fahrt",
       "historyEmpty": "Noch keine Monatsdaten für dieses Rad vorhanden.",
-      "historyRange": "Zeitraum"
+      "historyRange": "Zeitraum",
+      "rangeLabel": "Ansicht",
+      "monthlyPeak": "Peak-Monat",
+      "rangeOptions": {
+        "all": "Alle",
+        "2y": "2J",
+        "1y": "1J",
+        "6m": "6M",
+        "3m": "3M"
+      }
     },
     "manualCreate": {
       "title": "Ausrüstung manuell erfassen",
