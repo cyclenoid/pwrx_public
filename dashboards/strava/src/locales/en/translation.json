@@ -119,11 +119,13 @@
       "ctlLabel": "CTL Fitness",
       "tsbLabel": "TSB",
       "ctlNoData": "CTL unavailable without FTP",
+      "ctlTrend7d": "7-day trend",
+      "ctlTrendNoData": "No 7-day trend yet",
       "formFresh": "Fresh",
       "formBalanced": "Balanced",
       "formTired": "Loaded",
       "streakSubShort": "Active weeks",
-      "ctlSubShort": "Form status"
+      "ctlSubShort": "Current fitness"
     },
     "calendar": {
       "prevMonth": "Previous month",
@@ -1023,6 +1025,11 @@
     "recentRuns": {
       "title": "Recent runs",
       "subtitle": "Your latest {{count}} sessions at a glance",
+      "terrain": {
+        "flat": "Flat",
+        "rolling": "Rolling",
+        "hilly": "Hilly"
+      },
       "table": {
         "date": "Date",
         "activity": "Activity",

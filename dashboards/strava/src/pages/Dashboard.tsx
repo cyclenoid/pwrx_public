@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
 import { useQuery, useQueries, useMutation, useQueryClient } from '@tanstack/react-query'
 import { Link } from 'react-router-dom'
-import { Bike, Footprints, Activity, Flame, Dumbbell, RefreshCw, LayoutGrid, List, ChevronLeft, ChevronRight, Award, Globe, Clock, Mountain, Lightbulb } from 'lucide-react'
+import { Bike, Footprints, Activity, Flame, Dumbbell, RefreshCw, LayoutGrid, List, ChevronLeft, ChevronRight, Award, Globe, Clock, Mountain, Lightbulb, TrendingUp, TrendingDown, Minus } from 'lucide-react'
 import {
   getActivities,
   getActivity,
@@ -445,11 +445,6 @@ export function Dashboard() {
       : tsbValue >= -10
         ? 'balanced'
         : 'fatigued'
-  const tsbStatusClass = tsbStatus === 'fresh'
-    ? 'text-emerald-500'
-    : tsbStatus === 'balanced'
-      ? 'text-orange-500'
-      : 'text-rose-500'
   const tsbSurfaceClass = tsbStatus === 'fresh'
     ? 'bg-emerald-500/10 border-emerald-500/25'
     : tsbStatus === 'balanced'
@@ -457,6 +452,22 @@ export function Dashboard() {
       : tsbStatus === 'fatigued'
         ? 'bg-rose-500/10 border-rose-500/25'
         : 'bg-background/40 border-orange-500/20'
+  const ctlTrend7d = useMemo(() => {
+    const dailyValues = dashboardTrainingLoad?.dailyValues ?? []
+    if (dailyValues.length < 2) return null
+
+    const latest = dailyValues[dailyValues.length - 1]
+    const previous = dailyValues[Math.max(0, dailyValues.length - 8)]
+    if (!latest || !previous) return null
+
+    const delta = latest.ctl - previous.ctl
+    const roundedDelta = Math.round(delta * 10) / 10
+
+    return {
+      delta: roundedDelta,
+      direction: roundedDelta > 0.2 ? 'up' : roundedDelta < -0.2 ? 'down' : 'flat',
+    } as const
+  }, [dashboardTrainingLoad])
 
   // Calculate weekly hours for last 4 weeks
   const weeklyHours = useMemo(() => {
@@ -1044,13 +1055,23 @@ export function Dashboard() {
                   <>
                     <div className="mt-2 text-5xl font-bold text-foreground leading-none">{ctlValue}</div>
                     <p className="mt-2 text-xs text-muted-foreground leading-tight">{t('dashboard.streak.ctlSubShort')}</p>
-                    <p className={`text-xs font-semibold leading-tight ${tsbStatusClass}`}>
-                      {t('dashboard.streak.tsbLabel')}: {tsbValue ?? '--'} · {tsbStatus === 'fresh'
-                        ? t('dashboard.streak.formFresh')
-                        : tsbStatus === 'balanced'
-                          ? t('dashboard.streak.formBalanced')
-                          : t('dashboard.streak.formTired')}
-                    </p>
+                    {ctlTrend7d ? (
+                      <div className="mt-1 flex items-center gap-1.5">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold ${
+                          ctlTrend7d.direction === 'up'
+                            ? 'bg-emerald-500/10 text-emerald-300'
+                            : ctlTrend7d.direction === 'down'
+                              ? 'bg-rose-500/10 text-rose-300'
+                              : 'bg-muted/40 text-muted-foreground'
+                        }`}>
+                          {ctlTrend7d.direction === 'up' ? <TrendingUp size={12} /> : ctlTrend7d.direction === 'down' ? <TrendingDown size={12} /> : <Minus size={12} />}
+                          {ctlTrend7d.delta > 0 ? '+' : ''}{ctlTrend7d.delta.toFixed(1)}
+                        </span>
+                        <span className="text-xs font-medium text-muted-foreground">{t('dashboard.streak.ctlTrend7d')}</span>
+                      </div>
+                    ) : (
+                      <p className="mt-1 text-xs text-muted-foreground">{t('dashboard.streak.ctlTrendNoData')}</p>
+                    )}
                   </>
                 ) : (
                   <div className="mt-2 text-sm text-muted-foreground">{t('dashboard.streak.ctlNoData')}</div>
