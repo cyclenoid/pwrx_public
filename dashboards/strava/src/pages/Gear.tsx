@@ -226,6 +226,36 @@ const formatMonthLabel = (month: string, locale: string) => {
   }
 };
 
+const parseMonthKey = (month: string) => {
+  const [year, monthPart] = String(month).split("-");
+  const parsedYear = Number(year);
+  const parsedMonth = Number(monthPart);
+  if (!parsedYear || !parsedMonth) return null;
+  return new Date(parsedYear, parsedMonth - 1, 1);
+};
+
+const formatMonthKey = (date: Date) => {
+  const year = date.getFullYear();
+  const month = `${date.getMonth() + 1}`.padStart(2, "0");
+  return `${year}-${month}`;
+};
+
+const addMonthsToDate = (date: Date, months: number) =>
+  new Date(date.getFullYear(), date.getMonth() + months, 1);
+
+const formatMonthRangeLabel = (month: string, locale: string) => {
+  const date = parseMonthKey(month);
+  if (!date) return month;
+  try {
+    return new Intl.DateTimeFormat(locale, {
+      month: "2-digit",
+      year: "numeric",
+    }).format(date);
+  } catch {
+    return month;
+  }
+};
+
 const getUsedKm = (currentKm: number, lastResetKm?: number | null) => {
   const resetKm = Number(lastResetKm || 0);
   return Math.max(currentKm - resetKm, 0);
@@ -495,19 +525,74 @@ function GearDetail({ gearId }: { gearId: string }) {
   const locale = i18n.language?.startsWith("de") ? "de-DE" : "en-US";
   const monthlyStats = detailData.monthly_stats || [];
   const recentActivities = detailData.recent_activities || [];
-  const yearTrend = monthlyStats.map((item) => ({
-    month: item.month,
-    monthLabel: formatMonthLabel(item.month, locale),
-    distanceKm: Number(item.total_distance_km || 0),
-    elevationM: Number(item.total_elevation_m || 0),
-    activityCount: Number(item.activity_count || 0),
-  }));
   const lastRide = recentActivities[0]?.start_date;
   const dateFormatter = new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
   });
+  const monthFormatterShort = new Intl.DateTimeFormat(locale, {
+    month: "short",
+  });
+  const monthFormatterWithYear = new Intl.DateTimeFormat(locale, {
+    month: "short",
+    year: "2-digit",
+  });
+  const monthlyStatsMap = new Map(
+    monthlyStats.map((item) => [
+      item.month,
+      {
+        distanceKm: Number(item.total_distance_km || 0),
+        elevationM: Number(item.total_elevation_m || 0),
+        activityCount: Number(item.activity_count || 0),
+      },
+    ]),
+  );
+  const firstActivityMonthDate =
+    monthlyStats.length > 0 ? parseMonthKey(monthlyStats[0].month) : null;
+  const lastActivityMonthDate =
+    monthlyStats.length > 0
+      ? parseMonthKey(monthlyStats[monthlyStats.length - 1].month)
+      : null;
+  const currentMonthDate = new Date();
+  currentMonthDate.setDate(1);
+  currentMonthDate.setHours(0, 0, 0, 0);
+  const yearTrend =
+    firstActivityMonthDate && lastActivityMonthDate
+      ? (() => {
+          const rows: Array<{
+            month: string;
+            monthLabel: string;
+            axisLabel: string;
+            distanceKm: number;
+            elevationM: number;
+            activityCount: number;
+            hasActivity: boolean;
+          }> = [];
+          for (
+            let cursor = new Date(firstActivityMonthDate);
+            cursor <= currentMonthDate;
+            cursor = addMonthsToDate(cursor, 1)
+          ) {
+            const monthKey = formatMonthKey(cursor);
+            const monthData = monthlyStatsMap.get(monthKey);
+            rows.push({
+              month: monthKey,
+              monthLabel: formatMonthLabel(monthKey, locale),
+              axisLabel:
+                cursor.getMonth() === 0 ||
+                monthKey === formatMonthKey(currentMonthDate)
+                  ? monthFormatterWithYear.format(cursor)
+                  : monthFormatterShort.format(cursor),
+              distanceKm: monthData?.distanceKm || 0,
+              elevationM: monthData?.elevationM || 0,
+              activityCount: monthData?.activityCount || 0,
+              hasActivity: Boolean(monthData),
+            });
+          }
+          return rows;
+        })()
+      : [];
   const selectedTrendOption = GEAR_TREND_RANGE_OPTIONS.find(
     (option) => option.key === selectedTrendRange,
   );
@@ -524,6 +609,14 @@ function GearDetail({ gearId }: { gearId: string }) {
     filteredTrend.length > 0
       ? Math.max(...filteredTrend.map((month) => month.distanceKm))
       : 0;
+  const activityDataRangeLabel =
+    firstActivityMonthDate && lastActivityMonthDate
+      ? `${formatMonthRangeLabel(formatMonthKey(firstActivityMonthDate), locale)} - ${formatMonthRangeLabel(formatMonthKey(lastActivityMonthDate), locale)}`
+      : "--";
+  const visibleRangeLabel =
+    filteredTrend.length > 0
+      ? `${formatMonthRangeLabel(filteredTrend[0].month, locale)} - ${formatMonthRangeLabel(filteredTrend[filteredTrend.length - 1].month, locale)}`
+      : "--";
 
   const saveMaintenance = async (items: GearMaintenanceItem[]) => {
     const response = await updateGearMaintenance(
@@ -702,6 +795,12 @@ function GearDetail({ gearId }: { gearId: string }) {
                       })}
                     </div>
                   </div>
+                  <div className="text-xs text-muted-foreground">
+                    {t("gear.detail.rangeSummary", {
+                      active: activityDataRangeLabel,
+                      visible: visibleRangeLabel,
+                    })}
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -759,14 +858,14 @@ function GearDetail({ gearId }: { gearId: string }) {
                             opacity={0.35}
                           />
                           <XAxis
-                            dataKey="monthLabel"
+                            dataKey="axisLabel"
                             tick={{
                               fontSize: 11,
                               fill: "hsl(var(--muted-foreground))",
                             }}
                             tickLine={false}
                             axisLine={false}
-                            minTickGap={20}
+                            minTickGap={28}
                           />
                           <YAxis
                             yAxisId="distance"
@@ -856,11 +955,7 @@ function GearDetail({ gearId }: { gearId: string }) {
                     />
                     <StatCard
                       label={t("gear.detail.historyRange")}
-                      value={
-                        filteredTrend.length > 0
-                          ? `${filteredTrend[0]?.month} - ${filteredTrend[filteredTrend.length - 1]?.month}`
-                          : "--"
-                      }
+                      value={visibleRangeLabel}
                     />
                   </div>
                 </CardContent>
