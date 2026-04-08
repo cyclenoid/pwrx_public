@@ -1020,6 +1020,18 @@
         "avgHr": "Avg HR"
       }
     },
+    "recentRuns": {
+      "title": "Recent runs",
+      "subtitle": "Your latest {{count}} sessions at a glance",
+      "table": {
+        "date": "Date",
+        "activity": "Activity",
+        "distance": "Distance",
+        "pace": "Pace",
+        "duration": "Time",
+        "avgHr": "Avg HR"
+      }
+    },
     "runPerformance": {
       "title": "Running performance vs heart rate",
       "subtitle": "{{count}} usable runs • {{distance}} km in the selected range",

@@ -1020,6 +1020,18 @@
         "avgHr": "Ø HF"
       }
     },
+    "recentRuns": {
+      "title": "Letzte Läufe",
+      "subtitle": "Die letzten {{count}} Einheiten im Überblick",
+      "table": {
+        "date": "Datum",
+        "activity": "Aktivität",
+        "distance": "Distanz",
+        "pace": "Pace",
+        "duration": "Zeit",
+        "avgHr": "Ø HF"
+      }
+    },
     "runPerformance": {
       "title": "Laufleistung vs. Puls",
       "subtitle": "{{count}} verwertbare Läufe • {{distance}} km im gewählten Zeitraum",

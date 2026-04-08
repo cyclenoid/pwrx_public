@@ -233,6 +233,14 @@ export function Training() {
     }
   }, [runningPaceChartData])
 
+  const recentRunningActivities = useMemo(() => {
+    if (!runningActivities?.activities?.length) return []
+
+    return [...runningActivities.activities]
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      .slice(0, 8)
+  }, [runningActivities])
+
   const thirtyDaysAgo = useMemo(() => {
     const date = new Date()
     date.setDate(date.getDate() - 30)
@@ -1284,6 +1292,60 @@ export function Training() {
                       <span className="h-2 w-2 rounded-full" style={{ backgroundColor: trainingPalette.muted }} />
                       {distanceLabel}
                     </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {isRunning && recentRunningActivities.length > 0 && (
+              <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.05] via-transparent to-transparent shadow-lg shadow-orange-500/5">
+                <CardHeader className="pb-3">
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" className="text-orange-500">
+                      <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+                    </svg>
+                    {t('training.recentRuns.title')}
+                  </CardTitle>
+                  <CardDescription className="mt-1 text-xs">
+                    {t('training.recentRuns.subtitle', { count: recentRunningActivities.length })}
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b text-muted-foreground">
+                          <th className="px-2 py-2 text-left">{t('training.recentRuns.table.date')}</th>
+                          <th className="px-2 py-2 text-left">{t('training.recentRuns.table.activity')}</th>
+                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.distance')}</th>
+                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.pace')}</th>
+                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.duration')}</th>
+                          <th className="px-2 py-2 text-right">{t('training.recentRuns.table.avgHr')}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {recentRunningActivities.map((activity) => (
+                          <tr key={activity.activity_id} className="border-b hover:bg-muted/50">
+                            <td className="px-2 py-2 text-muted-foreground">{formatDayMonth(activity.date)}</td>
+                            <td className="px-2 py-2">
+                              <Link to={`/activity/${activity.activity_id}`} className="hover:text-primary hover:underline">
+                                {activity.name}
+                              </Link>
+                            </td>
+                            <td className="px-2 py-2 text-right tabular-nums">
+                              {activity.distance_km.toFixed(2)} {t('records.units.km')}
+                            </td>
+                            <td className="px-2 py-2 text-right tabular-nums font-medium text-orange-500">
+                              {activity.avg_pace} {t('training.units.pace')}
+                            </td>
+                            <td className="px-2 py-2 text-right tabular-nums">{formatDurationShort(activity.moving_time)}</td>
+                            <td className="px-2 py-2 text-right tabular-nums">
+                              {activity.avg_hr ? t('activity.units.bpm', { value: activity.avg_hr }) : t('common.notAvailable')}
+                            </td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
                   </div>
                 </CardContent>
               </Card>
