@@ -249,6 +249,14 @@ const resolveGearSource = (gear: GearType): "manual" | "synced" => {
 const primaryActionButtonClass =
   "px-4 py-2 rounded-md border border-primary/40 bg-background text-primary text-sm font-medium transition-colors hover:bg-primary/10 disabled:opacity-60";
 
+const GEAR_TREND_RANGE_OPTIONS = [
+  { key: "all", months: null },
+  { key: "2y", months: 24 },
+  { key: "1y", months: 12 },
+  { key: "6m", months: 6 },
+  { key: "3m", months: 3 },
+] as const;
+
 function MaintenanceBar({
   usedKm,
   targetKm,
@@ -421,6 +429,8 @@ function GearDetail({ gearId }: { gearId: string }) {
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
+  const [selectedTrendRange, setSelectedTrendRange] =
+    useState<(typeof GEAR_TREND_RANGE_OPTIONS)[number]["key"]>("1y");
   const [maintenanceItems, setMaintenanceItems] = useState<
     GearMaintenanceItem[]
   >([]);
@@ -492,15 +502,28 @@ function GearDetail({ gearId }: { gearId: string }) {
     elevationM: Number(item.total_elevation_m || 0),
     activityCount: Number(item.activity_count || 0),
   }));
-  const activeMonths = yearTrend.filter(
-    (month) => month.activityCount > 0,
-  ).length;
   const lastRide = recentActivities[0]?.start_date;
   const dateFormatter = new Intl.DateTimeFormat(locale, {
     day: "2-digit",
     month: "2-digit",
     year: "2-digit",
   });
+  const selectedTrendOption = GEAR_TREND_RANGE_OPTIONS.find(
+    (option) => option.key === selectedTrendRange,
+  );
+  const filteredTrend =
+    !selectedTrendOption || selectedTrendOption.months === null
+      ? yearTrend
+      : yearTrend.length <= selectedTrendOption.months
+        ? yearTrend
+        : yearTrend.slice(-selectedTrendOption.months);
+  const filteredActiveMonths = filteredTrend.filter(
+    (month) => month.activityCount > 0,
+  ).length;
+  const filteredPeakDistance =
+    filteredTrend.length > 0
+      ? Math.max(...filteredTrend.map((month) => month.distanceKm))
+      : 0;
 
   const saveMaintenance = async (items: GearMaintenanceItem[]) => {
     const response = await updateGearMaintenance(
@@ -649,13 +672,36 @@ function GearDetail({ gearId }: { gearId: string }) {
           <div className="grid gap-6 xl:grid-cols-[minmax(0,1.45fr)_360px] xl:items-start">
             <div className="space-y-6">
               <Card className="border-border/60 bg-neutral-900">
-                <CardHeader className="pb-2">
-                  <CardTitle className="text-base">
-                    {t("gear.detail.yearTrendTitle")}
-                  </CardTitle>
-                  <p className="text-sm text-muted-foreground">
-                    {t("gear.detail.yearTrendSubtitle")}
-                  </p>
+                <CardHeader className="gap-3 pb-2">
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <CardTitle className="text-base">
+                        {t("gear.detail.yearTrendTitle")}
+                      </CardTitle>
+                      <p className="text-sm text-muted-foreground">
+                        {t("gear.detail.yearTrendSubtitle")}
+                      </p>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-2">
+                      {GEAR_TREND_RANGE_OPTIONS.map((option) => {
+                        const isActive = selectedTrendRange === option.key;
+                        return (
+                          <button
+                            key={option.key}
+                            type="button"
+                            onClick={() => setSelectedTrendRange(option.key)}
+                            className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                              isActive
+                                ? "border-primary/50 bg-primary/15 text-primary"
+                                : "border-border/60 bg-background/60 text-muted-foreground hover:bg-secondary/60"
+                            }`}
+                          >
+                            {t(`gear.detail.rangeOptions.${option.key}`)}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
@@ -677,14 +723,14 @@ function GearDetail({ gearId }: { gearId: string }) {
                     />
                     <StatCard
                       label={t("gear.detail.activeMonths")}
-                      value={activeMonths}
+                      value={filteredActiveMonths}
                     />
                   </div>
-                  {yearTrend.length > 0 ? (
+                  {filteredTrend.length > 0 ? (
                     <div className="h-[360px] xl:h-[420px]">
                       <ResponsiveContainer width="100%" height="100%">
                         <AreaChart
-                          data={yearTrend}
+                          data={filteredTrend}
                           margin={{ top: 10, right: 10, left: -18, bottom: 0 }}
                         >
                           <defs>
@@ -792,6 +838,31 @@ function GearDetail({ gearId }: { gearId: string }) {
                       {t("gear.detail.historyEmpty")}
                     </div>
                   )}
+                  <div className="grid grid-cols-2 gap-3 md:grid-cols-4">
+                    <StatCard
+                      label={t("gear.detail.rangeLabel")}
+                      value={t(
+                        `gear.detail.rangeOptions.${selectedTrendRange}`,
+                      )}
+                    />
+                    <StatCard
+                      label={t("gear.detail.monthlyPeak")}
+                      value={formatNumber(filteredPeakDistance, 0)}
+                      unit={t("records.units.km")}
+                    />
+                    <StatCard
+                      label={t("gear.detail.activeMonths")}
+                      value={filteredActiveMonths}
+                    />
+                    <StatCard
+                      label={t("gear.detail.historyRange")}
+                      value={
+                        filteredTrend.length > 0
+                          ? `${filteredTrend[0]?.month} - ${filteredTrend[filteredTrend.length - 1]?.month}`
+                          : "--"
+                      }
+                    />
+                  </div>
                 </CardContent>
               </Card>
 
