@@ -161,9 +161,6 @@ export function Layout() {
       <footer className="border-t py-6">
         <div className="container mx-auto px-4 text-center text-sm text-muted-foreground">
           <p className="mb-1">{t('footer.poweredBy')}</p>
-          <p className="mx-auto mb-3 max-w-2xl text-xs leading-6 text-muted-foreground">
-            {t('footer.supportText')}
-          </p>
           <div className="flex flex-wrap items-center justify-center gap-2 text-xs">
             <span>{t('footer.poweredByLine')}</span>
             <a href="https://cyclenoid.com" target="_blank" rel="noopener noreferrer" className="hover:text-primary transition-colors">

@@ -22,23 +22,23 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     date: "2026-04-09",
     tag: "ui",
     title: {
-      de: "Footer macht Support fuer das kostenlose Projekt sichtbarer",
-      en: "Footer makes support for the free project more visible",
+      de: "Footer zeigt den Support-Link jetzt kompakter",
+      en: "Footer now shows the support link more compactly",
     },
     summary: {
-      de: "Im Footer steht jetzt klarer, dass viel Zeit in Weiterentwicklung und Verbesserungen fliesst und PWRX trotzdem kostenlos bleibt. Der Support-Link ist dadurch sichtbarer und wirkt weniger wie eine nackte URL.",
-      en: "The footer now explains more clearly that a lot of time goes into ongoing improvements while PWRX stays free. The support link is more visible and no longer looks like a bare URL.",
+      de: "Der Footer nutzt jetzt einen kompakteren Support-Link mit Coffee-Icon statt einer schlichten URL.",
+      en: "The footer now uses a more compact support link with a coffee icon instead of a plain URL.",
     },
     bullets: {
       de: [
-        "Der Footer enthaelt jetzt einen kurzen Support-Hinweis direkt unter dem Produktnamen.",
-        "Die Botschaft macht klar, dass PWRX kostenlos bleibt und freiwilliger Support willkommen ist.",
-        "Der Buy-me-a-coffee-Link erscheint als sichtbarer Button mit Coffee-Icon statt nur als schlichte URL.",
+        "Der Buy-me-a-coffee-Link erscheint als sichtbarer Button mit Coffee-Icon.",
+        "Die bisherige nackte URL im Footer wurde durch einen kompakteren CTA ersetzt.",
+        "Der Footer bleibt dadurch aufgeraeumter, ohne den Support-Link zu verstecken.",
       ],
       en: [
-        "The footer now includes a short support note directly below the product name.",
-        "The message makes it clear that PWRX stays free and voluntary support is welcome.",
-        "The Buy Me a Coffee link now appears as a visible button with a coffee icon instead of a plain URL.",
+        "The Buy Me a Coffee link now appears as a visible button with a coffee icon.",
+        "The previous bare URL in the footer has been replaced with a more compact CTA.",
+        "This keeps the footer cleaner without hiding the support link.",
       ],
     },
   },
