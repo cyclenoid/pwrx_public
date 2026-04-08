@@ -534,8 +534,7 @@
         "elevationDiff": "Höhenunterschied"
       }
     }
-  }
-  ,
+  },
   "activities": {
     "title": "Aktivitäten",
     "count": "{{shown}} von {{filtered}} Aktivitäten",
@@ -1666,12 +1665,16 @@
       "topHmPerKm": "Top Räder nach HM/km"
     },
     "detail": {
-      "yearTrendTitle": "Jahresverlauf",
-      "yearTrendSubtitle": "Monatliche Distanz und Höhenmeter dieses Rads.",
+      "back": "Zurück zur Gear-Seite",
+      "yearTrendTitle": "Langfristiger Verlauf",
+      "yearTrendSubtitle": "Monatliche Distanz und Höhenmeter über die komplette Historie dieses Rads.",
       "recentTitle": "Letzte Aktivitäten mit diesem Rad",
       "recentEmpty": "Noch keine Aktivitäten mit diesem Rad gefunden.",
       "recentActivities": "Letzte Aktivitäten",
-      "activeMonths": "Aktive Monate"
+      "activeMonths": "Aktive Monate",
+      "lastRide": "Letzte Fahrt",
+      "historyEmpty": "Noch keine Monatsdaten für dieses Rad vorhanden.",
+      "historyRange": "Zeitraum"
     },
     "manualCreate": {
       "title": "Ausrüstung manuell erfassen",

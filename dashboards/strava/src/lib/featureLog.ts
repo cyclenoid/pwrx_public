@@ -22,12 +22,12 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     date: '2026-04-07',
     tag: 'analysis',
     title: {
-      de: 'Aktivitäten vergleichen und Gear-Statistiken schneller erfassen',
-      en: 'Compare activities and read gear stats faster',
+      de: 'Aktivitäten vergleichen und Gear klarer auswerten',
+      en: 'Compare activities and read gear insights more clearly',
     },
     summary: {
-      de: 'Aktivitätsdetails zeigen jetzt nur noch echte Streckenvergleiche ab 90% Match. Die Gear-Seite stellt Räder je Kennzahl direkt als Ranking gegenüber.',
-      en: 'Activity details now show only real route comparisons from a 90% match upward. The gear page now compares bikes directly in metric-based rankings.',
+      de: 'Aktivitätsdetails zeigen jetzt nur noch echte Streckenvergleiche ab 90% Match. Gear-Details laufen als eigene Seite mit größerem Verlauf und näher platziertem Verschleiß-Tracking.',
+      en: 'Activity details now show only real route comparisons from a 90% match upward. Gear details now live on their own page with a larger long-term chart and maintenance tracking placed closer to the core stats.',
     },
     bullets: {
       de: [
@@ -36,7 +36,9 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
         'Der Vergleichs-Chart zeigt zusätzlich eine Trendlinie und nutzt eine engere Y-Skalierung, damit kleine Speed-Unterschiede klarer sichtbar werden.',
         'Auf der Gear-Seite wurde die feste Erfassungsbox durch einen Button mit Overlay ersetzt.',
         'Die Sidebar vergleicht Räder jetzt als Rankings nach Strecke, Höhenmetern, Ø km/h und HM pro km.',
-        'Im Gear-Detail gibt es jetzt eine solide Detailansicht mit Kennzahlen, Jahresverlauf und den letzten Aktivitäten des gewählten Rads.',
+        'Im Gear-Detail gibt es jetzt eine echte Unterseite statt eines Fensters, damit Charts und Kennzahlen mehr Platz haben.',
+        'Der Gear-Verlauf nutzt jetzt die komplette verfügbare Historie, damit auch länger nicht gefahrene Räder noch einen sinnvollen Chart zeigen.',
+        'Das Verschleiß-Tracking sitzt im Detail jetzt direkt neben dem Verlauf und ist dadurch schneller erreichbar.',
       ],
       en: [
         'The new card below the power section now shows only comparable efforts with at least a 90% route match.',
@@ -44,7 +46,9 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
         'The comparison chart now adds a trend line and a tighter Y scale so smaller speed differences stand out more clearly.',
         'On the gear page, the fixed create form has been replaced by a button that opens an overlay.',
         'The sidebar now compares bikes in rankings for distance, elevation, avg km/h, and elevation per km.',
-        'The gear detail view is now solid and expanded with key stats, a yearly trend, and recent activities for the selected bike.',
+        'Gear detail now opens as a real subpage instead of a modal so charts and metrics have more room.',
+        'The gear trend now uses the full available history so bikes that have not been ridden recently still show a meaningful chart.',
+        'Maintenance tracking now sits directly next to the chart so it is easier to reach while reviewing a bike.',
       ],
     },
   },

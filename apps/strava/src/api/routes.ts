@@ -4907,7 +4907,6 @@ router.get('/gear/:id', async (req: Request, res: Response) => {
         COALESCE(AVG(average_speed) * 3.6, 0) AS avg_speed_kmh
       FROM strava.activities
       WHERE gear_id = $1
-        AND start_date >= DATE_TRUNC('month', CURRENT_DATE) - INTERVAL '11 months'
       GROUP BY DATE_TRUNC('month', start_date)
       ORDER BY month ASC
       `,
