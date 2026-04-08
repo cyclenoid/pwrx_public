@@ -534,8 +534,7 @@
         "elevationDiff": "Elevation diff"
       }
     }
-  }
-  ,
+  },
   "activities": {
     "title": "Activities",
     "count": "{{shown}} of {{filtered}} activities",
@@ -1666,12 +1665,16 @@
       "topHmPerKm": "Top bikes by elevation/km"
     },
     "detail": {
-      "yearTrendTitle": "Year trend",
-      "yearTrendSubtitle": "Monthly distance and elevation for this bike.",
+      "back": "Back to gear",
+      "yearTrendTitle": "Long-term trend",
+      "yearTrendSubtitle": "Monthly distance and elevation across this bike's full history.",
       "recentTitle": "Recent activities with this bike",
       "recentEmpty": "No activities found for this bike yet.",
       "recentActivities": "Recent activities",
-      "activeMonths": "Active months"
+      "activeMonths": "Active months",
+      "lastRide": "Last ride",
+      "historyEmpty": "No monthly data is available for this bike yet.",
+      "historyRange": "History"
     },
     "manualCreate": {
       "title": "Add gear manually",
