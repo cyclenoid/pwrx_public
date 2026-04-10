@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-10-compare-map-splits",
+    date: "2026-04-10",
+    tag: "ui",
+    title: {
+      de: "Compare startet jetzt mit Karte und Split-Hervorhebung",
+      en: "Compare now starts with route map and split highlighting",
+    },
+    summary: {
+      de: "Die Compare-Seite nutzt den Platz im oberen Bereich jetzt deutlich besser: Die Strecke steht zuerst im Fokus, und die Kilometer-Splits lassen sich direkt auf der Karte hervorheben.",
+      en: "The compare page now uses the top area more efficiently: the route comes first, and kilometer splits can be highlighted directly on the map.",
+    },
+    bullets: {
+      de: [
+        "Oben steht jetzt zuerst die Karte der Basisaktivitaet statt eines grossen Vergleichsblocks.",
+        "Bei Laufvergleichen sitzen die Kilometer-Splits direkt unter der Karte und heben beim Hover den passenden Streckenabschnitt hervor.",
+        "Der textliche Direktvergleich wurde kompakter gemacht und danach in einen kleineren Ueberblicksblock verschoben.",
+      ],
+      en: [
+        "The route map of the base activity now comes first instead of a large comparison block.",
+        "For run comparisons, kilometer splits now sit directly below the map and highlight the matching route section on hover.",
+        "The textual direct comparison has been condensed and moved into a smaller overview block below.",
+      ],
+    },
+  },
+  {
     id: "2026-04-10-distance-compare",
     date: "2026-04-10",
     tag: "analysis",

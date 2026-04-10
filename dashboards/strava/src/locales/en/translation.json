@@ -928,6 +928,12 @@
       "base": "This activity",
       "comparison": "Comparison"
     },
+    "mapCard": {
+      "title": "Route and splits",
+      "subtitle": "The base activity on the map first, with kilometer splits directly below.",
+      "noMap": "Route data is not available for this activity yet.",
+      "splitHint": "Hover a split to highlight the matching section on the map."
+    },
     "distanceChart": {
       "title": "Ahead / behind over distance",
       "subtitle": "Fine-grained time comparison along the shared route.",

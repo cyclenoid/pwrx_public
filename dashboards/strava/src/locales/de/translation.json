@@ -928,6 +928,12 @@
       "base": "Diese Aktivität",
       "comparison": "Vergleich"
     },
+    "mapCard": {
+      "title": "Strecke und Splits",
+      "subtitle": "Die Basisaktivität oben auf der Karte, die Kilometer-Splits direkt darunter.",
+      "noMap": "Für diese Aktivität sind noch keine Routendaten vorhanden.",
+      "splitHint": "Fahre über einen Split, um den Abschnitt auf der Karte hervorzuheben."
+    },
     "distanceChart": {
       "title": "Vorsprung / Rückstand über Distanz",
       "subtitle": "Fein aufgelöster Zeitvergleich entlang der gemeinsamen Strecke.",
