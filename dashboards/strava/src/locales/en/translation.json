@@ -928,6 +928,22 @@
       "base": "This activity",
       "comparison": "Comparison"
     },
+    "distanceChart": {
+      "title": "Ahead / behind over distance",
+      "subtitle": "Fine-grained time comparison along the shared route.",
+      "tooltipDistance": "At {{distance}} km",
+      "aheadBy": "{{value}} ahead",
+      "behindBy": "{{value}} behind",
+      "even": "Level",
+      "noData": "The required distance/time streams are still missing for a direct route comparison between these activities."
+    },
+    "performanceChart": {
+      "titleRun": "Pace over distance",
+      "subtitleRun": "Direct pace comparison along the full run.",
+      "titleRide": "Speed over distance",
+      "subtitleRide": "Direct comparison along the shared route.",
+      "tooltipDistance": "Segment around {{distance}} km"
+    },
     "gapChart": {
       "title": "Ahead / behind per km",
       "subtitle": "Cumulative time difference over the run.",

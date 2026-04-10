@@ -2395,6 +2395,267 @@ type ComparableActivityRow = {
   match_type: 'segments' | 'name'
 }
 
+type ActivityComparePreparedStreams = {
+  activity_id: number
+  type: string
+  distance_m: number[]
+  time_sec: number[]
+  altitude: Array<number | null>
+  heartrate: Array<number | null>
+  watts: Array<number | null>
+  cadence: Array<number | null>
+  velocity_smooth: Array<number | null>
+  total_distance_m: number
+  total_elapsed_sec: number
+}
+
+type ActivityCompareAlignedPoint = {
+  distance_m: number
+  distance_km: number
+  base_elapsed_sec: number
+  comparison_elapsed_sec: number
+  gap_sec: number
+  base_speed_kmh: number | null
+  comparison_speed_kmh: number | null
+  base_pace_sec_per_km: number | null
+  comparison_pace_sec_per_km: number | null
+  base_altitude: number | null
+  comparison_altitude: number | null
+  base_hr: number | null
+  comparison_hr: number | null
+  base_power: number | null
+  comparison_power: number | null
+  base_cadence: number | null
+  comparison_cadence: number | null
+}
+
+const toFiniteNumber = (value: unknown): number | null => {
+  const numeric = typeof value === 'number' ? value : Number(value);
+  return Number.isFinite(numeric) ? numeric : null;
+};
+
+const isCompareRunType = (type: string | undefined): boolean => (
+  type === 'Run' || type === 'TrailRun' || type === 'VirtualRun'
+);
+
+const normalizeCompareSportGroup = (type: string | undefined): string => {
+  if (isCompareRunType(type)) return 'run';
+  if (type === 'Ride' || type === 'VirtualRide' || type === 'EBikeRide') return 'ride';
+  return (type || 'unknown').toLowerCase();
+};
+
+const buildMonotonicNumberSeries = (input: unknown[] | undefined, length: number): number[] => {
+  const result: number[] = [];
+  let last = 0;
+
+  for (let index = 0; index < length; index += 1) {
+    const value = toFiniteNumber(input?.[index]);
+    if (value === null) {
+      result.push(last);
+      continue;
+    }
+    last = Math.max(last, value);
+    result.push(last);
+  }
+
+  return result;
+};
+
+const buildOptionalNumberSeries = (input: unknown[] | undefined, length: number): Array<number | null> => {
+  const result: Array<number | null> = [];
+
+  for (let index = 0; index < length; index += 1) {
+    result.push(toFiniteNumber(input?.[index]));
+  }
+
+  return result;
+};
+
+const getActivityCompareSummary = (
+  activity: ActivityCompareBaseRow | ComparableActivityRow
+) => ({
+  strava_activity_id: activity.strava_activity_id,
+  name: activity.name,
+  start_date: activity.start_date,
+  type: activity.type,
+  moving_time: activity.moving_time,
+  elapsed_time: activity.elapsed_time,
+  distance_km: activity.distance_km,
+  avg_speed_kmh: activity.avg_speed_kmh,
+  total_elevation_gain: activity.total_elevation_gain,
+  average_heartrate: activity.average_heartrate,
+  average_watts: activity.average_watts,
+});
+
+const prepareActivityCompareStreams = async (
+  activity: ActivityCompareBaseRow | ComparableActivityRow
+): Promise<ActivityComparePreparedStreams | null> => {
+  const streams = await db.getActivityStreams(activity.strava_activity_id);
+  const streamMap = new Map(streams.map((stream) => [stream.stream_type, stream.data]));
+  const distanceRaw = streamMap.get('distance');
+  const timeRaw = streamMap.get('time');
+
+  if (!Array.isArray(distanceRaw) || !Array.isArray(timeRaw)) return null;
+
+  const baseLength = Math.min(distanceRaw.length, timeRaw.length);
+  if (baseLength < 2) return null;
+
+  const distanceSeries = buildMonotonicNumberSeries(distanceRaw, baseLength);
+  const timeSeries = buildMonotonicNumberSeries(timeRaw, baseLength);
+  const totalDistanceM = distanceSeries[baseLength - 1] ?? 0;
+  const totalElapsedSec = timeSeries[baseLength - 1] ?? 0;
+
+  if (totalDistanceM <= 0 || totalElapsedSec <= 0) return null;
+
+  return {
+    activity_id: activity.strava_activity_id,
+    type: activity.type,
+    distance_m: distanceSeries,
+    time_sec: timeSeries,
+    altitude: buildOptionalNumberSeries(Array.isArray(streamMap.get('altitude')) ? streamMap.get('altitude') as unknown[] : undefined, baseLength),
+    heartrate: buildOptionalNumberSeries(Array.isArray(streamMap.get('heartrate')) ? streamMap.get('heartrate') as unknown[] : undefined, baseLength),
+    watts: buildOptionalNumberSeries(Array.isArray(streamMap.get('watts')) ? streamMap.get('watts') as unknown[] : undefined, baseLength),
+    cadence: buildOptionalNumberSeries(Array.isArray(streamMap.get('cadence')) ? streamMap.get('cadence') as unknown[] : undefined, baseLength),
+    velocity_smooth: buildOptionalNumberSeries(Array.isArray(streamMap.get('velocity_smooth')) ? streamMap.get('velocity_smooth') as unknown[] : undefined, baseLength),
+    total_distance_m: totalDistanceM,
+    total_elapsed_sec: totalElapsedSec,
+  };
+};
+
+const findDistanceUpperIndex = (series: number[], targetDistanceM: number): number => {
+  let low = 0;
+  let high = series.length - 1;
+
+  while (low < high) {
+    const middle = Math.floor((low + high) / 2);
+    if (series[middle] < targetDistanceM) {
+      low = middle + 1;
+    } else {
+      high = middle;
+    }
+  }
+
+  return low;
+};
+
+const interpolateOptionalSeries = (
+  series: Array<number | null>,
+  lowerIndex: number,
+  upperIndex: number,
+  ratio: number
+): number | null => {
+  const lower = series[lowerIndex] ?? null;
+  const upper = series[upperIndex] ?? null;
+
+  if (lower !== null && upper !== null) {
+    return lower + ((upper - lower) * ratio);
+  }
+  if (lower !== null) return lower;
+  if (upper !== null) return upper;
+  return null;
+};
+
+const sampleCompareStreamAtDistance = (
+  prepared: ActivityComparePreparedStreams,
+  targetDistanceM: number
+) => {
+  const cappedDistance = Math.min(Math.max(targetDistanceM, 0), prepared.total_distance_m);
+  const upperIndex = findDistanceUpperIndex(prepared.distance_m, cappedDistance);
+  const lowerIndex = Math.max(0, upperIndex - 1);
+  const lowerDistance = prepared.distance_m[lowerIndex] ?? 0;
+  const upperDistance = prepared.distance_m[upperIndex] ?? lowerDistance;
+  const span = upperDistance - lowerDistance;
+  const ratio = span > 0 ? (cappedDistance - lowerDistance) / span : 0;
+  const lowerTime = prepared.time_sec[lowerIndex] ?? 0;
+  const upperTime = prepared.time_sec[upperIndex] ?? lowerTime;
+
+  return {
+    elapsed_sec: lowerTime + ((upperTime - lowerTime) * ratio),
+    altitude: interpolateOptionalSeries(prepared.altitude, lowerIndex, upperIndex, ratio),
+    hr: interpolateOptionalSeries(prepared.heartrate, lowerIndex, upperIndex, ratio),
+    power: interpolateOptionalSeries(prepared.watts, lowerIndex, upperIndex, ratio),
+    cadence: interpolateOptionalSeries(prepared.cadence, lowerIndex, upperIndex, ratio),
+    speed_kmh: interpolateOptionalSeries(prepared.velocity_smooth, lowerIndex, upperIndex, ratio),
+  };
+};
+
+const roundCompareStep = (value: number): number => {
+  if (value <= 25) return Math.max(5, Math.ceil(value / 5) * 5);
+  if (value <= 100) return Math.ceil(value / 10) * 10;
+  return Math.ceil(value / 25) * 25;
+};
+
+const getCompareResolutionM = (distanceM: number, sportGroup: string): number => {
+  const minStep = sportGroup === 'run' ? 25 : 100;
+  const maxPoints = sportGroup === 'run' ? 1200 : 1400;
+  const adaptiveStep = roundCompareStep(distanceM / maxPoints);
+  return Math.max(minStep, adaptiveStep);
+};
+
+const buildAlignedComparePoints = (
+  basePrepared: ActivityComparePreparedStreams,
+  comparisonPrepared: ActivityComparePreparedStreams,
+  sportGroup: string
+): { resolution_m: number; points: ActivityCompareAlignedPoint[] } => {
+  const maxDistanceM = Math.min(basePrepared.total_distance_m, comparisonPrepared.total_distance_m);
+  const resolutionM = getCompareResolutionM(maxDistanceM, sportGroup);
+  const distances: number[] = [];
+
+  for (let distance = 0; distance < maxDistanceM; distance += resolutionM) {
+    distances.push(distance);
+  }
+
+  if (distances.length === 0 || distances[distances.length - 1] !== maxDistanceM) {
+    distances.push(maxDistanceM);
+  }
+
+  const points: ActivityCompareAlignedPoint[] = [];
+
+  distances.forEach((distanceM, index) => {
+    const baseSample = sampleCompareStreamAtDistance(basePrepared, distanceM);
+    const comparisonSample = sampleCompareStreamAtDistance(comparisonPrepared, distanceM);
+    const previous = points[index - 1] ?? null;
+    const segmentDistanceM = previous ? Math.max(distanceM - previous.distance_m, 0) : 0;
+    const baseDeltaSec = previous ? Math.max(baseSample.elapsed_sec - previous.base_elapsed_sec, 0) : 0;
+    const comparisonDeltaSec = previous ? Math.max(comparisonSample.elapsed_sec - previous.comparison_elapsed_sec, 0) : 0;
+
+    const inferredBaseSpeedKmh = segmentDistanceM > 0 && baseDeltaSec > 0
+      ? (segmentDistanceM / baseDeltaSec) * 3.6
+      : null;
+    const inferredComparisonSpeedKmh = segmentDistanceM > 0 && comparisonDeltaSec > 0
+      ? (segmentDistanceM / comparisonDeltaSec) * 3.6
+      : null;
+    const baseSpeedKmh = baseSample.speed_kmh !== null && baseSample.speed_kmh > 0
+      ? baseSample.speed_kmh * 3.6
+      : inferredBaseSpeedKmh;
+    const comparisonSpeedKmh = comparisonSample.speed_kmh !== null && comparisonSample.speed_kmh > 0
+      ? comparisonSample.speed_kmh * 3.6
+      : inferredComparisonSpeedKmh;
+
+    points.push({
+      distance_m: distanceM,
+      distance_km: distanceM / 1000,
+      base_elapsed_sec: baseSample.elapsed_sec,
+      comparison_elapsed_sec: comparisonSample.elapsed_sec,
+      gap_sec: baseSample.elapsed_sec - comparisonSample.elapsed_sec,
+      base_speed_kmh: baseSpeedKmh,
+      comparison_speed_kmh: comparisonSpeedKmh,
+      base_pace_sec_per_km: segmentDistanceM > 0 && baseDeltaSec > 0 ? baseDeltaSec / (segmentDistanceM / 1000) : null,
+      comparison_pace_sec_per_km: segmentDistanceM > 0 && comparisonDeltaSec > 0 ? comparisonDeltaSec / (segmentDistanceM / 1000) : null,
+      base_altitude: baseSample.altitude,
+      comparison_altitude: comparisonSample.altitude,
+      base_hr: baseSample.hr,
+      comparison_hr: comparisonSample.hr,
+      base_power: baseSample.power,
+      comparison_power: comparisonSample.power,
+      base_cadence: baseSample.cadence,
+      comparison_cadence: comparisonSample.cadence,
+    });
+  });
+
+  return { resolution_m: resolutionM, points };
+};
+
 const getActivityCompareBase = async (activityId: number): Promise<ActivityCompareBaseRow | null> => {
   const result = await db.query(
     `
@@ -2573,19 +2834,7 @@ router.get('/activities/:id/compare-context', async (req: Request, res: Response
     return res.json({
       activity_id: activityId,
       sport_type: baseActivity.type,
-      base_activity: {
-        strava_activity_id: baseActivity.strava_activity_id,
-        name: baseActivity.name,
-        start_date: baseActivity.start_date,
-        type: baseActivity.type,
-        moving_time: baseActivity.moving_time,
-        elapsed_time: baseActivity.elapsed_time,
-        distance_km: baseActivity.distance_km,
-        avg_speed_kmh: baseActivity.avg_speed_kmh,
-        total_elevation_gain: baseActivity.total_elevation_gain,
-        average_heartrate: baseActivity.average_heartrate,
-        average_watts: baseActivity.average_watts,
-      },
+      base_activity: getActivityCompareSummary(baseActivity),
       latest_activity_id: latestActivityId,
       best_activity_id: bestActivityId,
       count: candidates.length,
@@ -2598,6 +2847,88 @@ router.get('/activities/:id/compare-context', async (req: Request, res: Response
   } catch (error: any) {
     console.error('Error fetching activity compare context:', error);
     return res.status(500).json({ error: 'Failed to fetch activity compare context' });
+  }
+});
+
+/**
+ * GET /api/activities/:id/compare-data?targetId=...
+ * Returns a fine-grained distance-based comparison between two activities.
+ */
+router.get('/activities/:id/compare-data', async (req: Request, res: Response) => {
+  try {
+    const activityId = Number(req.params.id);
+    const targetId = Number(req.query.targetId);
+    if (!Number.isInteger(activityId) || !Number.isInteger(targetId)) {
+      return res.status(400).json({ error: 'Invalid activity id or target id' });
+    }
+
+    const baseActivity = await getActivityCompareBase(activityId);
+    const comparisonActivity = await getActivityCompareBase(targetId);
+    if (!baseActivity || !comparisonActivity) {
+      return res.status(404).json({ error: 'Activity not found' });
+    }
+
+    if (baseActivity.user_id !== comparisonActivity.user_id) {
+      return res.status(400).json({ error: 'Activities must belong to the same user' });
+    }
+
+    const baseSportGroup = normalizeCompareSportGroup(baseActivity.type);
+    const comparisonSportGroup = normalizeCompareSportGroup(comparisonActivity.type);
+    if (baseSportGroup !== comparisonSportGroup) {
+      return res.status(400).json({ error: 'Activities must belong to the same sport group' });
+    }
+
+    const [basePrepared, comparisonPrepared] = await Promise.all([
+      prepareActivityCompareStreams(baseActivity),
+      prepareActivityCompareStreams(comparisonActivity),
+    ]);
+
+    if (!basePrepared || !comparisonPrepared) {
+      return res.json({
+        activity_id: activityId,
+        target_activity_id: targetId,
+        sport_type: baseActivity.type,
+        base_activity: getActivityCompareSummary(baseActivity),
+        comparison_activity: getActivityCompareSummary(comparisonActivity),
+        resolution_m: null,
+        point_count: 0,
+        summary: {
+          final_gap_sec: null,
+          gap_at_half_sec: null,
+          max_ahead_sec: null,
+          max_behind_sec: null,
+        },
+        points: [],
+        message: 'Missing required distance/time streams for comparison',
+      });
+    }
+
+    const { resolution_m, points } = buildAlignedComparePoints(basePrepared, comparisonPrepared, baseSportGroup);
+    const finalPoint = points[points.length - 1] ?? null;
+    const middlePoint = points.length > 0 ? points[Math.floor(points.length / 2)] : null;
+    const gapValues = points.map((point) => point.gap_sec);
+    const minGap = gapValues.length > 0 ? Math.min(...gapValues) : 0;
+    const maxGap = gapValues.length > 0 ? Math.max(...gapValues) : 0;
+
+    return res.json({
+      activity_id: activityId,
+      target_activity_id: targetId,
+      sport_type: baseActivity.type,
+      base_activity: getActivityCompareSummary(baseActivity),
+      comparison_activity: getActivityCompareSummary(comparisonActivity),
+      resolution_m,
+      point_count: points.length,
+      summary: {
+        final_gap_sec: finalPoint ? finalPoint.gap_sec : null,
+        gap_at_half_sec: middlePoint ? middlePoint.gap_sec : null,
+        max_ahead_sec: minGap < 0 ? Math.abs(minGap) : 0,
+        max_behind_sec: maxGap > 0 ? maxGap : 0,
+      },
+      points,
+    });
+  } catch (error: any) {
+    console.error('Error fetching activity compare data:', error);
+    return res.status(500).json({ error: 'Failed to fetch activity compare data' });
   }
 });
 

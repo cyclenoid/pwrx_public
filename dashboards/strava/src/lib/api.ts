@@ -217,6 +217,56 @@ export const getActivityCompareContext = async (
   return data
 }
 
+export interface ActivityCompareAlignedPoint {
+  distance_m: number
+  distance_km: number
+  base_elapsed_sec: number
+  comparison_elapsed_sec: number
+  gap_sec: number
+  base_speed_kmh: number | null
+  comparison_speed_kmh: number | null
+  base_pace_sec_per_km: number | null
+  comparison_pace_sec_per_km: number | null
+  base_altitude: number | null
+  comparison_altitude: number | null
+  base_hr: number | null
+  comparison_hr: number | null
+  base_power: number | null
+  comparison_power: number | null
+  base_cadence: number | null
+  comparison_cadence: number | null
+}
+
+export interface ActivityCompareDataSummary {
+  final_gap_sec: number | null
+  gap_at_half_sec: number | null
+  max_ahead_sec: number | null
+  max_behind_sec: number | null
+}
+
+export interface ActivityCompareDataResponse {
+  activity_id: number
+  target_activity_id: number
+  sport_type: string
+  base_activity: ActivityCompareSummary
+  comparison_activity: ActivityCompareSummary
+  resolution_m: number | null
+  point_count: number
+  summary: ActivityCompareDataSummary
+  points: ActivityCompareAlignedPoint[]
+  message?: string
+}
+
+export const getActivityCompareData = async (
+  id: number,
+  targetId: number
+): Promise<ActivityCompareDataResponse> => {
+  const { data } = await api.get<ActivityCompareDataResponse>(`/activities/${id}/compare-data`, {
+    params: { targetId },
+  })
+  return data
+}
+
 export interface DeleteActivityResponse {
   success: boolean
   deleted_activity_id: number

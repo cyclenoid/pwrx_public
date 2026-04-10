@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-10-distance-compare",
+    date: "2026-04-10",
+    tag: "analysis",
+    title: {
+      de: "Aktivitaetsvergleich zeigt jetzt feine Distanz-Charts",
+      en: "Activity comparison now shows fine-grained distance charts",
+    },
+    summary: {
+      de: "Vergleiche zweier Aktivitaeten laufen jetzt ueber fein aufgeloeste Distanzpunkte statt nur ueber grobe Kennzahlen. Dadurch zeigt PWRX Vorsprung, Rueckstand und Pace/Geschwindigkeit direkt ueber den Streckenverlauf.",
+      en: "Activity comparisons now run on fine-grained distance points instead of only coarse summary metrics. This lets PWRX show ahead/behind and pace/speed directly across the route progression.",
+    },
+    bullets: {
+      de: [
+        "Die Compare-Seite hat jetzt einen fein aufgeloesten Vorsprung-/Rueckstand-Chart ueber die gemeinsame Distanz.",
+        "Pace bei Laeufen und Geschwindigkeit bei Fahrten werden direkt ueber den Streckenverlauf gegenuebergestellt.",
+        "Der bestehende KM-Split-Vergleich fuer Laeufe bleibt erhalten und sitzt jetzt unter dem neuen Distanzvergleich.",
+      ],
+      en: [
+        "The compare page now includes a fine-grained ahead/behind chart across the shared distance.",
+        "Run pace and ride speed are now compared directly along the route progression.",
+        "The existing km split comparison for runs remains in place below the new distance comparison.",
+      ],
+    },
+  },
+  {
     id: "2026-04-10-run-compare-charts",
     date: "2026-04-10",
     tag: "analysis",

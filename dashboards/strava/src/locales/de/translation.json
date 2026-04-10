@@ -928,6 +928,22 @@
       "base": "Diese Aktivität",
       "comparison": "Vergleich"
     },
+    "distanceChart": {
+      "title": "Vorsprung / Rückstand über Distanz",
+      "subtitle": "Fein aufgelöster Zeitvergleich entlang der gemeinsamen Strecke.",
+      "tooltipDistance": "Bei {{distance}} km",
+      "aheadBy": "{{value}} voraus",
+      "behindBy": "{{value}} zurück",
+      "even": "Gleichauf",
+      "noData": "Für diese beiden Aktivitäten fehlen noch die nötigen Distanz-/Zeit-Streams für den direkten Streckenvergleich."
+    },
+    "performanceChart": {
+      "titleRun": "Pace-Verlauf über Distanz",
+      "subtitleRun": "Direkter Pace-Vergleich entlang des gesamten Laufs.",
+      "titleRide": "Geschwindigkeit über Distanz",
+      "subtitleRide": "Direkter Vergleich entlang der gemeinsamen Strecke.",
+      "tooltipDistance": "Segment um {{distance}} km"
+    },
     "gapChart": {
       "title": "Vorsprung / Rückstand pro km",
       "subtitle": "Kumulierte Zeitdifferenz über den Laufverlauf.",
