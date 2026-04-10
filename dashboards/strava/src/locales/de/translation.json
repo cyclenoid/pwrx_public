@@ -894,27 +894,27 @@
   },
   "activityCompare": {
     "title": "Aktivitäten vergleichen",
-    "subtitle": "Wähle eine ähnliche Aktivität als Ziel für einen direkten Vergleich.",
+    "subtitle": "Wähle eine ähnliche Aktivität für einen direkten Vergleich.",
     "backToActivity": "Zur Aktivität zurück",
-    "openSelectedActivity": "Zielaktivität öffnen",
-    "currentActivity": "Aktuelle Aktivität",
-    "targetActivity": "Vergleichsaktivität",
+    "openSelectedActivity": "Vergleichsaktivität öffnen",
+    "baseActivity": "Diese Aktivität",
+    "comparisonActivity": "Vergleichsaktivität",
     "quickPickLatest": "Letzte wählen",
     "quickPickBest": "Beste wählen",
     "latest": "Letzte",
     "best": "Beste",
     "matchBadge": "{{percent}}% Streckenmatch",
-    "chooseTarget": "Vergleichsziel wählen",
-    "selectionHint": "Wähle zuerst eine ähnliche Aktivität als Ziel aus.",
-    "noTargetSelected": "Noch keine Zielaktivität gewählt.",
-    "noTargetBody": "Wähle rechts eine ähnliche Aktivität aus. Danach bauen wir darauf den detaillierten Distanz- und Split-Vergleich auf.",
+    "chooseComparison": "Vergleich wählen",
+    "selectionHint": "Wähle zuerst eine Vergleichsaktivität aus.",
+    "noComparisonSelected": "Noch keine Vergleichsaktivität gewählt.",
+    "noComparisonBody": "Wähle rechts eine ähnliche Aktivität aus. Danach zeigt PWRX die direkten Vergleichsdaten.",
     "noCandidates": "Noch keine ausreichend ähnlichen Aktivitäten für einen Direktvergleich gefunden.",
     "nextStepTitle": "Nächster Schritt",
-    "nextStepBody": "Diese erste Compare-Seite setzt den Einstieg und die Zielwahl. Im nächsten Ausbauschritt folgen Gap-Verlauf über Distanz, feinere Metrik-Charts und Lauf-Split-Vergleiche.",
+    "nextStepBody": "Für Läufe ist jetzt bereits der KM-Vergleich sichtbar. Für weitere Sportarten folgen als Nächstes feinere Distanz- und Metrik-Charts.",
     "headline": {
       "same": "Beide Aktivitäten liegen aktuell auf derselben Moving Time.",
-      "faster": "Die aktuelle Aktivität ist {{value}} schneller als das gewählte Ziel.",
-      "slower": "Die aktuelle Aktivität ist {{value}} langsamer als das gewählte Ziel."
+      "faster": "Diese Aktivität ist {{value}} schneller als der Vergleich.",
+      "slower": "Diese Aktivität ist {{value}} langsamer als der Vergleich."
     },
     "summary": {
       "title": "Direkter Überblick",
@@ -925,8 +925,30 @@
       "pace": "Ø Pace",
       "avgHr": "Ø Herzfrequenz",
       "avgPower": "Ø Leistung",
-      "current": "Aktuell",
-      "target": "Ziel"
+      "base": "Diese Aktivität",
+      "comparison": "Vergleich"
+    },
+    "gapChart": {
+      "title": "Vorsprung / Rückstand pro km",
+      "subtitle": "Kumulierte Zeitdifferenz über den Laufverlauf.",
+      "tooltipKm": "Bei km {{km}}",
+      "aheadBy": "{{value}} voraus",
+      "behindBy": "{{value}} zurück",
+      "even": "Gleichauf"
+    },
+    "paceChart": {
+      "title": "Pace-Vergleich pro km",
+      "subtitle": "Direkter Vergleich der gelaufenen Kilometer-Splits.",
+      "tooltipKm": "Split bei km {{km}}"
+    },
+    "splits": {
+      "title": "KM-Splits im Vergleich",
+      "subtitle": "Pace, Delta und kumulierter Verlauf pro Kilometer.",
+      "columns": {
+        "km": "KM",
+        "delta": "Delta",
+        "cumulative": "Kumuliert"
+      }
     }
   },
   "localClimbs": {
