@@ -19,7 +19,7 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
-import { formatClimbCategory, formatDuration, formatElevation, formatDistance } from '../lib/utils'
+import { cn, formatClimbCategory, formatDuration, formatElevation, formatDistance } from '../lib/utils'
 import { ActivityMap } from '../components/ActivityMap'
 import { AreaChart, Area, XAxis, YAxis, ResponsiveContainer, Tooltip, ReferenceDot, ReferenceArea, CartesianGrid, PieChart, Pie, Cell, Line } from 'recharts'
 import { useTheme } from '../components/ThemeProvider'
@@ -491,6 +491,18 @@ export function ActivityDetail() {
       return new Date(b.start_date).getTime() - new Date(a.start_date).getTime()
     })
   ), [comparableActivityRows])
+
+  const comparableCandidates = useMemo(() => (
+    comparableListRows.filter((entry) => !entry.isCurrent)
+  ), [comparableListRows])
+
+  const latestComparableActivity = useMemo(() => (
+    comparableCandidates[0] ?? null
+  ), [comparableCandidates])
+
+  const bestComparableActivity = useMemo(() => (
+    [...comparableCandidates].sort((a, b) => a.moving_time - b.moving_time)[0] ?? null
+  ), [comparableCandidates])
 
   const currentComparablePoint = useMemo(() => (
     comparableChartRows.find((entry) => entry.isCurrent) ?? null
@@ -2481,6 +2493,33 @@ export function ActivityDetail() {
             <CardContent className="pt-0">
               {comparableChartRows.length > 1 ? (
                 <div className="space-y-4">
+                  <div className="flex flex-wrap gap-2">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => latestComparableActivity && navigate(`/activity/${activity?.strava_activity_id}/compare?preset=latest`)}
+                      disabled={!latestComparableActivity}
+                      className="border-border/70 bg-background/70"
+                    >
+                      {t('activityDetail.comparable.compareLatest')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => bestComparableActivity && navigate(`/activity/${activity?.strava_activity_id}/compare?preset=best`)}
+                      disabled={!bestComparableActivity}
+                      className="border-border/70 bg-background/70"
+                    >
+                      {t('activityDetail.comparable.compareBest')}
+                    </Button>
+                    <Button
+                      size="sm"
+                      onClick={() => navigate(`/activity/${activity?.strava_activity_id}/compare`)}
+                    >
+                      {t('activityDetail.comparable.openCompare')}
+                    </Button>
+                  </div>
+
                   <div className="h-36">
                     <ResponsiveContainer width="100%" height="100%">
                       <AreaChart data={comparableChartRows} margin={{ top: 8, right: 4, left: -18, bottom: 0 }}>
@@ -2558,38 +2597,61 @@ export function ActivityDetail() {
 
                   <div className="space-y-2">
                     {comparableListRows.map((entry) => (
-                      <div key={entry.strava_activity_id} className="rounded-lg border border-border/60 bg-card/40 px-3 py-2.5">
-                        <div className="flex items-center justify-between gap-3">
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-2">
-                              <Link
-                                to={`/activity/${entry.strava_activity_id}`}
-                                className="truncate text-sm font-medium text-foreground hover:text-primary hover:underline"
-                              >
-                                {entry.shortDate}
-                              </Link>
-                              {entry.isCurrent && (
+                      entry.isCurrent ? (
+                        <div
+                          key={entry.strava_activity_id}
+                          className="rounded-xl border border-primary/25 bg-primary/10 px-3 py-2.5"
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate text-sm font-medium text-foreground">{entry.shortDate}</span>
                                 <span className="rounded-full border border-primary/30 bg-primary/10 px-2 py-0.5 text-[10px] font-semibold text-primary">
                                   {t('activityDetail.comparable.current')}
                                 </span>
-                              )}
-                            </div>
-                            <div className="text-[11px] text-muted-foreground">
-                              {formatDuration(entry.moving_time)}
-                            </div>
-                          </div>
-                          <div className="shrink-0 text-right">
-                            <div className="text-sm font-semibold text-primary">
-                              {Number(entry.avg_speed_kmh).toFixed(1)} {unitKmh}
-                            </div>
-                            {!entry.isCurrent && entry.overlap_pct >= 90 && (
-                              <div className="text-[11px] text-muted-foreground">
-                                {t('activityDetail.comparable.match', { percent: Number(entry.overlap_pct).toFixed(0) })}
                               </div>
-                            )}
+                              <div className="text-[11px] text-muted-foreground">
+                                {formatDuration(entry.moving_time)}
+                              </div>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <div className="text-sm font-semibold text-primary">
+                                {Number(entry.avg_speed_kmh).toFixed(1)} {unitKmh}
+                              </div>
+                            </div>
                           </div>
                         </div>
-                      </div>
+                      ) : (
+                        <Link
+                          key={entry.strava_activity_id}
+                          to={`/activity/${entry.strava_activity_id}`}
+                          className={cn(
+                            'block rounded-xl border border-border/60 bg-card/40 px-3 py-2.5 transition-colors transition-shadow',
+                            'hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm'
+                          )}
+                        >
+                          <div className="flex items-center justify-between gap-3">
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <span className="truncate text-sm font-medium text-foreground">{entry.shortDate}</span>
+                              </div>
+                              <div className="text-[11px] text-muted-foreground">
+                                {formatDuration(entry.moving_time)}
+                              </div>
+                            </div>
+                            <div className="shrink-0 text-right">
+                              <div className="text-sm font-semibold text-primary">
+                                {Number(entry.avg_speed_kmh).toFixed(1)} {unitKmh}
+                              </div>
+                              {entry.overlap_pct >= 90 && (
+                                <div className="text-[11px] text-muted-foreground">
+                                  {t('activityDetail.comparable.match', { percent: Number(entry.overlap_pct).toFixed(0) })}
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        </Link>
+                      )
                     ))}
                   </div>
                 </div>
