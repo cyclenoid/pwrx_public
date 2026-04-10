@@ -15,7 +15,7 @@ Compliance note:
 ## Which path should you choose?
 
 - want fast, stable operation: **Path A**
-- want API automation but low coupling: **Path B**
+- want automated Strava ingestion with low coupling: **Path B**
 - want deep native integration inside PWRX: **Path C**
 
 ## Path A: File import only (recommended for most users)
@@ -35,6 +35,10 @@ You can ingest via:
 - watch folder (`/imports/watch`, mounted from `./data/imports/watch`)
 - import API (`POST /api/import/file`, `POST /api/import/batch`)
 
+Recommended default inside Path B:
+- use `import_api` for the simplest setup
+- use `watch_folder` only if you deliberately want a watched-folder workflow
+
 Pros:
 - does not depend on internal adapter interfaces
 - easier to maintain across PWRX updates
@@ -43,7 +47,7 @@ Pros:
 Minimal architecture:
 1. Create your own Strava app and OAuth credentials.
 2. Run a sidecar job (cron/GitHub Action/server task) that fetches activities.
-3. Write fetched files to watch folder or upload via import API.
+3. Upload via import API, or write fetched files to watch folder if you intentionally want that workflow.
 4. Let PWRX process files as usual.
 
 Starter implementation in this repo:

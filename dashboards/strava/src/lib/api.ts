@@ -152,11 +152,14 @@ export interface ComparableActivity {
   strava_activity_id: number
   name: string
   start_date: string
+  type: string
   moving_time: number
   elapsed_time: number
   distance_km: number
   avg_speed_kmh: number
   total_elevation_gain: number
+  average_heartrate?: number | null
+  average_watts?: number | null
   overlap_count: number
   overlap_pct: number
   match_type: 'segments' | 'name'
@@ -170,6 +173,45 @@ export interface ComparableActivitiesResponse {
 
 export const getComparableActivities = async (id: number, limit: number = 8): Promise<ComparableActivitiesResponse> => {
   const { data } = await api.get<ComparableActivitiesResponse>(`/activities/${id}/comparable`, {
+    params: { limit },
+  })
+  return data
+}
+
+export interface ActivityCompareSummary {
+  strava_activity_id: number
+  name: string
+  start_date: string
+  type: string
+  moving_time: number
+  elapsed_time: number
+  distance_km: number
+  avg_speed_kmh: number
+  total_elevation_gain: number
+  average_heartrate?: number | null
+  average_watts?: number | null
+}
+
+export interface ActivityCompareContextCandidate extends ComparableActivity {
+  is_latest: boolean
+  is_best: boolean
+}
+
+export interface ActivityCompareContextResponse {
+  activity_id: number
+  sport_type: string
+  base_activity: ActivityCompareSummary
+  latest_activity_id: number | null
+  best_activity_id: number | null
+  count: number
+  candidates: ActivityCompareContextCandidate[]
+}
+
+export const getActivityCompareContext = async (
+  id: number,
+  limit: number = 12
+): Promise<ActivityCompareContextResponse> => {
+  const { data } = await api.get<ActivityCompareContextResponse>(`/activities/${id}/compare-context`, {
     params: { limit },
   })
   return data

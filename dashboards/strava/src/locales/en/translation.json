@@ -882,11 +882,51 @@
       "title": "Comparable activities",
       "subtitle": "Similar routes tracked over time by avg speed.",
       "current": "Current",
+      "compareLatest": "Compare with latest",
+      "compareBest": "Compare with best",
+      "openCompare": "Open compare",
       "match": "{{percent}}% route match",
       "empty": "No close route matches found yet. As soon as you repeat the same route more often, the comparison will appear here."
     },
     "power": {
       "noData": "No power data"
+    }
+  },
+  "activityCompare": {
+    "title": "Compare activities",
+    "subtitle": "Choose a similar activity as the target for a direct comparison.",
+    "backToActivity": "Back to activity",
+    "openSelectedActivity": "Open target activity",
+    "currentActivity": "Current activity",
+    "targetActivity": "Comparison activity",
+    "quickPickLatest": "Pick latest",
+    "quickPickBest": "Pick best",
+    "latest": "Latest",
+    "best": "Best",
+    "matchBadge": "{{percent}}% route match",
+    "chooseTarget": "Choose comparison target",
+    "selectionHint": "Choose a similar activity as the target first.",
+    "noTargetSelected": "No target activity selected yet.",
+    "noTargetBody": "Choose a similar activity on the right. The detailed distance and split comparison will build on that selection next.",
+    "noCandidates": "No sufficiently similar activities found for a direct comparison yet.",
+    "nextStepTitle": "Next step",
+    "nextStepBody": "This first compare page establishes the entry point and target selection. The next expansion step adds gap-over-distance, finer metric charts, and run split comparisons.",
+    "headline": {
+      "same": "Both activities currently have the same moving time.",
+      "faster": "The current activity is {{value}} faster than the selected target.",
+      "slower": "The current activity is {{value}} slower than the selected target."
+    },
+    "summary": {
+      "title": "Direct overview",
+      "distance": "Distance",
+      "movingTime": "Moving time",
+      "elevation": "Elevation",
+      "speed": "Avg speed",
+      "pace": "Avg pace",
+      "avgHr": "Avg heart rate",
+      "avgPower": "Avg power",
+      "current": "Current",
+      "target": "Target"
     }
   },
   "localClimbs": {

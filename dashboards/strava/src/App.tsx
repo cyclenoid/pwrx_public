@@ -5,6 +5,7 @@ import { Layout } from "./components/Layout";
 import { Dashboard } from "./pages/Dashboard";
 import { Activities } from "./pages/Activities";
 import { ActivityDetail } from "./pages/ActivityDetail";
+import { ActivityCompare } from "./pages/ActivityCompare";
 import { SegmentDetail } from "./pages/SegmentDetail";
 import { SegmentsDashboard } from "./pages/SegmentsDashboard";
 import { Records } from "./pages/Records";
@@ -40,6 +41,7 @@ function App() {
             <Route path="/" element={<Layout />}>
               <Route index element={<Dashboard />} />
               <Route path="activities" element={<Activities />} />
+              <Route path="activity/:id/compare" element={<ActivityCompare />} />
               <Route path="activity/:id" element={<ActivityDetail />} />
               <Route path="segment/:id" element={<SegmentDetail />} />
               <Route path="segments" element={<SegmentsDashboard />} />

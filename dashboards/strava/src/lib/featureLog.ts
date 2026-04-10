@@ -18,6 +18,33 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-10-activity-compare-entrypoints",
+    date: "2026-04-10",
+    tag: "analysis",
+    title: {
+      de: "Aktivitaetsvergleich bekommt klarere Einstiege",
+      en: "Activity comparison gets clearer entry points",
+    },
+    summary: {
+      de: "Vergleichbare Aktivitaeten sind in den Details jetzt klarer klickbar, und die Compare-Seite fuehrt mit serverseitig vorbereiteter Letzte-/Beste-Auswahl direkt in den Vergleich.",
+      en: "Comparable activities are now more clearly clickable in activity details, and the compare page now leads directly into comparison with server-prepared latest/best targets.",
+    },
+    bullets: {
+      de: [
+        "Jede vergleichbare Aktivitaet oeffnet sich jetzt ueber die komplette Karte statt nur ueber das Datum.",
+        "Hover-States zeigen deutlicher, dass diese Karten klickbar sind und setzen damit einen klareren UX-Standard in PWRX.",
+        "In der Aktivitaetsdetailseite gibt es jetzt direkte Einstiege fuer Vergleich mit letzter Aktivitaet, bester Aktivitaet und eine eigene Compare-Seite.",
+        "Die Compare-Seite bringt jetzt serverseitig vorbereitete Kandidaten, Letzte-/Beste-Badges und direkte Kennzahlen fuer den ersten Vergleichsschritt mit.",
+      ],
+      en: [
+        "Each comparable activity now opens from the full card instead of only from the date link.",
+        "Hover states make it clearer that these cards are clickable and establish a more consistent UX standard in PWRX.",
+        "Activity detail now includes direct entry points for comparing with the latest activity, the best activity, and a dedicated compare page.",
+        "The compare page now ships with server-prepared candidates, latest/best badges, and direct summary metrics for the first comparison step.",
+      ],
+    },
+  },
+  {
     id: "2026-04-09-footer-support-cta",
     date: "2026-04-09",
     tag: "ui",

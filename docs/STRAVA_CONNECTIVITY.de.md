@@ -15,7 +15,7 @@ Compliance-Hinweis:
 ## Welcher Weg passt zu dir?
 
 - du willst schnell und stabil arbeiten: **Weg A**
-- du willst API-Automatisierung mit wenig Koppelung: **Weg B**
+- du willst Strava automatisiert zufuehren und dabei wenig Koppelung: **Weg B**
 - du willst tiefe native Integration direkt in PWRX: **Weg C**
 
 ## Weg A: Nur Datei-Import (fuer die meisten empfohlen)
@@ -35,6 +35,10 @@ Uebergabewege:
 - Watch Folder (`/imports/watch`, gemountet aus `./data/imports/watch`)
 - Import-API (`POST /api/import/file`, `POST /api/import/batch`)
 
+Empfohlener Standard innerhalb von Weg B:
+- nutze `import_api`, wenn Du das einfachste Setup willst
+- nutze `watch_folder` nur, wenn Du bewusst ueber einen Watch Folder arbeiten willst
+
 Vorteile:
 - unabhaengig von internen Adapter-Interfaces
 - besser update-faehig bei PWRX-Updates
@@ -43,7 +47,7 @@ Vorteile:
 Minimales Zielbild:
 1. Eigene Strava-App inkl. OAuth-Credentials anlegen.
 2. Eigenen Sidecar-Job (Cron/GitHub Action/Server-Task) betreiben.
-3. Dateien in den Watch Folder legen oder per Import-API hochladen.
+3. Daten per Import-API hochladen, oder nur dann in den Watch Folder schreiben, wenn Du diesen Ablauf bewusst willst.
 4. PWRX verarbeitet die Daten wie im Standard-Import.
 
 Starter-Implementierung in diesem Repo:
