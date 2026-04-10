@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-10-compare-sidebar-sync",
+    date: "2026-04-10",
+    tag: "ui",
+    title: {
+      de: "Compare wird kompakter und koppelt Strecke direkt an den Gap-Chart",
+      en: "Compare gets more compact and ties the route directly to the gap chart",
+    },
+    summary: {
+      de: "Die Compare-Seite priorisiert jetzt Karte, Splits und Gap-Verlauf. Der Vergleichsblock sitzt kompakt in der Sidebar, und der Distanz-Chart zeigt beim Hover direkt die Position auf der Karte.",
+      en: "The compare page now prioritizes route, splits, and gap progression. The comparison block moves into a compact sidebar, and hovering the distance chart now shows the matching point on the map.",
+    },
+    bullets: {
+      de: [
+        "Die Split-Karten wurden kompakter gemacht und zeigen ihre Deltas jetzt als Sekundenwerte statt als grobe Minutenangaben.",
+        "Direkt unter Karte und Splits folgt jetzt der Vorsprung-/Rueckstand-Chart mit Hover-Sync zur Kartenposition.",
+        "Der bisher grosse Vergleichsblock wurde in die Sidebar verschoben und dort als kompakter Ueberblick zusammengefasst.",
+      ],
+      en: [
+        "The split cards are now more compact and show deltas as seconds instead of coarse minute values.",
+        "The ahead/behind chart now sits directly below the route and splits, with hover sync to the route map.",
+        "The previously large comparison block has been moved into the sidebar and condensed into a compact overview.",
+      ],
+    },
+  },
+  {
     id: "2026-04-10-compare-map-splits",
     date: "2026-04-10",
     tag: "ui",

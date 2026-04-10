@@ -46,7 +46,12 @@ const formatDelta = (seconds: number | null | undefined, fallback: string): stri
   if (!Number.isFinite(seconds)) return fallback
   const rounded = Math.round(seconds || 0)
   const sign = rounded > 0 ? '+' : rounded < 0 ? '−' : ''
-  return `${sign}${formatDuration(Math.abs(rounded))}`
+  return `${sign}${Math.abs(rounded)}s`
+}
+
+const formatSecondsValue = (seconds: number | null | undefined, fallback: string): string => {
+  if (!Number.isFinite(seconds)) return fallback
+  return `${Math.abs(Math.round(seconds || 0))}s`
 }
 
 const formatSpeed = (speedKmh: number | null | undefined, fallback: string): string => {
@@ -122,6 +127,7 @@ export function ActivityCompare() {
   const [searchParams, setSearchParams] = useSearchParams()
   const { t, i18n } = useTranslation()
   const [activeSplitKm, setActiveSplitKm] = useState<number | null>(null)
+  const [hoveredDistancePoint, setHoveredDistancePoint] = useState<ActivityCompareAlignedPoint | null>(null)
 
   const activityId = Number(id)
   const dateLocale = i18n.language?.startsWith('de') ? 'de-DE' : 'en-US'
@@ -260,19 +266,6 @@ export function ActivityCompare() {
     return [Math.max(0, minValue - padding), maxValue + padding]
   }, [runSplitRows])
 
-  const gapChartDomain = useMemo<[number, number]>(() => {
-    const values = runSplitRows
-      .map((row) => row.cumulativeDeltaSec)
-      .filter((value): value is number => Number.isFinite(value))
-
-    if (values.length === 0) return [-60, 60]
-
-    const minValue = Math.min(...values, 0)
-    const maxValue = Math.max(...values, 0)
-    const padding = Math.max((maxValue - minValue) * 0.15, 8)
-    return [minValue - padding, maxValue + padding]
-  }, [runSplitRows])
-
   const formatDate = (value: string) => {
     try {
       return new Intl.DateTimeFormat(dateLocale, {
@@ -329,10 +322,10 @@ export function ActivityCompare() {
     const deltaSeconds = baseActivity.moving_time - comparisonActivity.moving_time
     if (deltaSeconds === 0) return t('activityCompare.headline.same')
     if (deltaSeconds < 0) {
-      return t('activityCompare.headline.faster', { value: formatDuration(Math.abs(deltaSeconds)) })
+      return t('activityCompare.headline.faster', { value: formatSecondsValue(deltaSeconds, notAvailable) })
     }
-    return t('activityCompare.headline.slower', { value: formatDuration(deltaSeconds) })
-  }, [baseActivity, comparisonActivity, t])
+    return t('activityCompare.headline.slower', { value: formatSecondsValue(deltaSeconds, notAvailable) })
+  }, [baseActivity, comparisonActivity, notAvailable, t])
 
   const baseLabel = t('activityCompare.summary.base')
   const comparisonLabel = t('activityCompare.summary.comparison')
@@ -384,6 +377,36 @@ export function ActivityCompare() {
       ? splitHighlightRanges.find((range) => range.km === activeSplitKm) ?? null
       : null
   ), [activeSplitKm, splitHighlightRanges])
+
+  const hoveredMapPosition = useMemo<[number, number] | null>(() => {
+    if (!hoveredDistancePoint) return null
+    const distances = baseActivityDetails?.streams?.distance
+    if (!distances?.length || !baseCoordinates.length) return null
+
+    let closestIndex = 0
+    let closestDelta = Number.POSITIVE_INFINITY
+
+    for (let index = 0; index < distances.length && index < baseCoordinates.length; index += 1) {
+      const delta = Math.abs(distances[index] - hoveredDistancePoint.distance_m)
+      if (delta < closestDelta) {
+        closestDelta = delta
+        closestIndex = index
+      }
+    }
+
+    return baseCoordinates[closestIndex] ?? null
+  }, [baseActivityDetails?.streams?.distance, baseCoordinates, hoveredDistancePoint])
+
+  const hoveredGapLabel = useMemo(() => {
+    if (!hoveredDistancePoint) return null
+    if (hoveredDistancePoint.gap_sec < 0) {
+      return t('activityCompare.distanceChart.aheadBy', { value: formatSecondsValue(hoveredDistancePoint.gap_sec, notAvailable) })
+    }
+    if (hoveredDistancePoint.gap_sec > 0) {
+      return t('activityCompare.distanceChart.behindBy', { value: formatSecondsValue(hoveredDistancePoint.gap_sec, notAvailable) })
+    }
+    return t('activityCompare.distanceChart.even')
+  }, [hoveredDistancePoint, notAvailable, t])
 
   const compactSummaryMetrics = useMemo(() => ([
     {
@@ -462,6 +485,7 @@ export function ActivityCompare() {
                   <ActivityMap
                     coordinates={baseCoordinates}
                     showMarkers
+                    hoverPosition={hoveredMapPosition}
                     highlightRange={activeSplitRange}
                     showHighlightMarkers={false}
                     focusHighlight={false}
@@ -476,7 +500,7 @@ export function ActivityCompare() {
               {isRunComparison && hasRunSplitComparison && (
                 <div className="space-y-3">
                   <div className="text-sm text-muted-foreground">{t('activityCompare.mapCard.splitHint')}</div>
-                  <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-4">
+                  <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(132px,1fr))]">
                     {runSplitRows.map((row) => {
                       const splitKm = Number.isInteger(row.km) ? row.km : null
                       const isActive = splitKm !== null && activeSplitKm === splitKm
@@ -485,7 +509,7 @@ export function ActivityCompare() {
                           key={`split-card-${row.km}`}
                           type="button"
                           className={cn(
-                            'rounded-xl border px-3 py-3 text-left transition-colors transition-shadow',
+                            'rounded-lg border px-2.5 py-2 text-left transition-colors transition-shadow',
                             isActive
                               ? 'border-primary/40 bg-primary/10 shadow-sm'
                               : 'border-border/60 bg-card/40 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm'
@@ -500,7 +524,7 @@ export function ActivityCompare() {
                           onBlur={() => setActiveSplitKm(null)}
                         >
                           <div className="flex items-center justify-between gap-3">
-                            <div className="text-sm font-semibold text-foreground">
+                            <div className="text-xs font-semibold uppercase tracking-[0.16em] text-foreground">
                               {t('activityCompare.splits.columns.km')} {Number.isInteger(row.km) ? row.km : row.km.toFixed(1)}
                             </div>
                             <div
@@ -518,13 +542,13 @@ export function ActivityCompare() {
                               {formatDelta(row.deltaSec, notAvailable)}
                             </div>
                           </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2 text-sm">
+                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
                             <div>
-                              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{baseLabel}</div>
+                              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{baseLabel}</div>
                               <div className="mt-1 font-semibold text-foreground">{formatPaceFromSeconds(row.basePace, notAvailable)}</div>
                             </div>
                             <div>
-                              <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">{comparisonLabel}</div>
+                              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{comparisonLabel}</div>
                               <div className="mt-1 font-semibold text-foreground">{formatPaceFromSeconds(row.comparisonPace, notAvailable)}</div>
                             </div>
                           </div>
@@ -537,119 +561,42 @@ export function ActivityCompare() {
             </CardContent>
           </Card>
 
-          <Card className="border-primary/20 bg-card">
-            <CardHeader className="pb-3">
-              <div className="flex items-start justify-between gap-3">
-                <div className="space-y-1">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <ArrowRightLeft className="h-5 w-5 text-primary" />
-                    {t('activityCompare.title')}
-                  </CardTitle>
-                  <div className="text-sm text-muted-foreground">
-                    {t('activityCompare.subtitle')}
-                  </div>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4 pt-0">
-              <div className="flex flex-wrap items-center justify-between gap-3">
-                <p className="text-sm font-medium text-foreground">{compareHeadline}</p>
-                <div className="flex flex-wrap gap-2">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openPreset('latest')}
-                    disabled={!latestCandidate}
-                    className="border-border/70 bg-background/70"
-                  >
-                    {t('activityCompare.quickPickLatest')}
-                  </Button>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => openPreset('best')}
-                    disabled={!bestCandidate}
-                    className="border-border/70 bg-background/70"
-                  >
-                    {t('activityCompare.quickPickBest')}
-                  </Button>
-                </div>
-              </div>
-
-              <div className="grid gap-3 lg:grid-cols-2">
-                <div className="rounded-xl border border-border/60 bg-card/40 p-3">
-                  <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    {t('activityCompare.baseActivity')}
-                  </div>
-                  {baseActivity ? (
-                    <>
-                      <div className="mt-1 text-base font-semibold text-foreground">{baseActivity.name}</div>
-                      <div className="mt-1 text-sm text-muted-foreground">{formatDate(baseActivity.start_date)}</div>
-                    </>
-                  ) : (
-                    <div className="mt-2 text-sm text-muted-foreground">{t('common.loading')}</div>
-                  )}
-                </div>
-                <div className="rounded-xl border border-border/60 bg-card/40 p-3">
-                  <div className="text-xs font-medium uppercase tracking-[0.18em] text-muted-foreground">
-                    {t('activityCompare.comparisonActivity')}
-                  </div>
-                  {comparisonActivity ? (
-                    <>
-                      <div className="mt-1 text-base font-semibold text-foreground">{comparisonActivity.name}</div>
-                      <div className="mt-1 flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
-                        <span>{formatDate(comparisonActivity.start_date)}</span>
-                        {comparisonActivity.is_latest && (
-                          <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
-                            {t('activityCompare.latest')}
-                          </Badge>
-                        )}
-                        {comparisonActivity.is_best && (
-                          <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-500">
-                            {t('activityCompare.best')}
-                          </Badge>
-                        )}
-                      </div>
-                    </>
-                  ) : (
-                    <div className="mt-2 text-sm text-muted-foreground">
-                      {contextLoading ? t('common.loading') : t('activityCompare.noComparisonSelected')}
-                    </div>
-                  )}
-                </div>
-              </div>
-
-              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                {compactSummaryMetrics.map((metric) => (
-                  <SummaryMetric
-                    key={metric.label}
-                    icon={metric.icon}
-                    label={metric.label}
-                    baseValue={metric.baseValue}
-                    comparisonValue={metric.comparisonValue}
-                    baseLabel={baseLabel}
-                    comparisonLabel={comparisonLabel}
-                  />
-                ))}
-              </div>
-            </CardContent>
-          </Card>
-
           {comparisonActivity ? (
             hasDistanceComparison ? (
               <>
                 <Card>
                   <CardHeader className="pb-3">
-                    <CardTitle className="flex items-center gap-2 text-base">
-                      <TimerReset className="h-4 w-4 text-primary" />
-                      {t('activityCompare.distanceChart.title')}
-                    </CardTitle>
-                    <div className="text-sm text-muted-foreground">{t('activityCompare.distanceChart.subtitle')}</div>
+                    <div className="flex items-start justify-between gap-3">
+                      <div>
+                        <CardTitle className="flex items-center gap-2 text-base">
+                          <TimerReset className="h-4 w-4 text-primary" />
+                          {t('activityCompare.distanceChart.title')}
+                        </CardTitle>
+                        <div className="text-sm text-muted-foreground">{t('activityCompare.distanceChart.subtitle')}</div>
+                      </div>
+                      {hoveredDistancePoint && hoveredGapLabel && (
+                        <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-right">
+                          <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
+                            {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(hoveredDistancePoint.distance_km) })}
+                          </div>
+                          <div className="mt-1 text-sm font-semibold text-foreground">{hoveredGapLabel}</div>
+                        </div>
+                      )}
+                    </div>
                   </CardHeader>
                   <CardContent className="pt-0">
-                    <div className="h-80">
+                    <div className="h-72">
                       <ResponsiveContainer width="100%" height="100%">
-                        <LineChart data={distanceComparePoints} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                        <LineChart
+                          data={distanceComparePoints}
+                          margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
+                          onMouseMove={(state) => {
+                            const payload = (state as { activePayload?: Array<{ payload?: ActivityCompareAlignedPoint }> } | undefined)
+                              ?.activePayload?.[0]?.payload
+                            setHoveredDistancePoint(payload ?? null)
+                          }}
+                          onMouseLeave={() => setHoveredDistancePoint(null)}
+                        >
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35} />
                           <XAxis
                             dataKey="distance_km"
@@ -677,9 +624,9 @@ export function ActivityCompare() {
                                   </div>
                                   <div className="mt-1 text-muted-foreground">
                                     {point.gap_sec < 0
-                                      ? t('activityCompare.distanceChart.aheadBy', { value: formatDuration(Math.abs(point.gap_sec)) })
+                                      ? t('activityCompare.distanceChart.aheadBy', { value: formatSecondsValue(point.gap_sec, notAvailable) })
                                       : point.gap_sec > 0
-                                        ? t('activityCompare.distanceChart.behindBy', { value: formatDuration(point.gap_sec) })
+                                        ? t('activityCompare.distanceChart.behindBy', { value: formatSecondsValue(point.gap_sec, notAvailable) })
                                         : t('activityCompare.distanceChart.even')}
                                   </div>
                                   <div className="mt-2 space-y-1 text-muted-foreground">
@@ -816,65 +763,6 @@ export function ActivityCompare() {
 
           {isRunComparison && hasRunSplitComparison ? (
             <>
-              <Card>
-                <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2 text-base">
-                    <TimerReset className="h-4 w-4 text-primary" />
-                    {t('activityCompare.gapChart.title')}
-                  </CardTitle>
-                  <div className="text-sm text-muted-foreground">{t('activityCompare.gapChart.subtitle')}</div>
-                </CardHeader>
-                <CardContent className="pt-0">
-                  <div className="h-72">
-                    <ResponsiveContainer width="100%" height="100%">
-                      <LineChart data={runSplitRows} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
-                        <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35} />
-                        <XAxis dataKey="km" tickFormatter={(value) => `${value}`} tickLine={false} axisLine={false} />
-                        <YAxis
-                          domain={gapChartDomain}
-                          tickFormatter={(value) => `${Number(value) > 0 ? '+' : ''}${Math.round(Number(value))}s`}
-                          tickLine={false}
-                          axisLine={false}
-                          width={48}
-                        />
-                        <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" />
-                        <Tooltip
-                          content={({ active, payload }) => {
-                            if (!active || !payload?.length) return null
-                            const row = payload[0].payload as RunSplitCompareRow
-                            if (row.cumulativeDeltaSec === null) return null
-
-                            return (
-                              <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
-                                <div className="font-semibold">
-                                  {t('activityCompare.gapChart.tooltipKm', { km: row.km })}
-                                </div>
-                                <div className="mt-1 text-muted-foreground">
-                                  {row.cumulativeDeltaSec < 0
-                                    ? t('activityCompare.gapChart.aheadBy', { value: formatDuration(Math.abs(row.cumulativeDeltaSec)) })
-                                    : row.cumulativeDeltaSec > 0
-                                      ? t('activityCompare.gapChart.behindBy', { value: formatDuration(row.cumulativeDeltaSec) })
-                                      : t('activityCompare.gapChart.even')}
-                                </div>
-                              </div>
-                            )
-                          }}
-                        />
-                        <Line
-                          type="monotone"
-                          dataKey="cumulativeDeltaSec"
-                          stroke="hsl(var(--primary))"
-                          strokeWidth={2.5}
-                          dot={{ r: 3 }}
-                          activeDot={{ r: 5 }}
-                          connectNulls={false}
-                        />
-                      </LineChart>
-                    </ResponsiveContainer>
-                  </div>
-                </CardContent>
-              </Card>
-
               <Card>
                 <CardHeader className="pb-3">
                   <CardTitle className="text-base">{t('activityCompare.paceChart.title')}</CardTitle>
@@ -1022,69 +910,160 @@ export function ActivityCompare() {
           ) : null}
         </div>
 
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">{t('activityCompare.chooseComparison')}</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 pt-0">
-            {candidates.length > 0 ? (
-              candidates.map((candidate) => {
-                const candidateId = toNumericId(candidate.strava_activity_id)
-                const isSelected = candidateId === resolvedComparisonId
-                return (
-                  <button
-                    key={candidate.strava_activity_id}
-                    type="button"
-                    onClick={() => {
-                      if (candidateId !== null) applyComparison(candidateId, null)
-                    }}
-                    className={cn(
-                      'w-full rounded-xl border px-3 py-3 text-left transition-colors transition-shadow',
-                      isSelected
-                        ? 'border-primary/40 bg-primary/10 shadow-sm'
-                        : 'border-border/60 bg-card/40 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm'
-                    )}
-                  >
-                    <div className="flex items-start justify-between gap-3">
-                      <div className="min-w-0">
-                        <div className="text-sm font-semibold text-foreground">{formatDate(candidate.start_date)}</div>
-                        <div className="mt-1 flex flex-wrap items-center gap-2">
-                          {candidate.is_latest && (
-                            <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
-                              {t('activityCompare.latest')}
-                            </Badge>
-                          )}
-                          {candidate.is_best && (
-                            <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-500">
-                              {t('activityCompare.best')}
-                            </Badge>
-                          )}
+        <div className="space-y-6">
+          <Card className="border-primary/20 bg-card">
+            <CardHeader className="pb-3">
+              <CardTitle className="flex items-center gap-2 text-base">
+                <ArrowRightLeft className="h-4 w-4 text-primary" />
+                {t('activityCompare.title')}
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4 pt-0">
+              <p className="text-sm font-medium text-foreground">{compareHeadline}</p>
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-1">
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openPreset('latest')}
+                  disabled={!latestCandidate}
+                  className="border-border/70 bg-background/70"
+                >
+                  {t('activityCompare.quickPickLatest')}
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => openPreset('best')}
+                  disabled={!bestCandidate}
+                  className="border-border/70 bg-background/70"
+                >
+                  {t('activityCompare.quickPickBest')}
+                </Button>
+              </div>
+
+              <div className="grid gap-2">
+                <div className="rounded-lg border border-border/60 bg-card/40 p-3">
+                  <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    {t('activityCompare.baseActivity')}
+                  </div>
+                  {baseActivity ? (
+                    <>
+                      <div className="mt-1 text-sm font-semibold text-foreground">{baseActivity.name}</div>
+                      <div className="mt-1 text-xs text-muted-foreground">{formatDate(baseActivity.start_date)}</div>
+                    </>
+                  ) : (
+                    <div className="mt-2 text-sm text-muted-foreground">{t('common.loading')}</div>
+                  )}
+                </div>
+                <div className="rounded-lg border border-border/60 bg-card/40 p-3">
+                  <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    {t('activityCompare.comparisonActivity')}
+                  </div>
+                  {comparisonActivity ? (
+                    <>
+                      <div className="mt-1 text-sm font-semibold text-foreground">{comparisonActivity.name}</div>
+                      <div className="mt-1 flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                        <span>{formatDate(comparisonActivity.start_date)}</span>
+                        {comparisonActivity.is_latest && (
+                          <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
+                            {t('activityCompare.latest')}
+                          </Badge>
+                        )}
+                        {comparisonActivity.is_best && (
+                          <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-500">
+                            {t('activityCompare.best')}
+                          </Badge>
+                        )}
+                      </div>
+                    </>
+                  ) : (
+                    <div className="mt-2 text-sm text-muted-foreground">
+                      {contextLoading ? t('common.loading') : t('activityCompare.noComparisonSelected')}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-2">
+                {compactSummaryMetrics.map((metric) => (
+                  <SummaryMetric
+                    key={metric.label}
+                    icon={metric.icon}
+                    label={metric.label}
+                    baseValue={metric.baseValue}
+                    comparisonValue={metric.comparisonValue}
+                    baseLabel={baseLabel}
+                    comparisonLabel={comparisonLabel}
+                  />
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader className="pb-3">
+              <CardTitle className="text-base">{t('activityCompare.chooseComparison')}</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3 pt-0">
+              {candidates.length > 0 ? (
+                candidates.map((candidate) => {
+                  const candidateId = toNumericId(candidate.strava_activity_id)
+                  const isSelected = candidateId === resolvedComparisonId
+                  return (
+                    <button
+                      key={candidate.strava_activity_id}
+                      type="button"
+                      onClick={() => {
+                        if (candidateId !== null) applyComparison(candidateId, null)
+                      }}
+                      className={cn(
+                        'w-full rounded-xl border px-3 py-3 text-left transition-colors transition-shadow',
+                        isSelected
+                          ? 'border-primary/40 bg-primary/10 shadow-sm'
+                          : 'border-border/60 bg-card/40 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm'
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="min-w-0">
+                          <div className="text-sm font-semibold text-foreground">{formatDate(candidate.start_date)}</div>
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            {candidate.is_latest && (
+                              <Badge variant="outline" className="border-primary/30 bg-primary/10 text-primary">
+                                {t('activityCompare.latest')}
+                              </Badge>
+                            )}
+                            {candidate.is_best && (
+                              <Badge variant="outline" className="border-amber-500/30 bg-amber-500/10 text-amber-500">
+                                {t('activityCompare.best')}
+                              </Badge>
+                            )}
+                          </div>
+                        </div>
+                        <div className="text-right text-xs text-muted-foreground">
+                          {t('activityCompare.matchBadge', { percent: Number(candidate.overlap_pct).toFixed(0) })}
                         </div>
                       </div>
-                      <div className="text-right text-xs text-muted-foreground">
-                        {t('activityCompare.matchBadge', { percent: Number(candidate.overlap_pct).toFixed(0) })}
+                      <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
+                        <div>{formatDistance(candidate.distance_km * 1000)}</div>
+                        <div className="text-right">{formatDuration(candidate.moving_time)}</div>
+                        <div>
+                          {baseActivity && isRunType(baseActivity.type)
+                            ? formatPaceFromSpeed(Number(candidate.avg_speed_kmh), notAvailable)
+                            : `${Number(candidate.avg_speed_kmh).toFixed(1)} ${t('activityDetail.units.kmh')}`}
+                        </div>
+                        <div className="text-right">{formatElevation(Number(candidate.total_elevation_gain))}</div>
                       </div>
-                    </div>
-                    <div className="mt-3 grid grid-cols-2 gap-2 text-xs text-muted-foreground">
-                      <div>{formatDistance(candidate.distance_km * 1000)}</div>
-                      <div className="text-right">{formatDuration(candidate.moving_time)}</div>
-                      <div>
-                        {baseActivity && isRunType(baseActivity.type)
-                          ? formatPaceFromSpeed(Number(candidate.avg_speed_kmh), notAvailable)
-                          : `${Number(candidate.avg_speed_kmh).toFixed(1)} ${t('activityDetail.units.kmh')}`}
-                      </div>
-                      <div className="text-right">{formatElevation(Number(candidate.total_elevation_gain))}</div>
-                    </div>
-                  </button>
-                )
-              })
-            ) : (
-              <div className="rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-sm text-muted-foreground">
-                {t('activityCompare.noCandidates')}
-              </div>
-            )}
-          </CardContent>
-        </Card>
+                    </button>
+                  )
+                })
+              ) : (
+                <div className="rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-sm text-muted-foreground">
+                  {t('activityCompare.noCandidates')}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
       </div>
     </div>
   )
