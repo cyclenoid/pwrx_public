@@ -56,6 +56,11 @@ const formatDistanceLabel = (distanceKm: number): string => (
   distanceKm >= 10 ? distanceKm.toFixed(1) : distanceKm.toFixed(2)
 )
 
+const toNumericId = (value: unknown): number | null => {
+  const numeric = typeof value === 'number' ? value : Number(value)
+  return Number.isInteger(numeric) && numeric > 0 ? numeric : null
+}
+
 type RunSplitCompareRow = {
   km: number
   baseTime: number | null
@@ -129,21 +134,21 @@ export function ActivityCompare() {
   const latestCandidate = candidates.find((candidate) => candidate.is_latest) ?? null
   const bestCandidate = candidates.find((candidate) => candidate.is_best) ?? null
 
-  const resolvedComparisonId = useMemo(() => {
+  const resolvedComparisonId = useMemo<number | null>(() => {
     if (Number.isInteger(requestedComparison) && requestedComparison > 0) return requestedComparison
-    if (preset === 'best' && compareContext?.best_activity_id) return compareContext.best_activity_id
-    if (preset === 'latest' && compareContext?.latest_activity_id) return compareContext.latest_activity_id
-    return compareContext?.latest_activity_id ?? compareContext?.best_activity_id ?? null
+    if (preset === 'best') return toNumericId(compareContext?.best_activity_id)
+    if (preset === 'latest') return toNumericId(compareContext?.latest_activity_id)
+    return toNumericId(compareContext?.latest_activity_id) ?? toNumericId(compareContext?.best_activity_id)
   }, [compareContext?.best_activity_id, compareContext?.latest_activity_id, preset, requestedComparison])
 
   const comparisonActivity = useMemo(() => (
-    candidates.find((candidate) => candidate.strava_activity_id === resolvedComparisonId) ?? null
+    candidates.find((candidate) => toNumericId(candidate.strava_activity_id) === resolvedComparisonId) ?? null
   ), [candidates, resolvedComparisonId])
 
   const { data: compareData } = useQuery({
     queryKey: ['activity-compare-data', activityId, resolvedComparisonId],
     queryFn: () => getActivityCompareData(activityId, Number(resolvedComparisonId)),
-    enabled: Number.isInteger(activityId) && Number.isInteger(resolvedComparisonId) && Number(resolvedComparisonId) > 0,
+    enabled: Number.isInteger(activityId) && resolvedComparisonId !== null,
   })
 
   const isRunComparison = Boolean(
@@ -162,7 +167,7 @@ export function ActivityCompare() {
   const { data: comparisonSplits } = useQuery({
     queryKey: ['activity-km-splits', resolvedComparisonId, 'compare-comparison'],
     queryFn: () => getActivityKmSplits(Number(resolvedComparisonId)),
-    enabled: isRunComparison && Number.isInteger(resolvedComparisonId) && Number(resolvedComparisonId) > 0,
+    enabled: isRunComparison && resolvedComparisonId !== null,
   })
 
   const runSplitRows = useMemo<RunSplitCompareRow[]>(() => {
@@ -882,12 +887,15 @@ export function ActivityCompare() {
           <CardContent className="space-y-3 pt-0">
             {candidates.length > 0 ? (
               candidates.map((candidate) => {
-                const isSelected = candidate.strava_activity_id === resolvedComparisonId
+                const candidateId = toNumericId(candidate.strava_activity_id)
+                const isSelected = candidateId === resolvedComparisonId
                 return (
                   <button
                     key={candidate.strava_activity_id}
                     type="button"
-                    onClick={() => applyComparison(candidate.strava_activity_id, null)}
+                    onClick={() => {
+                      if (candidateId !== null) applyComparison(candidateId, null)
+                    }}
                     className={cn(
                       'w-full rounded-xl border px-3 py-3 text-left transition-colors transition-shadow',
                       isSelected
