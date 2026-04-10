@@ -8,8 +8,10 @@ import { Badge } from '../components/ui/badge'
 import { Button } from '../components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import {
+  getActivityCompareData,
   getActivityCompareContext,
   getActivityKmSplits,
+  type ActivityCompareAlignedPoint,
   type ActivityCompareContextCandidate,
 } from '../lib/api'
 import { cn, formatDistance, formatDuration, formatElevation } from '../lib/utils'
@@ -44,6 +46,15 @@ const formatDelta = (seconds: number | null | undefined, fallback: string): stri
   const sign = rounded > 0 ? '+' : rounded < 0 ? '−' : ''
   return `${sign}${formatDuration(Math.abs(rounded))}`
 }
+
+const formatSpeed = (speedKmh: number | null | undefined, fallback: string): string => {
+  if (!Number.isFinite(speedKmh) || !speedKmh || speedKmh <= 0) return fallback
+  return `${Number(speedKmh).toFixed(1)} km/h`
+}
+
+const formatDistanceLabel = (distanceKm: number): string => (
+  distanceKm >= 10 ? distanceKm.toFixed(1) : distanceKm.toFixed(2)
+)
 
 type RunSplitCompareRow = {
   km: number
@@ -129,6 +140,12 @@ export function ActivityCompare() {
     candidates.find((candidate) => candidate.strava_activity_id === resolvedComparisonId) ?? null
   ), [candidates, resolvedComparisonId])
 
+  const { data: compareData } = useQuery({
+    queryKey: ['activity-compare-data', activityId, resolvedComparisonId],
+    queryFn: () => getActivityCompareData(activityId, Number(resolvedComparisonId)),
+    enabled: Number.isInteger(activityId) && Number.isInteger(resolvedComparisonId) && Number(resolvedComparisonId) > 0,
+  })
+
   const isRunComparison = Boolean(
     baseActivity
     && comparisonActivity
@@ -177,6 +194,38 @@ export function ActivityCompare() {
   }, [baseSplits?.splits, comparisonSplits?.splits])
 
   const hasRunSplitComparison = runSplitRows.some((row) => row.baseTime !== null && row.comparisonTime !== null)
+  const distanceComparePoints = compareData?.points ?? []
+  const hasDistanceComparison = distanceComparePoints.length > 1
+
+  const distanceGapDomain = useMemo<[number, number]>(() => {
+    const values = distanceComparePoints
+      .map((point) => point.gap_sec)
+      .filter((value): value is number => Number.isFinite(value))
+
+    if (values.length === 0) return [-60, 60]
+
+    const minValue = Math.min(...values, 0)
+    const maxValue = Math.max(...values, 0)
+    const padding = Math.max((maxValue - minValue) * 0.15, 8)
+    return [minValue - padding, maxValue + padding]
+  }, [distanceComparePoints])
+
+  const performanceChartDomain = useMemo<[number, number]>(() => {
+    const values = distanceComparePoints
+      .flatMap((point) => (
+        isRunComparison
+          ? [point.base_pace_sec_per_km, point.comparison_pace_sec_per_km]
+          : [point.base_speed_kmh, point.comparison_speed_kmh]
+      ))
+      .filter((value): value is number => Number.isFinite(value))
+
+    if (values.length === 0) return [0, 1]
+
+    const minValue = Math.min(...values)
+    const maxValue = Math.max(...values)
+    const padding = Math.max((maxValue - minValue) * 0.12, isRunComparison ? 8 : 1)
+    return [Math.max(0, minValue - padding), maxValue + padding]
+  }, [distanceComparePoints, isRunComparison])
 
   const splitChartDomain = useMemo<[number, number]>(() => {
     const values = runSplitRows
@@ -267,6 +316,12 @@ export function ActivityCompare() {
 
   const baseLabel = t('activityCompare.summary.base')
   const comparisonLabel = t('activityCompare.summary.comparison')
+  const performanceChartTitle = isRunComparison
+    ? t('activityCompare.performanceChart.titleRun')
+    : t('activityCompare.performanceChart.titleRide')
+  const performanceChartSubtitle = isRunComparison
+    ? t('activityCompare.performanceChart.subtitleRun')
+    : t('activityCompare.performanceChart.subtitleRide')
 
   return (
     <div className="space-y-6">
@@ -445,6 +500,185 @@ export function ActivityCompare() {
               )}
             </CardContent>
           </Card>
+
+          {comparisonActivity ? (
+            hasDistanceComparison ? (
+              <>
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="flex items-center gap-2 text-base">
+                      <TimerReset className="h-4 w-4 text-primary" />
+                      {t('activityCompare.distanceChart.title')}
+                    </CardTitle>
+                    <div className="text-sm text-muted-foreground">{t('activityCompare.distanceChart.subtitle')}</div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={distanceComparePoints} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35} />
+                          <XAxis
+                            dataKey="distance_km"
+                            tickFormatter={(value) => `${Number(value).toFixed(1)}`}
+                            tickLine={false}
+                            axisLine={false}
+                          />
+                          <YAxis
+                            domain={distanceGapDomain}
+                            tickFormatter={(value) => `${Number(value) > 0 ? '+' : ''}${Math.round(Number(value))}s`}
+                            tickLine={false}
+                            axisLine={false}
+                            width={48}
+                          />
+                          <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.length) return null
+                              const point = payload[0].payload as ActivityCompareAlignedPoint
+
+                              return (
+                                <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
+                                  <div className="font-semibold">
+                                    {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(point.distance_km) })}
+                                  </div>
+                                  <div className="mt-1 text-muted-foreground">
+                                    {point.gap_sec < 0
+                                      ? t('activityCompare.distanceChart.aheadBy', { value: formatDuration(Math.abs(point.gap_sec)) })
+                                      : point.gap_sec > 0
+                                        ? t('activityCompare.distanceChart.behindBy', { value: formatDuration(point.gap_sec) })
+                                        : t('activityCompare.distanceChart.even')}
+                                  </div>
+                                  <div className="mt-2 space-y-1 text-muted-foreground">
+                                    <div>{baseLabel}: {formatDuration(Math.round(point.base_elapsed_sec))}</div>
+                                    <div>{comparisonLabel}: {formatDuration(Math.round(point.comparison_elapsed_sec))}</div>
+                                    <div>
+                                      {isRunComparison
+                                        ? `${baseLabel}: ${formatPaceFromSeconds(point.base_pace_sec_per_km, notAvailable)}`
+                                        : `${baseLabel}: ${formatSpeed(point.base_speed_kmh, notAvailable)}`}
+                                    </div>
+                                    <div>
+                                      {isRunComparison
+                                        ? `${comparisonLabel}: ${formatPaceFromSeconds(point.comparison_pace_sec_per_km, notAvailable)}`
+                                        : `${comparisonLabel}: ${formatSpeed(point.comparison_speed_kmh, notAvailable)}`}
+                                    </div>
+                                  </div>
+                                </div>
+                              )
+                            }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey="gap_sec"
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={2.5}
+                            dot={false}
+                            activeDot={{ r: 5 }}
+                            connectNulls={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader className="pb-3">
+                    <CardTitle className="text-base">{performanceChartTitle}</CardTitle>
+                    <div className="text-sm text-muted-foreground">{performanceChartSubtitle}</div>
+                  </CardHeader>
+                  <CardContent className="pt-0">
+                    <div className="h-80">
+                      <ResponsiveContainer width="100%" height="100%">
+                        <LineChart data={distanceComparePoints} margin={{ top: 8, right: 16, left: 0, bottom: 0 }}>
+                          <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35} />
+                          <XAxis
+                            dataKey="distance_km"
+                            tickFormatter={(value) => `${Number(value).toFixed(1)}`}
+                            tickLine={false}
+                            axisLine={false}
+                          />
+                          <YAxis
+                            domain={performanceChartDomain}
+                            tickFormatter={(value) => (
+                              isRunComparison
+                                ? formatPaceFromSeconds(Number(value), notAvailable)
+                                : formatSpeed(Number(value), notAvailable)
+                            )}
+                            tickLine={false}
+                            axisLine={false}
+                            width={isRunComparison ? 68 : 58}
+                            reversed={isRunComparison}
+                          />
+                          <Tooltip
+                            content={({ active, payload }) => {
+                              if (!active || !payload?.length) return null
+                              const point = payload[0].payload as ActivityCompareAlignedPoint
+
+                              return (
+                                <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
+                                  <div className="font-semibold">
+                                    {t('activityCompare.performanceChart.tooltipDistance', { distance: formatDistanceLabel(point.distance_km) })}
+                                  </div>
+                                  <div className="mt-1 space-y-1 text-muted-foreground">
+                                    <div>
+                                      {baseLabel}: {isRunComparison
+                                        ? formatPaceFromSeconds(point.base_pace_sec_per_km, notAvailable)
+                                        : formatSpeed(point.base_speed_kmh, notAvailable)}
+                                    </div>
+                                    <div>
+                                      {comparisonLabel}: {isRunComparison
+                                        ? formatPaceFromSeconds(point.comparison_pace_sec_per_km, notAvailable)
+                                        : formatSpeed(point.comparison_speed_kmh, notAvailable)}
+                                    </div>
+                                    {(point.base_hr !== null || point.comparison_hr !== null) && (
+                                      <div>
+                                        HR: {point.base_hr !== null ? `${Math.round(point.base_hr)} ${t('activityDetail.units.bpm')}` : notAvailable}
+                                        {' / '}
+                                        {point.comparison_hr !== null ? `${Math.round(point.comparison_hr)} ${t('activityDetail.units.bpm')}` : notAvailable}
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              )
+                            }}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey={isRunComparison ? 'base_pace_sec_per_km' : 'base_speed_kmh'}
+                            stroke="hsl(var(--primary))"
+                            strokeWidth={2.5}
+                            dot={false}
+                            activeDot={{ r: 5 }}
+                            connectNulls={false}
+                          />
+                          <Line
+                            type="monotone"
+                            dataKey={isRunComparison ? 'comparison_pace_sec_per_km' : 'comparison_speed_kmh'}
+                            stroke="#f59e0b"
+                            strokeWidth={2.5}
+                            dot={false}
+                            activeDot={{ r: 5 }}
+                            connectNulls={false}
+                          />
+                        </LineChart>
+                      </ResponsiveContainer>
+                    </div>
+                  </CardContent>
+                </Card>
+              </>
+            ) : (
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">{t('activityCompare.distanceChart.title')}</CardTitle>
+                </CardHeader>
+                <CardContent className="pt-0">
+                  <div className="rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-sm text-muted-foreground">
+                    {compareData?.message || t('activityCompare.distanceChart.noData')}
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          ) : null}
 
           {isRunComparison && hasRunSplitComparison ? (
             <>
@@ -627,7 +861,7 @@ export function ActivityCompare() {
                 </CardContent>
               </Card>
             </>
-          ) : (
+          ) : !hasDistanceComparison ? (
             <Card>
               <CardHeader className="pb-3">
                 <CardTitle className="text-base">{t('activityCompare.nextStepTitle')}</CardTitle>
@@ -638,7 +872,7 @@ export function ActivityCompare() {
                 </div>
               </CardContent>
             </Card>
-          )}
+          ) : null}
         </div>
 
         <Card>
