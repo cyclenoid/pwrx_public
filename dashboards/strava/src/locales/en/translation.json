@@ -894,27 +894,27 @@
   },
   "activityCompare": {
     "title": "Compare activities",
-    "subtitle": "Choose a similar activity as the target for a direct comparison.",
+    "subtitle": "Choose a similar activity for a direct comparison.",
     "backToActivity": "Back to activity",
-    "openSelectedActivity": "Open target activity",
-    "currentActivity": "Current activity",
-    "targetActivity": "Comparison activity",
+    "openSelectedActivity": "Open comparison activity",
+    "baseActivity": "This activity",
+    "comparisonActivity": "Comparison activity",
     "quickPickLatest": "Pick latest",
     "quickPickBest": "Pick best",
     "latest": "Latest",
     "best": "Best",
     "matchBadge": "{{percent}}% route match",
-    "chooseTarget": "Choose comparison target",
-    "selectionHint": "Choose a similar activity as the target first.",
-    "noTargetSelected": "No target activity selected yet.",
-    "noTargetBody": "Choose a similar activity on the right. The detailed distance and split comparison will build on that selection next.",
+    "chooseComparison": "Choose comparison",
+    "selectionHint": "Choose a comparison activity first.",
+    "noComparisonSelected": "No comparison activity selected yet.",
+    "noComparisonBody": "Choose a similar activity on the right. PWRX will then show the direct comparison data.",
     "noCandidates": "No sufficiently similar activities found for a direct comparison yet.",
     "nextStepTitle": "Next step",
-    "nextStepBody": "This first compare page establishes the entry point and target selection. The next expansion step adds gap-over-distance, finer metric charts, and run split comparisons.",
+    "nextStepBody": "Run comparisons already show km-based comparison data. Finer distance and metric charts for additional sports follow next.",
     "headline": {
       "same": "Both activities currently have the same moving time.",
-      "faster": "The current activity is {{value}} faster than the selected target.",
-      "slower": "The current activity is {{value}} slower than the selected target."
+      "faster": "This activity is {{value}} faster than the comparison.",
+      "slower": "This activity is {{value}} slower than the comparison."
     },
     "summary": {
       "title": "Direct overview",
@@ -925,8 +925,30 @@
       "pace": "Avg pace",
       "avgHr": "Avg heart rate",
       "avgPower": "Avg power",
-      "current": "Current",
-      "target": "Target"
+      "base": "This activity",
+      "comparison": "Comparison"
+    },
+    "gapChart": {
+      "title": "Ahead / behind per km",
+      "subtitle": "Cumulative time difference over the run.",
+      "tooltipKm": "At km {{km}}",
+      "aheadBy": "{{value}} ahead",
+      "behindBy": "{{value}} behind",
+      "even": "Level"
+    },
+    "paceChart": {
+      "title": "Pace comparison per km",
+      "subtitle": "Direct comparison of each completed kilometer split.",
+      "tooltipKm": "Split at km {{km}}"
+    },
+    "splits": {
+      "title": "KM splits comparison",
+      "subtitle": "Pace, delta, and cumulative progression per kilometer.",
+      "columns": {
+        "km": "KM",
+        "delta": "Delta",
+        "cumulative": "Cumulative"
+      }
     }
   },
   "localClimbs": {

@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-10-run-compare-charts",
+    date: "2026-04-10",
+    tag: "analysis",
+    title: {
+      de: "Laufvergleiche zeigen jetzt Pace und Zeitverlauf pro Kilometer",
+      en: "Run comparisons now show pace and time progression per kilometer",
+    },
+    summary: {
+      de: "Die Compare-Seite spricht jetzt klarer von Vergleich statt Ziel und zeigt fuer Laeufe erstmals echte Charts und KM-Splits statt nur einer Auswahlansicht.",
+      en: "The compare page now uses clearer comparison wording instead of target wording and, for runs, shows real charts and km splits instead of only a selection view.",
+    },
+    bullets: {
+      de: [
+        "Die Beschriftung auf der Compare-Seite wurde von Ziel-Logik auf direkte Vergleichsbegriffe umgestellt.",
+        "Laeufe zeigen jetzt einen Vorsprung-/Rueckstand-Chart ueber den Kilometerverlauf.",
+        "Zusaetzlich gibt es einen Pace-Vergleich pro km und eine Split-Tabelle mit Delta und kumuliertem Verlauf.",
+      ],
+      en: [
+        "The compare page wording now uses direct comparison language instead of target language.",
+        "Runs now show an ahead/behind chart across the kilometer progression.",
+        "It also adds a pace comparison per km and a split table with delta and cumulative progression.",
+      ],
+    },
+  },
+  {
     id: "2026-04-10-activity-compare-entrypoints",
     date: "2026-04-10",
     tag: "analysis",
