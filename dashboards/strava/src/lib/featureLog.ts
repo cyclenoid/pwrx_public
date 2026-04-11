@@ -2,6 +2,17 @@ export interface FeatureLogEntry {
   id: string;
   date: string;
   tag?: string;
+  images?: Array<{
+    src: string;
+    alt: {
+      de: string;
+      en: string;
+    };
+    caption?: {
+      de: string;
+      en: string;
+    };
+  }>;
   title: {
     de: string;
     en: string;
@@ -21,24 +32,48 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
     id: "2026-04-11-compare-sidebar-ab",
     date: "2026-04-11",
     tag: "ui",
+    images: [
+      {
+        src: "/feature-log/compare-overview-2026-04-11.svg",
+        alt: {
+          de: "Compare-Seite mit Karte, A-B-Auswahl und kompakten Aktivitätskarten in der Sidebar.",
+          en: "Compare page with map, A/B selection, and compact activity cards in the sidebar.",
+        },
+        caption: {
+          de: "Die neue Compare-Seite startet mit klarer A/B-Auswahl und direkter Einordnung in der Sidebar.",
+          en: "The new compare page starts with a clearer A/B selector and direct context in the sidebar.",
+        },
+      },
+      {
+        src: "/feature-log/compare-charts-2026-04-11.svg",
+        alt: {
+          de: "Compare-Seite mit Gap-Chart, Marker-Sync auf der Karte und KM-Split-Tabelle.",
+          en: "Compare page with gap chart, synced map markers, and km split table.",
+        },
+        caption: {
+          de: "Zeitvergleich, Kartenmarker und KM-Splits greifen jetzt sichtbar ineinander.",
+          en: "Time comparison, map markers, and km splits now work together more visibly.",
+        },
+      },
+    ],
     title: {
-      de: "Compare nutzt jetzt eine kompakte A/B-Sidebar",
-      en: "Compare now uses a compact A/B sidebar",
+      de: "Compare verbindet Karte, Splits und A/B-Auswahl klarer",
+      en: "Compare now connects map, splits, and A/B selection more clearly",
     },
     summary: {
-      de: "Die Compare-Seite wurde in der Sidebar klarer strukturiert: Aktivitaet A und B werden oben per Dropdown gewaehlt, darunter folgt direkt die Split-Tabelle als zentrales Bedienelement fuer den Kartenvergleich.",
-      en: "The compare page sidebar is now structured more clearly: activities A and B are chosen with dropdowns at the top, followed directly by the split table as the main control for map-based comparison.",
+      de: "Die Compare-Seite fuehrt jetzt kompakter durch den Vergleich: Aktivitaet A und B werden klar gewaehlt, Karte und Zeitvergleich sprechen dieselbe Logik, und die Split-Tabelle bleibt direkt daneben sichtbar.",
+      en: "The compare page now guides comparisons more clearly: activity A and B are chosen explicitly, map and time comparison follow the same logic, and the split table stays visible right next to it.",
     },
     bullets: {
       de: [
-        "Die bisherige Auswahl mit mehreren Buttons wurde durch zwei kompakte Dropdowns fuer Aktivitaet A und B ersetzt.",
-        "Unter den Auswahlen zeigt eine kompakte Stats-Zeile Datum, Pace/Geschwindigkeit und Distanz fuer beide Aktivitaeten.",
-        "Die KM-Split-Tabelle sitzt jetzt in der Sidebar und hebt beim Hover den passenden Abschnitt auf der Karte mit einer deutlich sichtbaren Cyan-Markierung hervor.",
+        "Zwei kompakte Dropdowns waehlen Aktivitaet A und B direkt in der Sidebar, darunter stehen sofort Datum, Pace und Distanz fuer beide Seiten.",
+        "Die KM-Split-Tabelle sitzt jetzt direkt unter der Auswahl und hebt beim Hover den passenden Abschnitt auf der Karte sichtbar hervor.",
+        "Beim Hover im Zeitvergleich folgen die Kartenmarker jetzt derselben Zeitlogik wie der Chart, sodass Vorsprung und Rueckstand besser lesbar bleiben.",
       ],
       en: [
-        "The previous multi-button selection has been replaced by two compact dropdowns for activity A and B.",
-        "A compact stats row below the selectors shows date, pace/speed, and distance for both activities.",
-        "The km split table now lives in the sidebar and highlights the matching route section on the map with a clearly visible cyan accent on hover.",
+        "Two compact dropdowns now select activity A and B directly in the sidebar, with date, pace, and distance shown immediately below.",
+        "The km split table now sits right below the selectors and visibly highlights the matching route section on the map on hover.",
+        "When hovering the time comparison, the map markers now follow the same time logic as the chart so ahead/behind stays easier to read.",
       ],
     },
   },
@@ -922,7 +957,7 @@ export const getFeatureLogLocale = (language?: string) =>
   language?.startsWith("de") ? "de" : "en";
 
 export const getFeatureLogText = <
-  T extends Pick<FeatureLogEntry, "title" | "summary" | "bullets">,
+  T extends Pick<FeatureLogEntry, "title" | "summary" | "bullets"> & Partial<Pick<FeatureLogEntry, "images">>,
 >(
   entry: T,
   language?: string,
@@ -932,6 +967,11 @@ export const getFeatureLogText = <
     title: entry.title[locale],
     summary: entry.summary[locale],
     bullets: entry.bullets[locale],
+    images: entry.images?.map((image) => ({
+      src: image.src,
+      alt: image.alt[locale],
+      caption: image.caption?.[locale],
+    })),
   };
 };
 

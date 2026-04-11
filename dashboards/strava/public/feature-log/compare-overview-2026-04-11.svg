@@ -1,0 +1,48 @@
+<svg width="1600" height="940" viewBox="0 0 1600 940" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="940" rx="28" fill="#141518"/>
+  <rect x="36" y="36" width="1528" height="868" rx="24" fill="#1A1C20" stroke="#2A2D33"/>
+  <text x="72" y="104" fill="#FC4C02" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800">PWRX</text>
+  <text x="72" y="158" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Compare: Strecke und Splits</text>
+  <text x="72" y="184" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="14">A und B werden kompakt in der Sidebar gewählt. Karte und Vergleich bleiben im selben Blickfeld.</text>
+
+  <rect x="72" y="212" width="920" height="430" rx="18" fill="#111215" stroke="#31343A"/>
+  <rect x="72" y="660" width="920" height="72" rx="14" fill="#1B1D21" stroke="#31343A"/>
+  <text x="100" y="705" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Bei 3.38 km · 132s voraus · 299m voraus</text>
+
+  <path d="M181 511C173 459 175 425 180 391C188 325 218 247 288 196C335 164 457 175 547 196C648 220 760 236 840 325C887 378 900 436 888 495C874 561 812 611 735 615C633 622 601 548 517 548C417 548 387 614 282 612C221 611 189 572 181 511Z" stroke="#F59E0B" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" opacity="0.55"/>
+  <path d="M178 518C170 466 171 432 177 399C186 332 219 253 291 199C340 164 465 176 554 198C658 224 770 241 850 332C895 384 907 441 896 499C882 566 820 618 744 621C641 625 607 553 524 553C424 553 393 619 289 617C228 616 186 578 178 518Z" stroke="#FC4C02" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+
+  <circle cx="662" cy="420" r="14" fill="#06B6D4" stroke="white" stroke-width="6"/>
+  <circle cx="701" cy="404" r="14" fill="#F59E0B" stroke="white" stroke-width="6"/>
+  <circle cx="860" cy="534" r="17" fill="#22C55E" stroke="white" stroke-width="6"/>
+  <circle cx="890" cy="534" r="17" fill="#EF4444" stroke="white" stroke-width="6"/>
+
+  <rect x="1040" y="212" width="488" height="430" rx="18" fill="#181A1F" stroke="#31343A"/>
+  <text x="1074" y="250" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Aktivitäten vergleichen</text>
+  <text x="1074" y="278" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">Aktivität A ist 349s schneller als B.</text>
+
+  <circle cx="1078" cy="324" r="6" fill="#06B6D4"/>
+  <text x="1096" y="330" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="1.6">AKTIVITÄT A</text>
+  <rect x="1074" y="342" width="420" height="56" rx="12" fill="#202329" stroke="#3A3F46"/>
+  <text x="1098" y="377" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="15">Fr, 10. Apr. 2026 · Morning Run</text>
+
+  <circle cx="1078" cy="434" r="6" fill="#F59E0B"/>
+  <text x="1096" y="440" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="1.6">AKTIVITÄT B</text>
+  <rect x="1074" y="452" width="420" height="56" rx="12" fill="#202329" stroke="#3A3F46"/>
+  <text x="1098" y="487" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="15">Do, 20. Nov. 2025 · Afternoon Trail Run</text>
+
+  <rect x="1074" y="536" width="202" height="78" rx="14" fill="#1D2025" stroke="#31343A"/>
+  <rect x="1292" y="536" width="202" height="78" rx="14" fill="#1D2025" stroke="#31343A"/>
+  <circle cx="1100" cy="558" r="6" fill="#06B6D4"/>
+  <text x="1117" y="563" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1.6">AKTIVITÄT A</text>
+  <text x="1100" y="592" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">6:58/km</text>
+  <text x="1100" y="618" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="15">7.07 km</text>
+  <circle cx="1318" cy="558" r="6" fill="#F59E0B"/>
+  <text x="1335" y="563" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="11" font-weight="700" letter-spacing="1.6">AKTIVITÄT B</text>
+  <text x="1318" y="592" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">7:47/km</text>
+  <text x="1318" y="618" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="15">7.09 km</text>
+
+  <rect x="72" y="760" width="1456" height="108" rx="18" fill="#181A1F" stroke="#31343A"/>
+  <text x="100" y="804" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Was ist neu?</text>
+  <text x="100" y="836" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="15">Kompakte A/B-Auswahl, direkte Stats in der Sidebar und eine Karte, die den Vergleich sauber begleitet.</text>
+</svg>
