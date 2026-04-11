@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet'
+import { CircleMarker, MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { useTheme } from './ThemeProvider'
@@ -72,38 +72,26 @@ function FitBounds({ bounds, fitKey }: { bounds: L.LatLngBoundsExpression; fitKe
 }
 
 // Hover marker icon (bright cyan for visibility)
-const hoverIcon = new L.DivIcon({
-  className: 'custom-marker hover-marker',
-  html: `<div style="
-    background-color: #06b6d4;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 3px solid white;
-    box-shadow: 0 2px 8px rgba(6, 182, 212, 0.6);
-  "></div>`,
-  iconSize: [16, 16],
-  iconAnchor: [8, 8],
-})
-
-const secondaryHoverIcon = new L.DivIcon({
-  className: 'custom-marker hover-marker-secondary',
-  html: `<div style="
-    background-color: #f59e0b;
-    width: 16px;
-    height: 16px;
-    border-radius: 50%;
-    border: 3px solid white;
-    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.55);
-  "></div>`,
-  iconSize: [16, 16],
-  iconAnchor: [8, 8],
-})
-
-// Component to update hover marker position
-function HoverMarker({ position, icon }: { position: [number, number] | null; icon: L.DivIcon }) {
+function HoverMarker({
+  position,
+  color,
+}: {
+  position: [number, number] | null
+  color: string
+}) {
   if (!position) return null
-  return <Marker key={`${position[0]}-${position[1]}-${icon.options.className || 'hover'}`} position={position} icon={icon} />
+  return (
+    <CircleMarker
+      center={position}
+      radius={7}
+      pathOptions={{
+        color: '#ffffff',
+        weight: 3,
+        fillColor: color,
+        fillOpacity: 1,
+      }}
+    />
+  )
 }
 
 interface ActivityMapProps {
@@ -292,8 +280,8 @@ export function ActivityMap({
       )}
 
       {/* Hover position marker */}
-      <HoverMarker position={hoverPosition ?? null} icon={hoverIcon} />
-      <HoverMarker position={secondaryHoverPosition ?? null} icon={secondaryHoverIcon} />
+      <HoverMarker position={hoverPosition ?? null} color="#06b6d4" />
+      <HoverMarker position={secondaryHoverPosition ?? null} color="#f59e0b" />
     </MapContainer>
   )
 }
