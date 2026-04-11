@@ -598,16 +598,20 @@ async function refreshSyncSchedules(force: boolean = false): Promise<void> {
     }
 
     if (force && hasClubCapability()) {
-      const userId = await getActiveUserId(db);
-      if (!userId) {
-        console.log('⏭️  Skip startup club stats export: no active user profile');
+      if (!settings.startup.enabled) {
+        console.log('⏭️  Skip startup club stats export: startup catch-up disabled');
       } else {
-        const stale = await shouldRunStartupClubExport(db, userId, CLUB_EXPORT_STARTUP_STALE_HOURS);
-        if (stale) {
-          console.log(`🚀 Startup club export enabled (stale >= ${CLUB_EXPORT_STARTUP_STALE_HOURS}h)`);
-          await runClubStatsExport('startup club stats export', 30);
+        const userId = await getActiveUserId(db);
+        if (!userId) {
+          console.log('⏭️  Skip startup club stats export: no active user profile');
         } else {
-          console.log('✅ Startup club export not needed (recent export found)');
+          const stale = await shouldRunStartupClubExport(db, userId, CLUB_EXPORT_STARTUP_STALE_HOURS);
+          if (stale) {
+            console.log(`🚀 Startup club export enabled (stale >= ${CLUB_EXPORT_STARTUP_STALE_HOURS}h)`);
+            await runClubStatsExport('startup club stats export', 30);
+          } else {
+            console.log('✅ Startup club export not needed (recent export found)');
+          }
         }
       }
     }
