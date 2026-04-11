@@ -945,7 +945,10 @@
       "tooltipDistance": "At {{distance}} km",
       "aheadBy": "{{value}} ahead",
       "behindBy": "{{value}} behind",
+      "aheadByDistance": "{{value}} ahead",
+      "behindByDistance": "{{value}} behind",
       "even": "Level",
+      "evenDistance": "0m gap",
       "noData": "The required distance/time streams are still missing for a direct route comparison between these activities."
     },
     "performanceChart": {

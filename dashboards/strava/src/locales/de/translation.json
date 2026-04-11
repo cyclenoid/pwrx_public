@@ -945,7 +945,10 @@
       "tooltipDistance": "Bei {{distance}} km",
       "aheadBy": "{{value}} voraus",
       "behindBy": "{{value}} zurück",
+      "aheadByDistance": "{{value}} voraus",
+      "behindByDistance": "{{value}} zurück",
       "even": "Gleichauf",
+      "evenDistance": "0m Abstand",
       "noData": "Für diese beiden Aktivitäten fehlen noch die nötigen Distanz-/Zeit-Streams für den direkten Streckenvergleich."
     },
     "performanceChart": {
