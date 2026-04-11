@@ -171,6 +171,19 @@ CREATE TABLE IF NOT EXISTS segment_efforts (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
+-- Tabelle: activity_backfill_state
+-- Tracks adapter backfill attempts for activities with partial or empty Strava detail data.
+CREATE TABLE IF NOT EXISTS activity_backfill_state (
+    activity_id BIGINT PRIMARY KEY REFERENCES activities(strava_activity_id) ON DELETE CASCADE,
+    stream_backfill_checked_at TIMESTAMP,
+    stream_backfill_last_stream_count INTEGER,
+    watts_stream_missing_checked_at TIMESTAMP,
+    segment_backfill_checked_at TIMESTAMP,
+    segment_backfill_last_effort_count INTEGER,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
 -- Sequences for synthetic local segment IDs/effort IDs
 CREATE SEQUENCE IF NOT EXISTS local_segment_id_seq
   AS BIGINT
@@ -305,6 +318,8 @@ CREATE INDEX IF NOT EXISTS idx_activities_gear ON activities(gear_id);
 CREATE INDEX IF NOT EXISTS idx_activities_user_id ON activities(user_id);
 CREATE INDEX IF NOT EXISTS idx_activity_streams_activity_id ON activity_streams(activity_id);
 CREATE INDEX IF NOT EXISTS idx_activity_streams_type ON activity_streams(stream_type);
+CREATE INDEX IF NOT EXISTS idx_activity_backfill_state_stream_checked_at ON activity_backfill_state(stream_backfill_checked_at);
+CREATE INDEX IF NOT EXISTS idx_activity_backfill_state_segment_checked_at ON activity_backfill_state(segment_backfill_checked_at);
 CREATE INDEX IF NOT EXISTS idx_segments_activity_type ON segments(activity_type);
 CREATE INDEX IF NOT EXISTS idx_segments_source ON segments(source);
 CREATE INDEX IF NOT EXISTS idx_segments_auto_climb ON segments(is_auto_climb);

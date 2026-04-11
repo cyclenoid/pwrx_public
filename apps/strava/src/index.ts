@@ -18,6 +18,10 @@ import { importQueueAlertMonitor, importQueueWorker } from './services/import/se
 import { adapterRegistry } from './services/adapters/registry';
 import { loadStravaRoutesFactory } from './services/adapters/stravaModuleLoader';
 import { backfillManualSegments } from './services/localSegments';
+import {
+  notifyAnalyticsDataChanged,
+  registerAnalyticsInvalidationHandler,
+} from './services/analyticsInvalidation';
 
 // Load .env from project root (apps/strava) - override existing env vars
 dotenv.config({ path: path.join(__dirname, '../.env'), override: true });
@@ -39,12 +43,14 @@ const hasSyncCapability = (): boolean =>
 const hasClubCapability = (): boolean =>
   Boolean(adapterRegistry.getCapabilities().capabilities.supportsClubs);
 
-const notifyAnalyticsDataChanged = (reason: string): void => {
+const handleAnalyticsDataChanged = (reason: string): void => {
   refreshTechStatsCache();
   scheduleHeatmapCachePrewarm(reason);
   clearTrainingLoadCache(reason);
   schedulePerformanceCachePrewarm(reason);
 };
+
+registerAnalyticsInvalidationHandler(handleAnalyticsDataChanged);
 
 function formatSyncError(error: any): string {
   const status = error?.response?.status;
