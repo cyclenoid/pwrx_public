@@ -166,6 +166,12 @@ export function ActivityCompare() {
     candidates.find((candidate) => toNumericId(candidate.strava_activity_id) === resolvedComparisonId) ?? null
   ), [candidates, resolvedComparisonId])
 
+  const { data: comparisonActivityDetails } = useQuery({
+    queryKey: ['activity', resolvedComparisonId, 'compare-map-secondary'],
+    queryFn: () => getActivity(Number(resolvedComparisonId)),
+    enabled: resolvedComparisonId !== null,
+  })
+
   const { data: compareData } = useQuery({
     queryKey: ['activity-compare-data', activityId, resolvedComparisonId],
     queryFn: () => getActivityCompareData(activityId, Number(resolvedComparisonId)),
@@ -347,6 +353,17 @@ export function ActivityCompare() {
     ))
   }, [baseActivityDetails?.streams?.latlng])
 
+  const comparisonCoordinates = useMemo<[number, number][]>(() => {
+    const coordinates = comparisonActivityDetails?.streams?.latlng
+    if (!coordinates?.length) return []
+    return coordinates.filter((coord): coord is [number, number] => (
+      Array.isArray(coord)
+      && coord.length === 2
+      && Number.isFinite(coord[0])
+      && Number.isFinite(coord[1])
+    ))
+  }, [comparisonActivityDetails?.streams?.latlng])
+
   const splitHighlightRanges = useMemo<SplitHighlightRange[]>(() => {
     if (!isRunComparison || !runSplitRows.length) return []
     const distances = baseActivityDetails?.streams?.distance
@@ -396,6 +413,25 @@ export function ActivityCompare() {
 
     return baseCoordinates[closestIndex] ?? null
   }, [baseActivityDetails?.streams?.distance, baseCoordinates, hoveredDistancePoint])
+
+  const hoveredComparisonMapPosition = useMemo<[number, number] | null>(() => {
+    if (!hoveredDistancePoint) return null
+    const distances = comparisonActivityDetails?.streams?.distance
+    if (!distances?.length || !comparisonCoordinates.length) return null
+
+    let closestIndex = 0
+    let closestDelta = Number.POSITIVE_INFINITY
+
+    for (let index = 0; index < distances.length && index < comparisonCoordinates.length; index += 1) {
+      const delta = Math.abs(distances[index] - hoveredDistancePoint.distance_m)
+      if (delta < closestDelta) {
+        closestDelta = delta
+        closestIndex = index
+      }
+    }
+
+    return comparisonCoordinates[closestIndex] ?? null
+  }, [comparisonActivityDetails?.streams?.distance, comparisonCoordinates, hoveredDistancePoint])
 
   const hoveredGapLabel = useMemo(() => {
     if (!hoveredDistancePoint) return null
@@ -453,7 +489,7 @@ export function ActivityCompare() {
         {comparisonActivity && (
           <Link
             to={`/activity/${comparisonActivity.strava_activity_id}`}
-            className="inline-flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium transition-colors hover:bg-accent hover:text-accent-foreground"
+            className="inline-flex items-center rounded-md border border-input bg-background px-3 py-2 text-sm font-medium transition-colors hover:border-primary/60 hover:bg-primary/5 hover:text-foreground"
           >
             {t('activityCompare.openSelectedActivity')}
           </Link>
@@ -484,8 +520,10 @@ export function ActivityCompare() {
                 <div className="overflow-hidden rounded-xl border border-border/60">
                   <ActivityMap
                     coordinates={baseCoordinates}
+                    secondaryCoordinates={comparisonCoordinates}
                     showMarkers
                     hoverPosition={hoveredMapPosition}
+                    secondaryHoverPosition={hoveredComparisonMapPosition}
                     highlightRange={activeSplitRange}
                     showHighlightMarkers={false}
                     focusHighlight={false}
@@ -494,6 +532,16 @@ export function ActivityCompare() {
               ) : (
                 <div className="rounded-xl border border-dashed border-border/70 bg-card/40 px-4 py-6 text-sm text-muted-foreground">
                   {t('activityCompare.mapCard.noMap')}
+                </div>
+              )}
+
+              {hoveredDistancePoint && hoveredGapLabel && (
+                <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
+                  <span className="font-semibold">
+                    {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(hoveredDistancePoint.distance_km) })}
+                  </span>
+                  {' · '}
+                  <span>{hoveredGapLabel}</span>
                 </div>
               )}
 

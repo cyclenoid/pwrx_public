@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-11-compare-button-logic",
+    date: "2026-04-11",
+    tag: "ui",
+    title: {
+      de: "Compare vereinfacht Buttons und synchronisiert beide Kartenpunkte",
+      en: "Compare simplifies buttons and syncs both map points",
+    },
+    summary: {
+      de: "Der Einstieg in den Aktivitaetsvergleich wurde optisch entwirrt, und beim Hover im Vorsprung-/Rueckstand-Chart bewegen sich jetzt beide Aktivitaeten direkt auf der Karte mit.",
+      en: "The activity comparison entry point has been visually simplified, and hovering the ahead/behind chart now moves both activities directly on the map.",
+    },
+    bullets: {
+      de: [
+        "Im Bereich Vergleichbare Aktivitaeten gibt es jetzt nur noch einen klaren Compare-Button statt mehrerer konkurrierender Aktionen.",
+        "Outline-Buttons in PWRX nutzen jetzt beim Hover einen orangefarbenen Rand als konsistentere visuelle Regel.",
+        "Die Compare-Karte blendet jetzt beide Routen ein und fuehrt beim Hover im Gap-Chart zwei Positionsmarker fuer Basis und Vergleich mit.",
+      ],
+      en: [
+        "The comparable activities area now uses a single clear compare button instead of multiple competing actions.",
+        "Outline buttons in PWRX now use an orange hover border as a more consistent visual rule.",
+        "The compare map now shows both routes and moves two position markers for base and comparison when hovering the gap chart.",
+      ],
+    },
+  },
+  {
     id: "2026-04-10-compare-sidebar-sync",
     date: "2026-04-10",
     tag: "ui",

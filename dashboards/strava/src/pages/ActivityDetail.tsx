@@ -492,18 +492,6 @@ export function ActivityDetail() {
     })
   ), [comparableActivityRows])
 
-  const comparableCandidates = useMemo(() => (
-    comparableListRows.filter((entry) => !entry.isCurrent)
-  ), [comparableListRows])
-
-  const latestComparableActivity = useMemo(() => (
-    comparableCandidates[0] ?? null
-  ), [comparableCandidates])
-
-  const bestComparableActivity = useMemo(() => (
-    [...comparableCandidates].sort((a, b) => a.moving_time - b.moving_time)[0] ?? null
-  ), [comparableCandidates])
-
   const currentComparablePoint = useMemo(() => (
     comparableChartRows.find((entry) => entry.isCurrent) ?? null
   ), [comparableChartRows])
@@ -2493,32 +2481,14 @@ export function ActivityDetail() {
             <CardContent className="pt-0">
               {comparableChartRows.length > 1 ? (
                 <div className="space-y-4">
-                  <div className="flex flex-wrap gap-2">
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => latestComparableActivity && navigate(`/activity/${activity?.strava_activity_id}/compare?preset=latest`)}
-                      disabled={!latestComparableActivity}
-                      className="border-border/70 bg-background/70"
-                    >
-                      {t('activityDetail.comparable.compareLatest')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      variant="outline"
-                      onClick={() => bestComparableActivity && navigate(`/activity/${activity?.strava_activity_id}/compare?preset=best`)}
-                      disabled={!bestComparableActivity}
-                      className="border-border/70 bg-background/70"
-                    >
-                      {t('activityDetail.comparable.compareBest')}
-                    </Button>
-                    <Button
-                      size="sm"
-                      onClick={() => navigate(`/activity/${activity?.strava_activity_id}/compare`)}
-                    >
-                      {t('activityDetail.comparable.openCompare')}
-                    </Button>
-                  </div>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => navigate(`/activity/${activity?.strava_activity_id}/compare`)}
+                    className="border-border/70 bg-background/70"
+                  >
+                    {t('activityDetail.comparable.openCompare')}
+                  </Button>
 
                   <div className="h-36">
                     <ResponsiveContainer width="100%" height="100%">

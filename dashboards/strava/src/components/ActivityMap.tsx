@@ -86,18 +86,33 @@ const hoverIcon = new L.DivIcon({
   iconAnchor: [8, 8],
 })
 
+const secondaryHoverIcon = new L.DivIcon({
+  className: 'custom-marker hover-marker-secondary',
+  html: `<div style="
+    background-color: #f59e0b;
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    border: 3px solid white;
+    box-shadow: 0 2px 8px rgba(245, 158, 11, 0.55);
+  "></div>`,
+  iconSize: [16, 16],
+  iconAnchor: [8, 8],
+})
+
 // Component to update hover marker position
-function HoverMarker({ position }: { position: [number, number] | null }) {
+function HoverMarker({ position, icon }: { position: [number, number] | null; icon: L.DivIcon }) {
   if (!position) return null
-  // Use key to force re-render when position changes
-  return <Marker key={`${position[0]}-${position[1]}`} position={position} icon={hoverIcon} />
+  return <Marker key={`${position[0]}-${position[1]}-${icon.options.className || 'hover'}`} position={position} icon={icon} />
 }
 
 interface ActivityMapProps {
   coordinates: [number, number][]
+  secondaryCoordinates?: [number, number][]
   showMarkers?: boolean
   className?: string
   hoverPosition?: [number, number] | null
+  secondaryHoverPosition?: [number, number] | null
   highlightRange?: { startIndex: number; endIndex: number } | null
   highlightStyle?: { color?: string; weight?: number; opacity?: number }
   showHighlightMarkers?: boolean
@@ -106,9 +121,11 @@ interface ActivityMapProps {
 
 export function ActivityMap({
   coordinates,
+  secondaryCoordinates = [],
   showMarkers = true,
   className = '',
   hoverPosition,
+  secondaryHoverPosition,
   highlightRange,
   highlightStyle,
   showHighlightMarkers = true,
@@ -141,6 +158,27 @@ export function ActivityMap({
     if (!highlightRange) return []
     return normalizedCoordinates.slice(highlightRange.startIndex, highlightRange.endIndex + 1)
   }, [highlightRange, normalizedCoordinates])
+
+  const normalizedSecondaryCoordinates = useMemo(() => {
+    if (!secondaryCoordinates || secondaryCoordinates.length === 0) return []
+    const isValidCoord = (coord: [number, number] | null | undefined): coord is [number, number] =>
+      Array.isArray(coord)
+      && coord.length === 2
+      && Number.isFinite(coord[0])
+      && Number.isFinite(coord[1])
+
+    const firstValid = secondaryCoordinates.find(isValidCoord)
+    if (!firstValid) return []
+
+    let lastValid: [number, number] = firstValid
+    return secondaryCoordinates.map((coord) => {
+      if (isValidCoord(coord)) {
+        lastValid = coord
+        return coord
+      }
+      return lastValid
+    })
+  }, [secondaryCoordinates])
 
   const hasHighlight = highlightCoordinates.length > 1
   const baseBounds = useMemo(() => (
@@ -216,6 +254,20 @@ export function ActivityMap({
         }}
       />
 
+      {normalizedSecondaryCoordinates.length > 1 && (
+        <Polyline
+          positions={normalizedSecondaryCoordinates}
+          pathOptions={{
+            color: '#f59e0b',
+            weight: 3,
+            opacity: 0.65,
+            dashArray: '8 6',
+            lineCap: 'round',
+            lineJoin: 'round',
+          }}
+        />
+      )}
+
       {/* Highlighted selection segment */}
       {hasHighlight && (
         <Polyline
@@ -240,7 +292,8 @@ export function ActivityMap({
       )}
 
       {/* Hover position marker */}
-      <HoverMarker position={hoverPosition ?? null} />
+      <HoverMarker position={hoverPosition ?? null} icon={hoverIcon} />
+      <HoverMarker position={secondaryHoverPosition ?? null} icon={secondaryHoverIcon} />
     </MapContainer>
   )
 }
