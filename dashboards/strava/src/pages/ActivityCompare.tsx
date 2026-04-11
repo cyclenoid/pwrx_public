@@ -16,7 +16,7 @@ import {
   type ActivityCompareAlignedPoint,
   type ActivityCompareContextCandidate,
 } from '../lib/api'
-import { cn, formatDistance, formatDuration } from '../lib/utils'
+import { cn, formatDistance } from '../lib/utils'
 
 const safeNumber = (val: string | number | null | undefined): number => {
   if (val === null || val === undefined) return 0
@@ -54,6 +54,11 @@ const formatSecondsValue = (seconds: number | null | undefined, fallback: string
   return `${Math.abs(Math.round(seconds || 0))}s`
 }
 
+const formatMetersValue = (meters: number | null | undefined, fallback: string): string => {
+  if (!Number.isFinite(meters)) return fallback
+  return `${Math.abs(Math.round(meters || 0))}m`
+}
+
 const formatSpeed = (speedKmh: number | null | undefined, fallback: string): string => {
   if (!Number.isFinite(speedKmh) || !speedKmh || speedKmh <= 0) return fallback
   return `${Number(speedKmh).toFixed(1)} km/h`
@@ -66,6 +71,36 @@ const formatDistanceLabel = (distanceKm: number): string => (
 const toNumericId = (value: unknown): number | null => {
   const numeric = typeof value === 'number' ? value : Number(value)
   return Number.isInteger(numeric) && numeric > 0 ? numeric : null
+}
+
+const interpolateDistanceAtElapsed = (
+  elapsedTimes: number[] | undefined,
+  distances: number[] | undefined,
+  elapsedSec: number
+): number | null => {
+  if (!elapsedTimes?.length || !distances?.length) return null
+  const upperBound = Math.min(elapsedTimes.length, distances.length) - 1
+  if (upperBound < 0) return null
+  if (elapsedSec <= elapsedTimes[0]) return distances[0] ?? null
+  if (elapsedSec >= elapsedTimes[upperBound]) return distances[upperBound] ?? null
+
+  for (let index = 1; index <= upperBound; index += 1) {
+    const currentElapsed = elapsedTimes[index]
+    if (currentElapsed >= elapsedSec) {
+      const previousElapsed = elapsedTimes[index - 1]
+      const previousDistance = distances[index - 1]
+      const currentDistance = distances[index]
+      if (!Number.isFinite(previousElapsed) || !Number.isFinite(currentElapsed) || !Number.isFinite(previousDistance) || !Number.isFinite(currentDistance)) {
+        return null
+      }
+      const span = currentElapsed - previousElapsed
+      if (span <= 0) return currentDistance
+      const ratio = (elapsedSec - previousElapsed) / span
+      return previousDistance + ((currentDistance - previousDistance) * ratio)
+    }
+  }
+
+  return distances[upperBound] ?? null
 }
 
 type RunSplitCompareRow = {
@@ -92,21 +127,11 @@ type CompareSelectOption = {
 function DistanceCompareTooltip({
   active,
   payload,
-  baseLabel,
-  comparisonLabel,
-  isRunComparison,
-  notAvailable,
   onPointChange,
-  t,
 }: {
   active?: boolean
   payload?: Array<{ payload?: ActivityCompareAlignedPoint }>
-  baseLabel: string
-  comparisonLabel: string
-  isRunComparison: boolean
-  notAvailable: string
   onPointChange: (point: ActivityCompareAlignedPoint | null) => void
-  t: ReturnType<typeof useTranslation>['t']
 }) {
   const point = active && payload?.length ? payload[0].payload ?? null : null
 
@@ -114,36 +139,7 @@ function DistanceCompareTooltip({
     onPointChange(point)
   }, [onPointChange, point])
 
-  if (!point) return null
-
-  return (
-    <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
-      <div className="font-semibold">
-        {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(point.distance_km) })}
-      </div>
-      <div className="mt-1 text-muted-foreground">
-        {point.gap_sec < 0
-          ? t('activityCompare.distanceChart.aheadBy', { value: formatSecondsValue(point.gap_sec, notAvailable) })
-          : point.gap_sec > 0
-            ? t('activityCompare.distanceChart.behindBy', { value: formatSecondsValue(point.gap_sec, notAvailable) })
-            : t('activityCompare.distanceChart.even')}
-      </div>
-      <div className="mt-2 space-y-1 text-muted-foreground">
-        <div>{baseLabel}: {formatDuration(Math.round(point.base_elapsed_sec))}</div>
-        <div>{comparisonLabel}: {formatDuration(Math.round(point.comparison_elapsed_sec))}</div>
-        <div>
-          {isRunComparison
-            ? `${baseLabel}: ${formatPaceFromSeconds(point.base_pace_sec_per_km, notAvailable)}`
-            : `${baseLabel}: ${formatSpeed(point.base_speed_kmh, notAvailable)}`}
-        </div>
-        <div>
-          {isRunComparison
-            ? `${comparisonLabel}: ${formatPaceFromSeconds(point.comparison_pace_sec_per_km, notAvailable)}`
-            : `${comparisonLabel}: ${formatSpeed(point.comparison_speed_kmh, notAvailable)}`}
-        </div>
-      </div>
-    </div>
-  )
+  return null
 }
 
 export function ActivityCompare() {
@@ -487,6 +483,54 @@ export function ActivityCompare() {
     return t('activityCompare.distanceChart.even')
   }, [hoveredDistancePoint, notAvailable, t])
 
+  const hoveredGapMeters = useMemo(() => {
+    if (!hoveredDistancePoint) return null
+
+    const baseTimes = baseActivityDetails?.streams?.time
+    const baseDistances = baseActivityDetails?.streams?.distance
+    const comparisonTimes = comparisonActivityDetails?.streams?.time
+    const comparisonDistances = comparisonActivityDetails?.streams?.distance
+
+    if (hoveredDistancePoint.gap_sec < 0) {
+      const comparisonDistanceAtBaseTime = interpolateDistanceAtElapsed(
+        comparisonTimes,
+        comparisonDistances,
+        hoveredDistancePoint.base_elapsed_sec
+      )
+      if (!Number.isFinite(comparisonDistanceAtBaseTime)) return null
+      return Math.max(0, hoveredDistancePoint.distance_m - Number(comparisonDistanceAtBaseTime))
+    }
+
+    if (hoveredDistancePoint.gap_sec > 0) {
+      const baseDistanceAtComparisonTime = interpolateDistanceAtElapsed(
+        baseTimes,
+        baseDistances,
+        hoveredDistancePoint.comparison_elapsed_sec
+      )
+      if (!Number.isFinite(baseDistanceAtComparisonTime)) return null
+      return Math.max(0, hoveredDistancePoint.distance_m - Number(baseDistanceAtComparisonTime))
+    }
+
+    return 0
+  }, [
+    baseActivityDetails?.streams?.distance,
+    baseActivityDetails?.streams?.time,
+    comparisonActivityDetails?.streams?.distance,
+    comparisonActivityDetails?.streams?.time,
+    hoveredDistancePoint,
+  ])
+
+  const hoveredGapDistanceLabel = useMemo(() => {
+    if (!hoveredDistancePoint || hoveredGapMeters === null) return null
+    if (hoveredDistancePoint.gap_sec < 0) {
+      return t('activityCompare.distanceChart.aheadByDistance', { value: formatMetersValue(hoveredGapMeters, notAvailable) })
+    }
+    if (hoveredDistancePoint.gap_sec > 0) {
+      return t('activityCompare.distanceChart.behindByDistance', { value: formatMetersValue(hoveredGapMeters, notAvailable) })
+    }
+    return t('activityCompare.distanceChart.evenDistance')
+  }, [hoveredDistancePoint, hoveredGapMeters, notAvailable, t])
+
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
@@ -559,6 +603,12 @@ export function ActivityCompare() {
                     </span>
                     {' · '}
                     <span>{hoveredGapLabel}</span>
+                    {hoveredGapDistanceLabel ? (
+                      <>
+                        {' · '}
+                        <span>{hoveredGapDistanceLabel}</span>
+                      </>
+                    ) : null}
                   </>
                 ) : (
                   <span>{t('activityCompare.mapCard.hoverHint')}</span>
@@ -610,12 +660,7 @@ export function ActivityCompare() {
                               <DistanceCompareTooltip
                                 active={active}
                                 payload={payload as Array<{ payload?: ActivityCompareAlignedPoint }> | undefined}
-                                baseLabel={baseLabel}
-                                comparisonLabel={comparisonLabel}
-                                isRunComparison={isRunComparison}
-                                notAvailable={notAvailable}
                                 onPointChange={setHoveredDistancePoint}
-                                t={t}
                               />
                             )}
                           />
