@@ -18,6 +18,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-11-compare-sidebar-ab",
+    date: "2026-04-11",
+    tag: "ui",
+    title: {
+      de: "Compare nutzt jetzt eine kompakte A/B-Sidebar",
+      en: "Compare now uses a compact A/B sidebar",
+    },
+    summary: {
+      de: "Die Compare-Seite wurde in der Sidebar klarer strukturiert: Aktivitaet A und B werden oben per Dropdown gewaehlt, darunter folgt direkt die Split-Tabelle als zentrales Bedienelement fuer den Kartenvergleich.",
+      en: "The compare page sidebar is now structured more clearly: activities A and B are chosen with dropdowns at the top, followed directly by the split table as the main control for map-based comparison.",
+    },
+    bullets: {
+      de: [
+        "Die bisherige Auswahl mit mehreren Buttons wurde durch zwei kompakte Dropdowns fuer Aktivitaet A und B ersetzt.",
+        "Unter den Auswahlen zeigt eine kompakte Stats-Zeile Datum, Pace/Geschwindigkeit und Distanz fuer beide Aktivitaeten.",
+        "Die KM-Split-Tabelle sitzt jetzt in der Sidebar und hebt beim Hover den passenden Abschnitt auf der Karte mit einer deutlich sichtbaren Cyan-Markierung hervor.",
+      ],
+      en: [
+        "The previous multi-button selection has been replaced by two compact dropdowns for activity A and B.",
+        "A compact stats row below the selectors shows date, pace/speed, and distance for both activities.",
+        "The km split table now lives in the sidebar and highlights the matching route section on the map with a clearly visible cyan accent on hover.",
+      ],
+    },
+  },
+  {
     id: "2026-04-11-compare-button-logic",
     date: "2026-04-11",
     tag: "ui",

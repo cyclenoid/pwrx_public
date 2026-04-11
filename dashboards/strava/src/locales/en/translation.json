@@ -928,11 +928,15 @@
       "base": "This activity",
       "comparison": "Comparison"
     },
+    "selector": {
+      "a": "Activity A",
+      "b": "Activity B"
+    },
     "mapCard": {
       "title": "Route and splits",
-      "subtitle": "The base activity on the map first, with kilometer splits directly below.",
+      "subtitle": "Both activities are shown on the map above. The kilometer splits live in the right sidebar.",
       "noMap": "Route data is not available for this activity yet.",
-      "splitHint": "Hover a split to highlight the matching section on the map."
+      "splitHint": "Hover a split in the sidebar to highlight the matching section on the map."
     },
     "distanceChart": {
       "title": "Ahead / behind over distance",
@@ -966,6 +970,7 @@
     "splits": {
       "title": "KM splits comparison",
       "subtitle": "Pace, delta, and cumulative progression per kilometer.",
+      "sidebarHint": "Hover a row to highlight the matching section on the map.",
       "columns": {
         "km": "KM",
         "delta": "Delta",
