@@ -580,14 +580,6 @@ export function ActivityCompare() {
                         </CardTitle>
                         <div className="text-sm text-muted-foreground">{t('activityCompare.distanceChart.subtitle')}</div>
                       </div>
-                      {hoveredDistancePoint && hoveredGapLabel && (
-                        <div className="w-[240px] shrink-0 rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-right">
-                          <div className="whitespace-nowrap text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
-                            {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(hoveredDistancePoint.distance_km) })}
-                          </div>
-                          <div className="mt-1 whitespace-nowrap text-sm font-semibold text-foreground">{hoveredGapLabel}</div>
-                        </div>
-                      )}
                     </div>
                   </CardHeader>
                   <CardContent className="pt-0">
