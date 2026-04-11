@@ -59,6 +59,9 @@ const formatMetersValue = (meters: number | null | undefined, fallback: string):
   return `${Math.abs(Math.round(meters || 0))}m`
 }
 
+const baseMarkerColor = '#06b6d4'
+const comparisonMarkerColor = '#f59e0b'
+
 const formatSpeed = (speedKmh: number | null | undefined, fallback: string): string => {
   if (!Number.isFinite(speedKmh) || !speedKmh || speedKmh <= 0) return fallback
   return `${Number(speedKmh).toFixed(1)} km/h`
@@ -101,6 +104,45 @@ const interpolateDistanceAtElapsed = (
   }
 
   return distances[upperBound] ?? null
+}
+
+const interpolateCoordinateAtDistance = (
+  distances: number[] | undefined,
+  coordinates: [number, number][],
+  distanceMeters: number | null | undefined
+): [number, number] | null => {
+  if (!distances?.length || !coordinates.length || !Number.isFinite(distanceMeters)) return null
+  const targetDistance = Number(distanceMeters)
+  const upperBound = Math.min(distances.length, coordinates.length) - 1
+  if (upperBound < 0) return null
+  if (targetDistance <= distances[0]) return coordinates[0] ?? null
+  if (targetDistance >= distances[upperBound]) return coordinates[upperBound] ?? null
+
+  for (let index = 1; index <= upperBound; index += 1) {
+    const currentDistance = distances[index]
+    if (currentDistance >= targetDistance) {
+      const previousDistance = distances[index - 1]
+      const previousCoordinate = coordinates[index - 1]
+      const currentCoordinate = coordinates[index]
+      if (
+        !Number.isFinite(previousDistance)
+        || !Number.isFinite(currentDistance)
+        || !previousCoordinate
+        || !currentCoordinate
+      ) {
+        return null
+      }
+      const span = currentDistance - previousDistance
+      if (span <= 0) return currentCoordinate
+      const ratio = (targetDistance - previousDistance) / span
+      return [
+        previousCoordinate[0] + ((currentCoordinate[0] - previousCoordinate[0]) * ratio),
+        previousCoordinate[1] + ((currentCoordinate[1] - previousCoordinate[1]) * ratio),
+      ]
+    }
+  }
+
+  return coordinates[upperBound] ?? null
 }
 
 type RunSplitCompareRow = {
@@ -434,43 +476,82 @@ export function ActivityCompare() {
       : null
   ), [activeSplitKm, splitHighlightRanges])
 
-  const hoveredMapPosition = useMemo<[number, number] | null>(() => {
-    if (!hoveredDistancePoint) return null
-    const distances = baseActivityDetails?.streams?.distance
-    if (!distances?.length || !baseCoordinates.length) return null
-
-    let closestIndex = 0
-    let closestDelta = Number.POSITIVE_INFINITY
-
-    for (let index = 0; index < distances.length && index < baseCoordinates.length; index += 1) {
-      const delta = Math.abs(distances[index] - hoveredDistancePoint.distance_m)
-      if (delta < closestDelta) {
-        closestDelta = delta
-        closestIndex = index
+  const hoveredMarkerDistances = useMemo(() => {
+    if (!hoveredDistancePoint) {
+      return {
+        baseDistanceMeters: null as number | null,
+        comparisonDistanceMeters: null as number | null,
+        gapMeters: null as number | null,
       }
     }
 
-    return baseCoordinates[closestIndex] ?? null
-  }, [baseActivityDetails?.streams?.distance, baseCoordinates, hoveredDistancePoint])
+    const baseDistanceMeters = hoveredDistancePoint.distance_m
+    const comparisonDistanceMeters = hoveredDistancePoint.distance_m
+    const baseTimes = baseActivityDetails?.streams?.time
+    const baseDistances = baseActivityDetails?.streams?.distance
+    const comparisonTimes = comparisonActivityDetails?.streams?.time
+    const comparisonDistances = comparisonActivityDetails?.streams?.distance
 
-  const hoveredComparisonMapPosition = useMemo<[number, number] | null>(() => {
-    if (!hoveredDistancePoint) return null
-    const distances = comparisonActivityDetails?.streams?.distance
-    if (!distances?.length || !comparisonCoordinates.length) return null
+    if (hoveredDistancePoint.gap_sec < 0) {
+      const comparisonDistanceAtBaseTime = interpolateDistanceAtElapsed(
+        comparisonTimes,
+        comparisonDistances,
+        hoveredDistancePoint.base_elapsed_sec
+      )
 
-    let closestIndex = 0
-    let closestDelta = Number.POSITIVE_INFINITY
-
-    for (let index = 0; index < distances.length && index < comparisonCoordinates.length; index += 1) {
-      const delta = Math.abs(distances[index] - hoveredDistancePoint.distance_m)
-      if (delta < closestDelta) {
-        closestDelta = delta
-        closestIndex = index
+      return {
+        baseDistanceMeters,
+        comparisonDistanceMeters: comparisonDistanceAtBaseTime ?? comparisonDistanceMeters,
+        gapMeters: Number.isFinite(comparisonDistanceAtBaseTime)
+          ? Math.max(0, baseDistanceMeters - Number(comparisonDistanceAtBaseTime))
+          : null,
       }
     }
 
-    return comparisonCoordinates[closestIndex] ?? null
-  }, [comparisonActivityDetails?.streams?.distance, comparisonCoordinates, hoveredDistancePoint])
+    if (hoveredDistancePoint.gap_sec > 0) {
+      const baseDistanceAtComparisonTime = interpolateDistanceAtElapsed(
+        baseTimes,
+        baseDistances,
+        hoveredDistancePoint.comparison_elapsed_sec
+      )
+
+      return {
+        baseDistanceMeters: baseDistanceAtComparisonTime ?? baseDistanceMeters,
+        comparisonDistanceMeters,
+        gapMeters: Number.isFinite(baseDistanceAtComparisonTime)
+          ? Math.max(0, comparisonDistanceMeters - Number(baseDistanceAtComparisonTime))
+          : null,
+      }
+    }
+
+    return {
+      baseDistanceMeters,
+      comparisonDistanceMeters,
+      gapMeters: 0,
+    }
+  }, [
+    baseActivityDetails?.streams?.distance,
+    baseActivityDetails?.streams?.time,
+    comparisonActivityDetails?.streams?.distance,
+    comparisonActivityDetails?.streams?.time,
+    hoveredDistancePoint,
+  ])
+
+  const hoveredMapPosition = useMemo<[number, number] | null>(() => (
+    interpolateCoordinateAtDistance(
+      baseActivityDetails?.streams?.distance,
+      baseCoordinates,
+      hoveredMarkerDistances.baseDistanceMeters
+    )
+  ), [baseActivityDetails?.streams?.distance, baseCoordinates, hoveredMarkerDistances.baseDistanceMeters])
+
+  const hoveredComparisonMapPosition = useMemo<[number, number] | null>(() => (
+    interpolateCoordinateAtDistance(
+      comparisonActivityDetails?.streams?.distance,
+      comparisonCoordinates,
+      hoveredMarkerDistances.comparisonDistanceMeters
+    )
+  ), [comparisonActivityDetails?.streams?.distance, comparisonCoordinates, hoveredMarkerDistances.comparisonDistanceMeters])
 
   const hoveredGapLabel = useMemo(() => {
     if (!hoveredDistancePoint) return null
@@ -483,42 +564,7 @@ export function ActivityCompare() {
     return t('activityCompare.distanceChart.even')
   }, [hoveredDistancePoint, notAvailable, t])
 
-  const hoveredGapMeters = useMemo(() => {
-    if (!hoveredDistancePoint) return null
-
-    const baseTimes = baseActivityDetails?.streams?.time
-    const baseDistances = baseActivityDetails?.streams?.distance
-    const comparisonTimes = comparisonActivityDetails?.streams?.time
-    const comparisonDistances = comparisonActivityDetails?.streams?.distance
-
-    if (hoveredDistancePoint.gap_sec < 0) {
-      const comparisonDistanceAtBaseTime = interpolateDistanceAtElapsed(
-        comparisonTimes,
-        comparisonDistances,
-        hoveredDistancePoint.base_elapsed_sec
-      )
-      if (!Number.isFinite(comparisonDistanceAtBaseTime)) return null
-      return Math.max(0, hoveredDistancePoint.distance_m - Number(comparisonDistanceAtBaseTime))
-    }
-
-    if (hoveredDistancePoint.gap_sec > 0) {
-      const baseDistanceAtComparisonTime = interpolateDistanceAtElapsed(
-        baseTimes,
-        baseDistances,
-        hoveredDistancePoint.comparison_elapsed_sec
-      )
-      if (!Number.isFinite(baseDistanceAtComparisonTime)) return null
-      return Math.max(0, hoveredDistancePoint.distance_m - Number(baseDistanceAtComparisonTime))
-    }
-
-    return 0
-  }, [
-    baseActivityDetails?.streams?.distance,
-    baseActivityDetails?.streams?.time,
-    comparisonActivityDetails?.streams?.distance,
-    comparisonActivityDetails?.streams?.time,
-    hoveredDistancePoint,
-  ])
+  const hoveredGapMeters = hoveredMarkerDistances.gapMeters
 
   const hoveredGapDistanceLabel = useMemo(() => {
     if (!hoveredDistancePoint || hoveredGapMeters === null) return null
@@ -866,7 +912,8 @@ export function ActivityCompare() {
 
               <div className="grid gap-2">
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground" htmlFor="compare-select-a">
+                  <label className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground" htmlFor="compare-select-a">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: baseMarkerColor }} />
                     {labelA}
                   </label>
                   <select
@@ -889,7 +936,8 @@ export function ActivityCompare() {
                 </div>
 
                 <div className="space-y-1">
-                  <label className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground" htmlFor="compare-select-b">
+                  <label className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground" htmlFor="compare-select-b">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: comparisonMarkerColor }} />
                     {labelB}
                   </label>
                   <select
@@ -915,7 +963,10 @@ export function ActivityCompare() {
 
               <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-2">
                 <div className="rounded-lg border border-border/60 bg-card/40 p-3">
-                  <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{labelA}</div>
+                  <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: baseMarkerColor }} />
+                    {labelA}
+                  </div>
                   {baseActivity ? (
                     <div className="mt-2 grid gap-1 text-sm">
                       <div className="font-semibold text-foreground">{formatDate(baseActivity.start_date)}</div>
@@ -927,7 +978,10 @@ export function ActivityCompare() {
                   )}
                 </div>
                 <div className="rounded-lg border border-border/60 bg-card/40 p-3">
-                  <div className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">{labelB}</div>
+                  <div className="flex items-center gap-2 text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    <span className="inline-block h-2.5 w-2.5 rounded-full" style={{ backgroundColor: comparisonMarkerColor }} />
+                    {labelB}
+                  </div>
                   {comparisonActivity ? (
                     <div className="mt-2 grid gap-1 text-sm">
                       <div className="font-semibold text-foreground">{formatDate(comparisonActivity.start_date)}</div>
