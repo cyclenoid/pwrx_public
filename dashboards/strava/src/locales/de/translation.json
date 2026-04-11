@@ -928,11 +928,15 @@
       "base": "Diese Aktivität",
       "comparison": "Vergleich"
     },
+    "selector": {
+      "a": "Aktivität A",
+      "b": "Aktivität B"
+    },
     "mapCard": {
       "title": "Strecke und Splits",
-      "subtitle": "Die Basisaktivität oben auf der Karte, die Kilometer-Splits direkt darunter.",
+      "subtitle": "Beide Aktivitäten oben auf der Karte. Die Kilometer-Splits findest du rechts in der Sidebar.",
       "noMap": "Für diese Aktivität sind noch keine Routendaten vorhanden.",
-      "splitHint": "Fahre über einen Split, um den Abschnitt auf der Karte hervorzuheben."
+      "splitHint": "Fahre über einen Split in der Sidebar, um den Abschnitt auf der Karte hervorzuheben."
     },
     "distanceChart": {
       "title": "Vorsprung / Rückstand über Distanz",
@@ -966,6 +970,7 @@
     "splits": {
       "title": "KM-Splits im Vergleich",
       "subtitle": "Pace, Delta und kumulierter Verlauf pro Kilometer.",
+      "sidebarHint": "Fahre über eine Zeile, um den passenden Abschnitt auf der Karte hervorzuheben.",
       "columns": {
         "km": "KM",
         "delta": "Delta",
