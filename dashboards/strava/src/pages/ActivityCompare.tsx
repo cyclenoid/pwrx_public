@@ -1,4 +1,4 @@
-import { useMemo, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useState, type ReactNode } from 'react'
 import { Link, useNavigate, useParams, useSearchParams } from 'react-router-dom'
 import { useQuery } from '@tanstack/react-query'
 import { useTranslation } from 'react-i18next'
@@ -115,6 +115,63 @@ function SummaryMetric({
         <div className="flex items-center justify-between gap-3 text-sm">
           <span className="text-muted-foreground">{comparisonLabel}</span>
           <span className="font-semibold text-foreground">{comparisonValue}</span>
+        </div>
+      </div>
+    </div>
+  )
+}
+
+function DistanceCompareTooltip({
+  active,
+  payload,
+  baseLabel,
+  comparisonLabel,
+  isRunComparison,
+  notAvailable,
+  onPointChange,
+  t,
+}: {
+  active?: boolean
+  payload?: Array<{ payload?: ActivityCompareAlignedPoint }>
+  baseLabel: string
+  comparisonLabel: string
+  isRunComparison: boolean
+  notAvailable: string
+  onPointChange: (point: ActivityCompareAlignedPoint | null) => void
+  t: ReturnType<typeof useTranslation>['t']
+}) {
+  const point = active && payload?.length ? payload[0].payload ?? null : null
+
+  useEffect(() => {
+    onPointChange(point)
+  }, [onPointChange, point])
+
+  if (!point) return null
+
+  return (
+    <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
+      <div className="font-semibold">
+        {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(point.distance_km) })}
+      </div>
+      <div className="mt-1 text-muted-foreground">
+        {point.gap_sec < 0
+          ? t('activityCompare.distanceChart.aheadBy', { value: formatSecondsValue(point.gap_sec, notAvailable) })
+          : point.gap_sec > 0
+            ? t('activityCompare.distanceChart.behindBy', { value: formatSecondsValue(point.gap_sec, notAvailable) })
+            : t('activityCompare.distanceChart.even')}
+      </div>
+      <div className="mt-2 space-y-1 text-muted-foreground">
+        <div>{baseLabel}: {formatDuration(Math.round(point.base_elapsed_sec))}</div>
+        <div>{comparisonLabel}: {formatDuration(Math.round(point.comparison_elapsed_sec))}</div>
+        <div>
+          {isRunComparison
+            ? `${baseLabel}: ${formatPaceFromSeconds(point.base_pace_sec_per_km, notAvailable)}`
+            : `${baseLabel}: ${formatSpeed(point.base_speed_kmh, notAvailable)}`}
+        </div>
+        <div>
+          {isRunComparison
+            ? `${comparisonLabel}: ${formatPaceFromSeconds(point.comparison_pace_sec_per_km, notAvailable)}`
+            : `${comparisonLabel}: ${formatSpeed(point.comparison_speed_kmh, notAvailable)}`}
         </div>
       </div>
     </div>
@@ -548,7 +605,7 @@ export function ActivityCompare() {
               {isRunComparison && hasRunSplitComparison && (
                 <div className="space-y-3">
                   <div className="text-sm text-muted-foreground">{t('activityCompare.mapCard.splitHint')}</div>
-                  <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(132px,1fr))]">
+                  <div className="grid gap-2 [grid-template-columns:repeat(auto-fit,minmax(168px,1fr))]">
                     {runSplitRows.map((row) => {
                       const splitKm = Number.isInteger(row.km) ? row.km : null
                       const isActive = splitKm !== null && activeSplitKm === splitKm
@@ -557,7 +614,7 @@ export function ActivityCompare() {
                           key={`split-card-${row.km}`}
                           type="button"
                           className={cn(
-                            'flex min-h-[78px] flex-col justify-between rounded-lg border px-3 py-2 text-left transition-colors transition-shadow',
+                            'flex min-h-[92px] flex-col justify-between rounded-lg border px-3 py-2 text-left transition-colors transition-shadow',
                             isActive
                               ? 'border-primary/40 bg-primary/10 shadow-sm'
                               : 'border-border/60 bg-card/40 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm'
@@ -590,10 +647,9 @@ export function ActivityCompare() {
                               {formatDelta(row.deltaSec, notAvailable)}
                             </div>
                           </div>
-                          <div className="mt-2 text-sm font-semibold text-foreground">
-                            {formatPaceFromSeconds(row.basePace, notAvailable)}
-                            <span className="mx-1.5 text-muted-foreground">vs</span>
-                            <span className="text-muted-foreground">{formatPaceFromSeconds(row.comparisonPace, notAvailable)}</span>
+                          <div className="mt-2 space-y-1 text-xs leading-tight">
+                            <div className="font-semibold text-foreground">{formatPaceFromSeconds(row.basePace, notAvailable)}</div>
+                            <div className="text-muted-foreground">{t('activityCompare.summary.comparison')}: {formatPaceFromSeconds(row.comparisonPace, notAvailable)}</div>
                           </div>
                         </button>
                       )
@@ -633,20 +689,6 @@ export function ActivityCompare() {
                         <LineChart
                           data={distanceComparePoints}
                           margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
-                          onMouseMove={(state) => {
-                            const chartState = state as {
-                              activePayload?: Array<{ payload?: ActivityCompareAlignedPoint }>
-                              activeTooltipIndex?: number
-                              isTooltipActive?: boolean
-                            } | undefined
-                            const index = typeof chartState?.activeTooltipIndex === 'number'
-                              ? chartState.activeTooltipIndex
-                              : null
-                            const payload = index !== null
-                              ? distanceComparePoints[index] ?? chartState?.activePayload?.[0]?.payload
-                              : chartState?.activePayload?.[0]?.payload
-                            setHoveredDistancePoint(payload ?? null)
-                          }}
                           onMouseLeave={() => setHoveredDistancePoint(null)}
                         >
                           <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" opacity={0.35} />
@@ -665,39 +707,18 @@ export function ActivityCompare() {
                           />
                           <ReferenceLine y={0} stroke="hsl(var(--muted-foreground))" strokeDasharray="4 4" />
                           <Tooltip
-                            content={({ active, payload }) => {
-                              if (!active || !payload?.length) return null
-                              const point = payload[0].payload as ActivityCompareAlignedPoint
-
-                              return (
-                                <div className="rounded-lg border border-border bg-popover px-3 py-2 text-xs text-foreground shadow-lg">
-                                  <div className="font-semibold">
-                                    {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(point.distance_km) })}
-                                  </div>
-                                  <div className="mt-1 text-muted-foreground">
-                                    {point.gap_sec < 0
-                                      ? t('activityCompare.distanceChart.aheadBy', { value: formatSecondsValue(point.gap_sec, notAvailable) })
-                                      : point.gap_sec > 0
-                                        ? t('activityCompare.distanceChart.behindBy', { value: formatSecondsValue(point.gap_sec, notAvailable) })
-                                        : t('activityCompare.distanceChart.even')}
-                                  </div>
-                                  <div className="mt-2 space-y-1 text-muted-foreground">
-                                    <div>{baseLabel}: {formatDuration(Math.round(point.base_elapsed_sec))}</div>
-                                    <div>{comparisonLabel}: {formatDuration(Math.round(point.comparison_elapsed_sec))}</div>
-                                    <div>
-                                      {isRunComparison
-                                        ? `${baseLabel}: ${formatPaceFromSeconds(point.base_pace_sec_per_km, notAvailable)}`
-                                        : `${baseLabel}: ${formatSpeed(point.base_speed_kmh, notAvailable)}`}
-                                    </div>
-                                    <div>
-                                      {isRunComparison
-                                        ? `${comparisonLabel}: ${formatPaceFromSeconds(point.comparison_pace_sec_per_km, notAvailable)}`
-                                        : `${comparisonLabel}: ${formatSpeed(point.comparison_speed_kmh, notAvailable)}`}
-                                    </div>
-                                  </div>
-                                </div>
-                              )
-                            }}
+                            content={({ active, payload }) => (
+                              <DistanceCompareTooltip
+                                active={active}
+                                payload={payload as Array<{ payload?: ActivityCompareAlignedPoint }> | undefined}
+                                baseLabel={baseLabel}
+                                comparisonLabel={comparisonLabel}
+                                isRunComparison={isRunComparison}
+                                notAvailable={notAvailable}
+                                onPointChange={setHoveredDistancePoint}
+                                t={t}
+                              />
+                            )}
                           />
                           <Line
                             type="monotone"
