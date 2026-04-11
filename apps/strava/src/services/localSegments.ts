@@ -55,6 +55,32 @@ export interface LocalClimbBackfillOptions extends AutoClimbDetectionOptions {
   offset?: number;
 }
 
+export interface ManualLocalSegmentRebuildResult {
+  activityId: number;
+  processed: boolean;
+  matchedSegments: number;
+  persistedEfforts: number;
+  message: string;
+}
+
+export interface ManualLocalSegmentBackfillResult {
+  matchedActivities: number;
+  processedActivities: number;
+  activitiesWithMatches: number;
+  matchedSegments: number;
+  persistedEfforts: number;
+  errors: Array<{ activityId: number; message: string }>;
+}
+
+export interface ManualLocalSegmentBackfillOptions {
+  includeStrava?: boolean;
+  includeImported?: boolean;
+  includeRide?: boolean;
+  includeRun?: boolean;
+  offset?: number;
+  recentDays?: number;
+}
+
 export interface CreateManualLocalSegmentInput {
   activityId: number;
   startIndex: number;
@@ -515,6 +541,7 @@ const cleanupOrphanLocalSegments = async (db: DatabaseService): Promise<void> =>
     `
     DELETE FROM strava.segments s
     WHERE s.source = 'local'
+      AND COALESCE(s.is_auto_climb, false) = true
       AND NOT EXISTS (
         SELECT 1
         FROM strava.segment_efforts se
@@ -1192,7 +1219,7 @@ const persistLocalClimbsForActivity = async (
   climbs: DetectedLocalClimb[],
   namingOptions?: LocalSegmentNamingOptions
 ): Promise<number> => {
-  await db.deleteSegmentEffortsForActivity(activity.activityId, 'local');
+  await db.deleteLocalSegmentEffortsForActivityByKind(activity.activityId, 'auto');
 
   let persisted = 0;
   for (const climb of climbs) {
@@ -1256,7 +1283,7 @@ export const rebuildLocalClimbsForActivity = async (
   const streamsRows = await db.getActivityStreams(activityId);
   const streams = getDetectionStreams(streamsRows);
   if (!streams) {
-    await db.deleteSegmentEffortsForActivity(activityId, 'local');
+    await db.deleteLocalSegmentEffortsForActivityByKind(activityId, 'auto');
     await cleanupOrphanLocalSegments(db);
     return {
       activityId,
@@ -1285,6 +1312,268 @@ export const rebuildLocalClimbsForActivity = async (
       ? `Detected ${climbs.length} local segments`
       : 'No segments detected for activity',
   };
+};
+
+type ManualSegmentDefinition = {
+  segmentId: number;
+  segmentName: string;
+  distanceM: number;
+  startLatLng: [number, number];
+  endLatLng: [number, number];
+  bearingDeg: number;
+};
+
+const loadManualSegmentDefinitions = async (
+  db: DatabaseService,
+  activityType: string
+): Promise<ManualSegmentDefinition[]> => {
+  const activityTypes = getActivityTypeFamily(activityType || 'Ride');
+  const result = await db.query(
+    `
+    SELECT
+      s.id,
+      s.name,
+      s.distance,
+      s.start_latlng,
+      s.end_latlng
+    FROM strava.segments s
+    WHERE s.source = 'local'
+      AND COALESCE(s.is_auto_climb, false) = false
+      AND s.activity_type = ANY($1::text[])
+      AND s.distance IS NOT NULL
+      AND s.distance > 0
+      AND s.start_latlng IS NOT NULL
+      AND s.end_latlng IS NOT NULL
+    ORDER BY s.id ASC
+    `,
+    [activityTypes]
+  );
+
+  const segments: ManualSegmentDefinition[] = [];
+  for (const row of result.rows) {
+    const startLatLng = asLatLngTuple(row.start_latlng);
+    const endLatLng = asLatLngTuple(row.end_latlng);
+    const distanceM = finiteNumber(row.distance);
+    if (!startLatLng || !endLatLng || distanceM === null || distanceM <= 0) continue;
+    segments.push({
+      segmentId: Number(row.id),
+      segmentName: String(row.name || 'Manual segment'),
+      distanceM,
+      startLatLng,
+      endLatLng,
+      bearingDeg: bearingDegrees(startLatLng, endLatLng),
+    });
+  }
+
+  return segments;
+};
+
+export const rebuildManualSegmentsForActivity = async (
+  db: DatabaseService,
+  activityId: number,
+  options?: {
+    clearExistingEfforts?: boolean;
+  }
+): Promise<ManualLocalSegmentRebuildResult> => {
+  const activityResult = await db.query(
+    `
+    SELECT strava_activity_id, user_id, type, start_date
+    FROM strava.activities
+    WHERE strava_activity_id = $1
+    LIMIT 1
+    `,
+    [activityId]
+  );
+
+  if (activityResult.rows.length === 0) {
+    return {
+      activityId,
+      processed: false,
+      matchedSegments: 0,
+      persistedEfforts: 0,
+      message: 'Activity not found',
+    };
+  }
+
+  const activity = activityResult.rows[0];
+  const streamsRows = await db.getActivityStreams(activityId);
+  const streams = getManualMatchingStreams(streamsRows);
+  if (!streams) {
+    return {
+      activityId,
+      processed: false,
+      matchedSegments: 0,
+      persistedEfforts: 0,
+      message: 'Missing required streams (time + distance + latlng)',
+    };
+  }
+
+  if (options?.clearExistingEfforts ?? true) {
+    await db.deleteLocalSegmentEffortsForActivityByKind(activityId, 'manual');
+  }
+
+  const segments = await loadManualSegmentDefinitions(db, activity.type || 'Ride');
+  if (segments.length === 0) {
+    return {
+      activityId,
+      processed: true,
+      matchedSegments: 0,
+      persistedEfforts: 0,
+      message: 'No manual segments available',
+    };
+  }
+
+  let matchedSegments = 0;
+  let persistedEfforts = 0;
+  const userId = activity.user_id ? Number(activity.user_id) : null;
+  const startDate = new Date(activity.start_date);
+
+  for (const segment of segments) {
+    const match = findManualMatchCandidate(streams, {
+      startLatLng: segment.startLatLng,
+      endLatLng: segment.endLatLng,
+      distanceM: segment.distanceM,
+      bearingDeg: segment.bearingDeg,
+      matchingRadiusM: DEFAULT_MANUAL_MATCHING_RADIUS_M,
+    });
+    if (!match) continue;
+
+    matchedSegments += 1;
+    const effortId = await db.getNextLocalSegmentEffortId();
+    const effortStartDate = new Date(startDate.getTime() + (Math.max(0, match.startTimeSec) * 1000));
+
+    await upsertLocalEffort(db, {
+      effortId,
+      segmentId: segment.segmentId,
+      activityId,
+      userId,
+      effortName: segment.segmentName,
+      startDate: effortStartDate,
+      elapsedTimeSec: match.elapsedTimeSec,
+      movingTimeSec: match.elapsedTimeSec,
+      distanceM: match.distanceM,
+      startIndex: match.startIndex,
+      endIndex: match.endIndex,
+    });
+    persistedEfforts += 1;
+  }
+
+  return {
+    activityId,
+    processed: true,
+    matchedSegments,
+    persistedEfforts,
+    message: matchedSegments > 0
+      ? `Matched ${matchedSegments} manual segments`
+      : 'No manual segments matched',
+  };
+};
+
+export const backfillManualSegments = async (
+  db: DatabaseService,
+  limit: number = 100,
+  options?: ManualLocalSegmentBackfillOptions
+): Promise<ManualLocalSegmentBackfillResult> => {
+  const safeLimit = Number.isFinite(limit) ? Math.max(1, Math.min(Math.floor(limit), 2000)) : 100;
+  const safeOffset = Number.isFinite(options?.offset) ? Math.max(0, Math.floor(Number(options?.offset))) : 0;
+  const includeStrava = options?.includeStrava ?? true;
+  const includeImported = options?.includeImported ?? true;
+  const includeRide = options?.includeRide ?? true;
+  const includeRun = options?.includeRun ?? true;
+  const allowedTypes = buildAllowedActivityTypes(includeRide, includeRun);
+  const recentDays = Number.isFinite(options?.recentDays)
+    ? Math.max(1, Math.floor(Number(options?.recentDays)))
+    : null;
+
+  const summary: ManualLocalSegmentBackfillResult = {
+    matchedActivities: 0,
+    processedActivities: 0,
+    activitiesWithMatches: 0,
+    matchedSegments: 0,
+    persistedEfforts: 0,
+    errors: [],
+  };
+
+  if (!includeStrava && !includeImported) {
+    return summary;
+  }
+  if (allowedTypes.length === 0) {
+    return summary;
+  }
+
+  const sourceFilters: string[] = [];
+  if (includeStrava) {
+    sourceFilters.push(`COALESCE(a.source, 'strava') = 'strava'`);
+  }
+  if (includeImported) {
+    sourceFilters.push(`COALESCE(a.source, 'strava') <> 'strava'`);
+  }
+
+  const queryParams: any[] = [allowedTypes, safeLimit, safeOffset];
+  let recentDaysClause = '';
+  if (recentDays !== null) {
+    queryParams.push(recentDays);
+    recentDaysClause = `AND a.start_date >= (NOW() - ($4::int * INTERVAL '1 day'))`;
+  }
+
+  const activityResult = await db.query(
+    `
+    SELECT a.strava_activity_id
+    FROM strava.activities a
+    WHERE (${sourceFilters.join(' OR ')})
+      AND a.type = ANY($1::text[])
+      ${recentDaysClause}
+      AND EXISTS (
+        SELECT 1 FROM strava.activity_streams s
+        WHERE s.activity_id = a.strava_activity_id AND s.stream_type = 'time'
+      )
+      AND EXISTS (
+        SELECT 1 FROM strava.activity_streams s
+        WHERE s.activity_id = a.strava_activity_id AND s.stream_type = 'distance'
+      )
+      AND EXISTS (
+        SELECT 1 FROM strava.activity_streams s
+        WHERE s.activity_id = a.strava_activity_id AND s.stream_type = 'latlng'
+      )
+    ORDER BY a.start_date DESC
+    LIMIT $2
+    OFFSET $3
+    `,
+    queryParams
+  );
+
+  summary.matchedActivities = activityResult.rows.length;
+
+  for (const row of activityResult.rows) {
+    const activityId = Number(row.strava_activity_id);
+    try {
+      const result = await rebuildManualSegmentsForActivity(db, activityId, {
+        clearExistingEfforts: true,
+      });
+      if (!result.processed && result.message === 'Activity not found') {
+        summary.errors.push({ activityId, message: result.message });
+        continue;
+      }
+      if (!result.processed && result.message.startsWith('Missing required streams')) {
+        summary.errors.push({ activityId, message: result.message });
+        continue;
+      }
+
+      summary.processedActivities += 1;
+      summary.matchedSegments += result.matchedSegments;
+      summary.persistedEfforts += result.persistedEfforts;
+      if (result.persistedEfforts > 0) {
+        summary.activitiesWithMatches += 1;
+      }
+    } catch (error: any) {
+      summary.errors.push({
+        activityId,
+        message: error?.message || 'Unknown error',
+      });
+    }
+  }
+
+  return summary;
 };
 
 export const backfillLocalClimbs = async (

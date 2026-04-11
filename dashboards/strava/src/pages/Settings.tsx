@@ -4,11 +4,13 @@ import { Link, useSearchParams } from 'react-router-dom'
 import {
   getSyncLogs,
   getTechStats,
+  triggerManualLocalSegmentsBackfill,
   repairLegacySportTypes,
   renameLocalSegmentsBulk,
   triggerLocalSegmentsBackfill,
   triggerFullSync,
   type LocalSegmentBackfillResponse,
+  type ManualLocalSegmentBackfillResponse,
   type RepairLegacySportTypesResponse,
   type SyncLog,
   updateUserProfile,
@@ -114,6 +116,8 @@ export default function Settings() {
   const [renameBatchSize, setRenameBatchSize] = useState('200')
   const [segmentBackfillLimit, setSegmentBackfillLimit] = useState('200')
   const [segmentBackfillResult, setSegmentBackfillResult] = useState<LocalSegmentBackfillResponse | null>(null)
+  const [manualSegmentBackfillLimit, setManualSegmentBackfillLimit] = useState('200')
+  const [manualSegmentBackfillResult, setManualSegmentBackfillResult] = useState<ManualLocalSegmentBackfillResponse | null>(null)
   const [repairLegacySportTypesResult, setRepairLegacySportTypesResult] = useState<RepairLegacySportTypesResponse | null>(null)
   const [segmentAdvancedOpen, setSegmentAdvancedOpen] = useState(false)
   type TabKey = 'personal' | 'segments' | 'import' | 'sync' | 'logs' | 'system'
@@ -322,6 +326,41 @@ export default function Settings() {
     },
   })
 
+  type ManualSegmentBackfillMode = 'single' | 'full'
+  const manualSegmentBackfillMutation = useMutation({
+    mutationFn: async (input: { limit: number; mode: ManualSegmentBackfillMode }) => (
+      triggerManualLocalSegmentsBackfill({
+        limit: input.limit,
+        full: input.mode === 'full',
+        batchSize: input.mode === 'full' ? input.limit : undefined,
+      })
+    ),
+    onSuccess: async (result) => {
+      setManualSegmentBackfillResult(result)
+      toast({
+        title: t('settings.localClimbs.jobs.manualBackfill.toast.successTitle'),
+        description: t('settings.localClimbs.jobs.manualBackfill.toast.successBody', {
+          processed: result.processedActivities,
+          persisted: result.persistedEfforts,
+        }),
+        variant: 'success',
+      })
+      await Promise.all([
+        queryClient.invalidateQueries({ queryKey: ['segments-summary'] }),
+        queryClient.invalidateQueries({ queryKey: ['segments-list'] }),
+        queryClient.invalidateQueries({ queryKey: ['tech'] }),
+      ])
+    },
+    onError: (error: any) => {
+      const detail = error?.response?.data?.error
+      toast({
+        title: t('settings.localClimbs.jobs.manualBackfill.toast.errorTitle'),
+        description: detail || t('settings.localClimbs.jobs.manualBackfill.toast.errorBody'),
+        variant: 'error',
+      })
+    },
+  })
+
   const repairLegacySportTypesMutation = useMutation({
     mutationFn: async () => repairLegacySportTypes(),
     onSuccess: async (result) => {
@@ -357,6 +396,13 @@ export default function Settings() {
     const limit = Number.isFinite(parsed) ? Math.max(1, Math.min(Math.floor(parsed), 2000)) : 200
     setSegmentBackfillLimit(String(limit))
     segmentBackfillMutation.mutate({ limit, mode })
+  }
+
+  const triggerManualSegmentBackfill = (mode: ManualSegmentBackfillMode) => {
+    const parsed = Number(manualSegmentBackfillLimit)
+    const limit = Number.isFinite(parsed) ? Math.max(1, Math.min(Math.floor(parsed), 2000)) : 200
+    setManualSegmentBackfillLimit(String(limit))
+    manualSegmentBackfillMutation.mutate({ limit, mode })
   }
 
   const handleProfileUpdate = (field: string) => {
@@ -1318,6 +1364,60 @@ export default function Settings() {
                     <div>{t('settings.localClimbs.jobs.backfill.result.processed', { value: segmentBackfillResult.processedActivities })}</div>
                     <div>{t('settings.localClimbs.jobs.backfill.result.persisted', { value: segmentBackfillResult.persistedClimbs })}</div>
                     {segmentBackfillResult.warning && <div>{segmentBackfillResult.warning}</div>}
+                  </div>
+                )}
+              </div>
+
+              <div className="rounded-lg border border-border/60 bg-muted/20 p-3 space-y-3">
+                <div className="text-sm font-semibold">{t('settings.localClimbs.jobs.manualBackfill.title')}</div>
+                <p className="text-xs text-muted-foreground">
+                  {t('settings.localClimbs.jobs.manualBackfill.hint')}
+                </p>
+                <div className="flex flex-wrap items-center gap-2">
+                  <label className="text-xs text-muted-foreground" htmlFor="settings-manual-segment-backfill-limit">
+                    {t('settings.localClimbs.jobs.manualBackfill.limit')}
+                  </label>
+                  <input
+                    id="settings-manual-segment-backfill-limit"
+                    type="number"
+                    min={1}
+                    max={2000}
+                    step={1}
+                    value={manualSegmentBackfillLimit}
+                    onChange={(event) => setManualSegmentBackfillLimit(event.target.value)}
+                    className="h-8 w-24 rounded-md border border-border bg-background px-2 text-sm"
+                  />
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={manualSegmentBackfillMutation.isPending}
+                    onClick={() => triggerManualSegmentBackfill('single')}
+                  >
+                    {manualSegmentBackfillMutation.isPending
+                      ? t('settings.localClimbs.jobs.manualBackfill.running')
+                      : t('settings.localClimbs.jobs.manualBackfill.button')}
+                  </Button>
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    disabled={manualSegmentBackfillMutation.isPending}
+                    onClick={() => triggerManualSegmentBackfill('full')}
+                  >
+                    {manualSegmentBackfillMutation.isPending
+                      ? t('settings.localClimbs.jobs.manualBackfill.runningAll')
+                      : t('settings.localClimbs.jobs.manualBackfill.buttonAll')}
+                  </Button>
+                </div>
+                {manualSegmentBackfillResult && (
+                  <div className="text-xs text-muted-foreground rounded border border-border/60 bg-background/50 p-2 space-y-1">
+                    {manualSegmentBackfillResult.matchedActivities !== undefined && (
+                      <div>{t('settings.localClimbs.jobs.manualBackfill.result.matched', { value: manualSegmentBackfillResult.matchedActivities })}</div>
+                    )}
+                    <div>{t('settings.localClimbs.jobs.manualBackfill.result.processed', { value: manualSegmentBackfillResult.processedActivities })}</div>
+                    <div>{t('settings.localClimbs.jobs.manualBackfill.result.activitiesWithMatches', { value: manualSegmentBackfillResult.activitiesWithMatches })}</div>
+                    <div>{t('settings.localClimbs.jobs.manualBackfill.result.matchedSegments', { value: manualSegmentBackfillResult.matchedSegments })}</div>
+                    <div>{t('settings.localClimbs.jobs.manualBackfill.result.persisted', { value: manualSegmentBackfillResult.persistedEfforts })}</div>
+                    {manualSegmentBackfillResult.warning && <div>{manualSegmentBackfillResult.warning}</div>}
                   </div>
                 )}
               </div>

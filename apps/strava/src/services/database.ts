@@ -618,6 +618,24 @@ export class DatabaseService {
     );
   }
 
+  async deleteLocalSegmentEffortsForActivityByKind(
+    activityId: number,
+    kind: 'auto' | 'manual'
+  ): Promise<void> {
+    await this.pool.query(
+      `
+      DELETE FROM segment_efforts se
+      USING segments s
+      WHERE se.activity_id = $1
+        AND se.source = 'local'
+        AND se.segment_id = s.id
+        AND s.source = 'local'
+        AND COALESCE(s.is_auto_climb, false) = $2
+      `,
+      [activityId, kind === 'auto']
+    );
+  }
+
   async getSegmentByLocalFingerprint(fingerprint: string): Promise<Segment | null> {
     const result = await this.pool.query(
       `SELECT * FROM segments WHERE local_fingerprint = $1 LIMIT 1`,

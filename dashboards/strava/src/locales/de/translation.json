@@ -1440,6 +1440,28 @@
             "errorBody": "Backfill konnte nicht gestartet werden."
           }
         },
+        "manualBackfill": {
+          "title": "Manuelle Segmente nachziehen",
+          "hint": "Prüft bestehende Aktivitäten rückwirkend gegen bereits angelegte manuelle Segmente. Neue Syncs prüfen frische Aktivitäten künftig automatisch mit.",
+          "limit": "Limit",
+          "button": "Nachziehen starten",
+          "buttonAll": "Alle prüfen",
+          "running": "Nachziehen läuft...",
+          "runningAll": "Vollständiger Lauf...",
+          "result": {
+            "matched": "Gefundene Aktivitäten: {{value}}",
+            "processed": "Verarbeitet: {{value}}",
+            "activitiesWithMatches": "Aktivitäten mit Treffern: {{value}}",
+            "matchedSegments": "Gefundene manuelle Segmente: {{value}}",
+            "persisted": "Gespeicherte Versuche: {{value}}"
+          },
+          "toast": {
+            "successTitle": "Manuelle Segmente nachgezogen",
+            "successBody": "{{processed}} Aktivitäten geprüft, {{persisted}} Versuche gespeichert.",
+            "errorTitle": "Nachziehen fehlgeschlagen",
+            "errorBody": "Manuelle Segmente konnten nicht nachgezogen werden."
+          }
+        },
         "repairSportTypes": {
           "title": "Fehlimporte bei Aktivitätstypen reparieren",
           "hint": "Korrigiert alte Dateiimporte mit fehlerhaftem Sporttyp (z. B. text/html) nach Parser-Fixes. Für Self-Hosted Wartung gedacht.",

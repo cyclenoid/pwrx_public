@@ -17,6 +17,7 @@ import { watchFolderService } from './services/import/watchFolder';
 import { importQueueAlertMonitor, importQueueWorker } from './services/import/service';
 import { adapterRegistry } from './services/adapters/registry';
 import { loadStravaRoutesFactory } from './services/adapters/stravaModuleLoader';
+import { backfillManualSegments } from './services/localSegments';
 
 // Load .env from project root (apps/strava) - override existing env vars
 dotenv.config({ path: path.join(__dirname, '../.env'), override: true });
@@ -252,6 +253,32 @@ async function runSyncPipeline(
           summary.push(`downloads=${downloadsCount}`);
         } else {
           summary.push('downloads=off');
+        }
+      }
+
+      if (mode === 'activity' || mode === 'backfill') {
+        const manualSegmentLimit = mode === 'activity'
+          ? Math.max(50, Math.min(settings.activity.recentDays * 20, 1000))
+          : Math.max(50, Math.min(
+            Math.max(
+              settings.backfill.streamsLimit,
+              settings.backfill.segmentsLimit,
+              200
+            ),
+            1000
+          ));
+
+        const manualSegmentResult = await backfillManualSegments(db, manualSegmentLimit, {
+          includeStrava: true,
+          includeImported: true,
+          includeRide: true,
+          includeRun: true,
+          recentDays: mode === 'activity' ? settings.activity.recentDays : undefined,
+        });
+        summary.push(`manual_segments_activities=${manualSegmentResult.activitiesWithMatches}`);
+        summary.push(`manual_segments_efforts=${manualSegmentResult.persistedEfforts}`);
+        if (manualSegmentResult.errors.length > 0) {
+          summary.push(`manual_segment_errors=${manualSegmentResult.errors.length}`);
         }
       }
 
