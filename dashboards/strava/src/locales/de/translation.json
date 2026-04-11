@@ -936,7 +936,8 @@
       "title": "Strecke und Splits",
       "subtitle": "Beide Aktivitäten oben auf der Karte. Die Kilometer-Splits findest du rechts in der Sidebar.",
       "noMap": "Für diese Aktivität sind noch keine Routendaten vorhanden.",
-      "splitHint": "Fahre über einen Split in der Sidebar, um den Abschnitt auf der Karte hervorzuheben."
+      "splitHint": "Fahre über einen Split in der Sidebar, um den Abschnitt auf der Karte hervorzuheben.",
+      "hoverHint": "Fahre über das Distanzdiagramm oder über einen Split in der Sidebar, um hier den aktuellen Vergleichspunkt zu sehen."
     },
     "distanceChart": {
       "title": "Vorsprung / Rückstand über Distanz",

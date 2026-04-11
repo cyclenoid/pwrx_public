@@ -544,15 +544,26 @@ export function ActivityCompare() {
                 </div>
               )}
 
-              {hoveredDistancePoint && hoveredGapLabel && (
-                <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-sm text-foreground">
-                  <span className="font-semibold">
-                    {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(hoveredDistancePoint.distance_km) })}
-                  </span>
-                  {' · '}
-                  <span>{hoveredGapLabel}</span>
-                </div>
-              )}
+              <div
+                className={cn(
+                  'min-h-[44px] rounded-lg border px-3 py-2 text-sm transition-colors',
+                  hoveredDistancePoint && hoveredGapLabel
+                    ? 'border-primary/30 bg-primary/10 text-foreground'
+                    : 'border-border/60 bg-card/40 text-muted-foreground'
+                )}
+              >
+                {hoveredDistancePoint && hoveredGapLabel ? (
+                  <>
+                    <span className="font-semibold">
+                      {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(hoveredDistancePoint.distance_km) })}
+                    </span>
+                    {' · '}
+                    <span>{hoveredGapLabel}</span>
+                  </>
+                ) : (
+                  <span>{t('activityCompare.mapCard.hoverHint')}</span>
+                )}
+              </div>
             </CardContent>
           </Card>
 

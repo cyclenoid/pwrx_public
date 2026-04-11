@@ -936,7 +936,8 @@
       "title": "Route and splits",
       "subtitle": "Both activities are shown on the map above. The kilometer splits live in the right sidebar.",
       "noMap": "Route data is not available for this activity yet.",
-      "splitHint": "Hover a split in the sidebar to highlight the matching section on the map."
+      "splitHint": "Hover a split in the sidebar to highlight the matching section on the map.",
+      "hoverHint": "Hover the distance chart or a split in the sidebar to show the current comparison point here."
     },
     "distanceChart": {
       "title": "Ahead / behind over distance",
