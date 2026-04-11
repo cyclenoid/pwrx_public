@@ -36,6 +36,12 @@ let syncConfigFingerprint = '';
 let startupSyncChecked = false;
 let initialSyncChecked = false;
 let syncCapabilityDisabledLogged = false;
+const CLUB_EXPORT_STARTUP_STALE_HOURS = (() => {
+  const raw = Number(process.env.CLUB_STATS_EXPORT_STARTUP_STALE_HOURS || '18');
+  if (!Number.isFinite(raw)) return 18;
+  return Math.min(168, Math.max(1, Math.round(raw)));
+})();
+const CLUB_EXPORT_LAST_SUCCESS_KEY = 'club_export_last_success_at';
 
 const hasSyncCapability = (): boolean =>
   Boolean(adapterRegistry.getCapabilities().capabilities.supportsSync);
@@ -135,6 +141,18 @@ async function shouldRunStartupSync(db: DatabaseService, staleHours: number): Pr
   if (!lastSync) return true;
 
   const ageMs = Date.now() - new Date(lastSync).getTime();
+  const thresholdMs = staleHours * 60 * 60 * 1000;
+  return ageMs >= thresholdMs;
+}
+
+async function shouldRunStartupClubExport(db: DatabaseService, userId: number, staleHours: number): Promise<boolean> {
+  const lastExportAt = await getUserSetting(db, userId, CLUB_EXPORT_LAST_SUCCESS_KEY);
+  if (!lastExportAt) return true;
+
+  const timestamp = new Date(lastExportAt).getTime();
+  if (!Number.isFinite(timestamp)) return true;
+
+  const ageMs = Date.now() - timestamp;
   const thresholdMs = staleHours * 60 * 60 * 1000;
   return ageMs >= thresholdMs;
 }
@@ -395,6 +413,11 @@ async function runClubStatsExport(reason: string, days: number = 30): Promise<vo
     return;
   }
 
+  if (await isSyncCurrentlyRunning()) {
+    console.log(`⏭️  Skip ${reason}: sync currently running`);
+    return;
+  }
+
   try {
     const configResponse = await fetch(`http://127.0.0.1:${PORT}/api/club/config`);
     if (!configResponse.ok) {
@@ -428,6 +451,15 @@ async function runClubStatsExport(reason: string, days: number = 30): Promise<vo
     }
 
     const payload: any = await response.json().catch(() => ({}));
+    const db = new DatabaseService();
+    try {
+      const userId = await getActiveUserId(db);
+      if (userId) {
+        await setUserSetting(db, userId, CLUB_EXPORT_LAST_SUCCESS_KEY, new Date().toISOString());
+      }
+    } finally {
+      await db.close();
+    }
     console.log(`✅ ${reason} completed (${String(payload?.exportedAt || 'ok')})`);
   } catch (error: any) {
     console.error(`❌ ${reason} failed:`, error?.message || error);
@@ -566,7 +598,18 @@ async function refreshSyncSchedules(force: boolean = false): Promise<void> {
     }
 
     if (force && hasClubCapability()) {
-      await runClubStatsExport('startup club stats export', 30);
+      const userId = await getActiveUserId(db);
+      if (!userId) {
+        console.log('⏭️  Skip startup club stats export: no active user profile');
+      } else {
+        const stale = await shouldRunStartupClubExport(db, userId, CLUB_EXPORT_STARTUP_STALE_HOURS);
+        if (stale) {
+          console.log(`🚀 Startup club export enabled (stale >= ${CLUB_EXPORT_STARTUP_STALE_HOURS}h)`);
+          await runClubStatsExport('startup club stats export', 30);
+        } else {
+          console.log('✅ Startup club export not needed (recent export found)');
+        }
+      }
     }
   } catch (error: any) {
     console.error('❌ Failed to refresh sync schedules:', error.message);
