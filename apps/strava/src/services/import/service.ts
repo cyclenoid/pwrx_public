@@ -8,6 +8,7 @@ import { sha256Hex } from './hash';
 import { parseActivity } from './parser';
 import { normalizeSportType } from './parsers/utils';
 import { rebuildLocalClimbsForActivity, rebuildManualSegmentsForActivity } from '../localSegments';
+import { notifyImportedDataChanged } from '../analyticsInvalidation';
 import { ActivityImportFormat, ImportFormat, ParsedActivity } from './types';
 import type { ImportFileRecord, ImportSource, ImportStatus, ImportType } from '../database';
 
@@ -1418,6 +1419,8 @@ const parseAndPersistActivity = async (
       `⚠️  Manual local segment matching skipped for activity ${activityId}: ${error?.message || error}`
     );
   }
+
+  notifyImportedDataChanged(`file_import:${input.detectedFormat}`);
   return {
     status: 'done',
     activityId,
