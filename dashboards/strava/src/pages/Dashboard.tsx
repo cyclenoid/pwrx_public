@@ -735,7 +735,10 @@ export function Dashboard() {
         Number.isFinite(caloriesValue) && caloriesValue > 0
           ? caloriesValue
           : Number.isFinite(kilojoulesValue) && kilojoulesValue > 0
-            ? kilojoulesValue * 0.239
+            // For cycling power files, mechanical work in kJ is usually a close
+            // approximation for metabolic kcal and matches athlete expectations
+            // much better than converting with the physical kJ->kcal factor.
+            ? kilojoulesValue
             : 0
 
       if (!estimatedCalories) return

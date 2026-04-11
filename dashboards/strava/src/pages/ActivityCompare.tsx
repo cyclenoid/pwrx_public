@@ -581,7 +581,7 @@ export function ActivityCompare() {
                         <div className="text-sm text-muted-foreground">{t('activityCompare.distanceChart.subtitle')}</div>
                       </div>
                       {hoveredDistancePoint && hoveredGapLabel && (
-                        <div className="rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-right">
+                        <div className="min-w-[180px] rounded-lg border border-primary/30 bg-primary/10 px-3 py-2 text-right">
                           <div className="text-[11px] uppercase tracking-[0.16em] text-muted-foreground">
                             {t('activityCompare.distanceChart.tooltipDistance', { distance: formatDistanceLabel(hoveredDistancePoint.distance_km) })}
                           </div>
