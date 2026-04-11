@@ -108,7 +108,29 @@ export function FeatureLog() {
                   </div>
                 </div>
               </CardHeader>
-              <CardContent>
+              <CardContent className="space-y-4">
+                {text.images?.length ? (
+                  <div className="grid gap-3 lg:grid-cols-2">
+                    {text.images.map((image) => (
+                      <figure
+                        key={`${entry.id}-${image.src}`}
+                        className="overflow-hidden rounded-xl border border-border/60 bg-background/80"
+                      >
+                        <img
+                          src={image.src}
+                          alt={image.alt}
+                          className="block h-auto w-full"
+                          loading="lazy"
+                        />
+                        {image.caption ? (
+                          <figcaption className="border-t border-border/60 px-3 py-2 text-xs leading-relaxed text-muted-foreground">
+                            {image.caption}
+                          </figcaption>
+                        ) : null}
+                      </figure>
+                    ))}
+                  </div>
+                ) : null}
                 <ul className="space-y-2 text-sm text-foreground/90">
                   {text.bullets.map((bullet) => (
                     <li key={bullet} className="flex gap-2">

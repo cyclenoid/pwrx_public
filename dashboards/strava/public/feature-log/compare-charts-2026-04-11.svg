@@ -1,0 +1,66 @@
+<svg width="1600" height="940" viewBox="0 0 1600 940" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <rect width="1600" height="940" rx="28" fill="#141518"/>
+  <rect x="36" y="36" width="1528" height="868" rx="24" fill="#1A1C20" stroke="#2A2D33"/>
+  <text x="72" y="104" fill="#FC4C02" font-family="Segoe UI, Arial, sans-serif" font-size="56" font-weight="800">PWRX</text>
+  <text x="72" y="158" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Compare: Vorsprung / Rückstand und KM-Splits</text>
+  <text x="72" y="184" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="14">Die Karte und der Zeitvergleich folgen derselben Logik. Rechts bleiben die Splits direkt sichtbar.</text>
+
+  <rect x="72" y="220" width="960" height="540" rx="18" fill="#111215" stroke="#31343A"/>
+  <text x="104" y="262" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Vorsprung / Rückstand über Distanz</text>
+  <text x="104" y="288" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="14">Zeitverlauf entlang der gemeinsamen Strecke</text>
+  <line x1="120" y1="472" x2="992" y2="472" stroke="#71717A" stroke-dasharray="10 10" opacity="0.6"/>
+  <line x1="330" y1="330" x2="330" y2="704" stroke="#71717A" opacity="0.35"/>
+  <path d="M120 432C210 455 260 500 330 523C430 556 510 534 604 575C670 603 738 624 812 650C886 675 940 707 992 726" stroke="#FC4C02" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>
+  <circle cx="330" cy="523" r="8" fill="#FC4C02" stroke="white" stroke-width="4"/>
+  <rect x="360" y="508" width="220" height="142" rx="16" fill="#17191D" stroke="#31343A"/>
+  <text x="388" y="542" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="16" font-weight="700">Bei 3.38 km</text>
+  <text x="388" y="576" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="24" font-weight="800">132s voraus</text>
+  <text x="388" y="612" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="16">299m voraus</text>
+
+  <rect x="72" y="778" width="960" height="74" rx="14" fill="#1B1D21" stroke="#31343A"/>
+  <circle cx="104" cy="815" r="8" fill="#06B6D4"/>
+  <circle cx="136" cy="815" r="8" fill="#F59E0B"/>
+  <text x="164" y="821" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">Bei 3.38 km · 132s voraus · 299m voraus</text>
+
+  <rect x="1080" y="220" width="448" height="632" rx="18" fill="#181A1F" stroke="#31343A"/>
+  <text x="1112" y="262" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">KM-Splits im Vergleich</text>
+  <text x="1112" y="288" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="14">Hover auf eine Zeile hebt den Abschnitt auf der Karte hervor.</text>
+
+  <rect x="1112" y="320" width="384" height="46" rx="10" fill="#1F2228" stroke="#31343A"/>
+  <text x="1136" y="349" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="1.2">KM</text>
+  <text x="1224" y="349" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="1.2">A</text>
+  <text x="1342" y="349" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="1.2">B</text>
+  <text x="1448" y="349" fill="#A1A1AA" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700" letter-spacing="1.2">DELTA</text>
+
+  <rect x="1112" y="380" width="384" height="60" rx="10" fill="#12313A" stroke="#06B6D4" opacity="0.95"/>
+  <text x="1136" y="417" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">4</text>
+  <text x="1224" y="417" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18">6:40/km</text>
+  <text x="1342" y="417" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="18">7:15/km</text>
+  <text x="1450" y="417" fill="#10B981" font-family="Segoe UI, Arial, sans-serif" font-size="18" font-weight="700">−35s</text>
+
+  <rect x="1112" y="448" width="384" height="56" rx="10" fill="#1D2025" stroke="#31343A"/>
+  <rect x="1112" y="512" width="384" height="56" rx="10" fill="#1D2025" stroke="#31343A"/>
+  <rect x="1112" y="576" width="384" height="56" rx="10" fill="#1D2025" stroke="#31343A"/>
+  <rect x="1112" y="640" width="384" height="56" rx="10" fill="#1D2025" stroke="#31343A"/>
+  <rect x="1112" y="704" width="384" height="56" rx="10" fill="#1D2025" stroke="#31343A"/>
+  <text x="1136" y="483" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">1</text>
+  <text x="1224" y="483" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">8:14/km</text>
+  <text x="1342" y="483" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">9:03/km</text>
+  <text x="1450" y="483" fill="#10B981" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">−49s</text>
+  <text x="1136" y="547" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">2</text>
+  <text x="1224" y="547" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">7:24/km</text>
+  <text x="1342" y="547" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">8:07/km</text>
+  <text x="1450" y="547" fill="#10B981" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">−43s</text>
+  <text x="1136" y="611" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">3</text>
+  <text x="1224" y="611" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">7:13/km</text>
+  <text x="1342" y="611" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">7:38/km</text>
+  <text x="1450" y="611" fill="#10B981" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">−25s</text>
+  <text x="1136" y="675" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">5</text>
+  <text x="1224" y="675" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">7:18/km</text>
+  <text x="1342" y="675" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">7:57/km</text>
+  <text x="1450" y="675" fill="#10B981" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">−39s</text>
+  <text x="1136" y="739" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">7</text>
+  <text x="1224" y="739" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">6:00/km</text>
+  <text x="1342" y="739" fill="#F3F4F6" font-family="Segoe UI, Arial, sans-serif" font-size="17">7:20/km</text>
+  <text x="1450" y="739" fill="#10B981" font-family="Segoe UI, Arial, sans-serif" font-size="17" font-weight="700">−80s</text>
+</svg>
