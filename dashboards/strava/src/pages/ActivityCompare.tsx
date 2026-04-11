@@ -557,7 +557,7 @@ export function ActivityCompare() {
                           key={`split-card-${row.km}`}
                           type="button"
                           className={cn(
-                            'rounded-lg border px-2.5 py-2 text-left transition-colors transition-shadow',
+                            'flex min-h-[78px] flex-col justify-between rounded-lg border px-3 py-2 text-left transition-colors transition-shadow',
                             isActive
                               ? 'border-primary/40 bg-primary/10 shadow-sm'
                               : 'border-border/60 bg-card/40 hover:border-primary/40 hover:bg-primary/5 hover:shadow-sm'
@@ -590,15 +590,10 @@ export function ActivityCompare() {
                               {formatDelta(row.deltaSec, notAvailable)}
                             </div>
                           </div>
-                          <div className="mt-2 grid grid-cols-2 gap-2 text-xs">
-                            <div>
-                              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{baseLabel}</div>
-                              <div className="mt-1 font-semibold text-foreground">{formatPaceFromSeconds(row.basePace, notAvailable)}</div>
-                            </div>
-                            <div>
-                              <div className="text-[10px] uppercase tracking-[0.16em] text-muted-foreground">{comparisonLabel}</div>
-                              <div className="mt-1 font-semibold text-foreground">{formatPaceFromSeconds(row.comparisonPace, notAvailable)}</div>
-                            </div>
+                          <div className="mt-2 text-sm font-semibold text-foreground">
+                            {formatPaceFromSeconds(row.basePace, notAvailable)}
+                            <span className="mx-1.5 text-muted-foreground">vs</span>
+                            <span className="text-muted-foreground">{formatPaceFromSeconds(row.comparisonPace, notAvailable)}</span>
                           </div>
                         </button>
                       )
@@ -639,8 +634,17 @@ export function ActivityCompare() {
                           data={distanceComparePoints}
                           margin={{ top: 8, right: 16, left: 0, bottom: 0 }}
                           onMouseMove={(state) => {
-                            const payload = (state as { activePayload?: Array<{ payload?: ActivityCompareAlignedPoint }> } | undefined)
-                              ?.activePayload?.[0]?.payload
+                            const chartState = state as {
+                              activePayload?: Array<{ payload?: ActivityCompareAlignedPoint }>
+                              activeTooltipIndex?: number
+                              isTooltipActive?: boolean
+                            } | undefined
+                            const index = typeof chartState?.activeTooltipIndex === 'number'
+                              ? chartState.activeTooltipIndex
+                              : null
+                            const payload = index !== null
+                              ? distanceComparePoints[index] ?? chartState?.activePayload?.[0]?.payload
+                              : chartState?.activePayload?.[0]?.payload
                             setHoveredDistancePoint(payload ?? null)
                           }}
                           onMouseLeave={() => setHoveredDistancePoint(null)}
