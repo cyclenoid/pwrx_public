@@ -528,6 +528,36 @@ export interface LocalSegmentBackfillResponse {
 }
 export type LocalClimbBackfillResponse = LocalSegmentBackfillResponse
 
+export interface ManualLocalSegmentRebuildResponse {
+  activityId: number
+  processed: boolean
+  matchedSegments: number
+  persistedEfforts: number
+  message: string
+}
+
+export interface ManualLocalSegmentBackfillResponse {
+  matchedActivities?: number
+  processedActivities: number
+  activitiesWithMatches: number
+  matchedSegments: number
+  persistedEfforts: number
+  mode?: 'single' | 'full'
+  batches?: number
+  batchSize?: number
+  warning?: string
+  filters?: {
+    includeStrava: boolean
+    includeImported: boolean
+    includeRide: boolean
+    includeRun: boolean
+  }
+  errors: Array<{
+    activityId: number
+    message: string
+  }>
+}
+
 export interface LocalSegmentRenameResponse {
   matchedSegments: number
   processedSegments: number
@@ -598,6 +628,32 @@ export const triggerLocalSegmentsBackfill = async (params?: {
   return data
 }
 export const triggerLocalClimbBackfill = triggerLocalSegmentsBackfill
+
+export const rebuildActivityManualLocalSegments = async (
+  activityId: number
+): Promise<ManualLocalSegmentRebuildResponse> => {
+  const { data } = await api.post<ManualLocalSegmentRebuildResponse>(
+    `/activities/${activityId}/local-segments/manual/rebuild`,
+    {}
+  )
+  return data
+}
+
+export const triggerManualLocalSegmentsBackfill = async (params?: {
+  limit?: number
+  full?: boolean
+  batchSize?: number
+  includeStrava?: boolean
+  includeImported?: boolean
+  includeRide?: boolean
+  includeRun?: boolean
+}): Promise<ManualLocalSegmentBackfillResponse> => {
+  const { data } = await api.post<ManualLocalSegmentBackfillResponse>(
+    '/segments/local-segments/manual/backfill',
+    params || {}
+  )
+  return data
+}
 
 export const renameLocalSegmentsBulk = async (params?: {
   limit?: number

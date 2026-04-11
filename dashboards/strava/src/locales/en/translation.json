@@ -1440,6 +1440,28 @@
             "errorBody": "Failed to start backfill."
           }
         },
+        "manualBackfill": {
+          "title": "Backfill manual segments",
+          "hint": "Re-checks existing activities against manual segments you already created. New syncs now also check fresh activities automatically.",
+          "limit": "Limit",
+          "button": "Start backfill",
+          "buttonAll": "Check all",
+          "running": "Backfill running...",
+          "runningAll": "Full run...",
+          "result": {
+            "matched": "Matched activities: {{value}}",
+            "processed": "Processed: {{value}}",
+            "activitiesWithMatches": "Activities with matches: {{value}}",
+            "matchedSegments": "Matched manual segments: {{value}}",
+            "persisted": "Saved efforts: {{value}}"
+          },
+          "toast": {
+            "successTitle": "Manual segments backfilled",
+            "successBody": "{{processed}} activities checked, {{persisted}} efforts saved.",
+            "errorTitle": "Backfill failed",
+            "errorBody": "Manual segments could not be backfilled."
+          }
+        },
         "repairSportTypes": {
           "title": "Repair malformed activity sport types",
           "hint": "Fixes older file imports with malformed sport types (for example text/html) after parser fixes. Intended for self-hosted maintenance.",

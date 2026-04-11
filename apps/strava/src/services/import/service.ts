@@ -7,7 +7,7 @@ import { decodeImportBufferIfNeeded, detectImportFormat, isSupportedImportFilena
 import { sha256Hex } from './hash';
 import { parseActivity } from './parser';
 import { normalizeSportType } from './parsers/utils';
-import { rebuildLocalClimbsForActivity } from '../localSegments';
+import { rebuildLocalClimbsForActivity, rebuildManualSegmentsForActivity } from '../localSegments';
 import { ActivityImportFormat, ImportFormat, ParsedActivity } from './types';
 import type { ImportFileRecord, ImportSource, ImportStatus, ImportType } from '../database';
 
@@ -1409,6 +1409,13 @@ const parseAndPersistActivity = async (
   } catch (error: any) {
     console.warn(
       `⚠️  Local climb detection skipped for activity ${activityId}: ${error?.message || error}`
+    );
+  }
+  try {
+    await rebuildManualSegmentsForActivity(db, activityId, { clearExistingEfforts: true });
+  } catch (error: any) {
+    console.warn(
+      `⚠️  Manual local segment matching skipped for activity ${activityId}: ${error?.message || error}`
     );
   }
   return {

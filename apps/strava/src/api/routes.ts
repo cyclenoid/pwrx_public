@@ -30,9 +30,11 @@ import {
 import { watchFolderService, type WatchFolderConfig } from '../services/import/watchFolder';
 import { adapterRegistry } from '../services/adapters/registry';
 import {
+  backfillManualSegments,
   backfillLocalClimbs,
   createManualLocalSegmentFromActivity,
   renameLocalSegments,
+  rebuildManualSegmentsForActivity,
   rebuildLocalClimbsForActivity,
 } from '../services/localSegments';
 import {
@@ -3230,6 +3232,35 @@ router.post('/activities/:id/local-segments/manual', async (req: Request, res: R
   }
 });
 
+/**
+ * POST /api/activities/:id/local-segments/manual/rebuild
+ * Re-check one activity against all existing manual local segments.
+ */
+router.post('/activities/:id/local-segments/manual/rebuild', async (req: Request, res: Response) => {
+  try {
+    const activityId = Number(req.params.id);
+    if (!Number.isInteger(activityId)) {
+      return res.status(400).json({ error: 'Invalid activity id' });
+    }
+
+    const result = await rebuildManualSegmentsForActivity(db, activityId, {
+      clearExistingEfforts: true,
+    });
+
+    if (!result.processed) {
+      if (result.message === 'Activity not found') {
+        return res.status(404).json({ error: result.message });
+      }
+      return res.status(422).json({ error: result.message });
+    }
+
+    return res.json(result);
+  } catch (error: any) {
+    console.error('Error rebuilding manual local segments for activity:', error);
+    return res.status(500).json({ error: 'Failed to rebuild manual local segments for activity' });
+  }
+});
+
 const handleBackfillLocalSegments = async (req: Request, res: Response) => {
   try {
     const rawLimit = req.body?.limit ?? req.query?.limit;
@@ -3340,6 +3371,108 @@ const handleBackfillLocalSegments = async (req: Request, res: Response) => {
 router.post('/segments/local-segments/backfill', handleBackfillLocalSegments);
 // Legacy alias (keep for compatibility)
 router.post('/segments/local-climbs/backfill', handleBackfillLocalSegments);
+
+const handleBackfillManualLocalSegments = async (req: Request, res: Response) => {
+  try {
+    const rawLimit = req.body?.limit ?? req.query?.limit;
+    const parsedLimit = Number(rawLimit);
+    const limit = Number.isFinite(parsedLimit) ? parsedLimit : 100;
+    const full = parseBooleanLike(req.body?.full ?? req.body?.runAll ?? req.query?.full ?? req.query?.runAll) ?? false;
+    const rawBatchSize = req.body?.batchSize ?? req.body?.batch_size ?? req.query?.batchSize ?? req.query?.batch_size;
+    const parsedBatchSize = Number(rawBatchSize);
+    const batchSize = Number.isFinite(parsedBatchSize) ? parsedBatchSize : limit;
+    const includeStrava = parseBooleanLike(req.body?.includeStrava ?? req.body?.include_strava ?? req.query?.includeStrava ?? req.query?.include_strava)
+      ?? true;
+    const includeImported = parseBooleanLike(req.body?.includeImported ?? req.body?.include_imported ?? req.query?.includeImported ?? req.query?.include_imported)
+      ?? true;
+    const includeRide = parseBooleanLike(req.body?.includeRide ?? req.body?.include_ride ?? req.query?.includeRide ?? req.query?.include_ride)
+      ?? true;
+    const includeRun = parseBooleanLike(req.body?.includeRun ?? req.body?.include_run ?? req.query?.includeRun ?? req.query?.include_run)
+      ?? true;
+
+    if (!full) {
+      const result = await backfillManualSegments(db, limit, {
+        includeStrava,
+        includeImported,
+        includeRide,
+        includeRun,
+      });
+      return res.json({
+        ...result,
+        mode: 'single',
+        batchSize: Math.max(1, Math.min(Math.floor(limit), 2000)),
+        filters: {
+          includeStrava,
+          includeImported,
+          includeRide,
+          includeRun,
+        },
+      });
+    }
+
+    const safeBatchSize = Math.max(1, Math.min(Math.floor(batchSize), 2000));
+    const summary = {
+      matchedActivities: 0,
+      processedActivities: 0,
+      activitiesWithMatches: 0,
+      matchedSegments: 0,
+      persistedEfforts: 0,
+      errors: [] as Array<{ activityId: number; message: string }>,
+    };
+
+    let offset = 0;
+    let batches = 0;
+    const maxBatches = 1000;
+
+    while (batches < maxBatches) {
+      const result = await backfillManualSegments(db, safeBatchSize, {
+        includeStrava,
+        includeImported,
+        includeRide,
+        includeRun,
+        offset,
+      });
+
+      batches += 1;
+      summary.matchedActivities += result.matchedActivities;
+      summary.processedActivities += result.processedActivities;
+      summary.activitiesWithMatches += result.activitiesWithMatches;
+      summary.matchedSegments += result.matchedSegments;
+      summary.persistedEfforts += result.persistedEfforts;
+      if (result.errors.length > 0) {
+        summary.errors.push(...result.errors);
+      }
+
+      if (result.matchedActivities < safeBatchSize) {
+        break;
+      }
+      offset += result.matchedActivities;
+    }
+
+    return res.json({
+      ...summary,
+      mode: 'full',
+      batches,
+      batchSize: safeBatchSize,
+      filters: {
+        includeStrava,
+        includeImported,
+        includeRide,
+        includeRun,
+      },
+      warning: batches >= maxBatches ? 'Backfill stopped at max batch guard.' : undefined,
+    });
+  } catch (error: any) {
+    console.error('Error backfilling manual local segments:', error);
+    return res.status(500).json({ error: 'Failed to backfill manual local segments' });
+  }
+};
+
+/**
+ * POST /api/segments/local-segments/manual/backfill
+ * Re-check activities against existing manual local segments.
+ */
+router.post('/segments/local-segments/manual/backfill', handleBackfillManualLocalSegments);
 
 const handleRepairLegacySportTypes = async (_req: Request, res: Response) => {
   try {
