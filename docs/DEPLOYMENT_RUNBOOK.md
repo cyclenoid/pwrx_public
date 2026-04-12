@@ -73,6 +73,7 @@ Expected:
 
 This is not part of the normal public end-user setup.
 This path is operator-owned and not a turnkey public multi-user feature.
+If you are deploying a normal public-core setup, leave this disabled and use file import or Sidecar import instead.
 
 If you intentionally run this advanced operator mode, set:
 

@@ -5,6 +5,7 @@
 - Sidecar runs **outside PWRX**.
 - It fetches Strava activities and turns them into import files for PWRX.
 - Inside PWRX itself, you do **not** need to enable anything for this.
+- Sidecar stays on the normal import path and does **not** require the private native Strava adapter.
 - For advanced users who want automated Strava ingestion, Sidecar is the recommended path.
 - Within the Sidecar options, `import_api` is usually the simplest default. `watch_folder` is the alternative if you deliberately want a watched-folder workflow.
 

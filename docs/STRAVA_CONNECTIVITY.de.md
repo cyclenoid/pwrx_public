@@ -7,6 +7,8 @@ Wichtiger Standard:
 - oeffentlicher Normalbetrieb = Datei-Import (`FIT/GPX/TCX`, einzeln oder ZIP)
 - keine API-Zugaenge noetig
 - dieses Dokument beschreibt optionale erweiterte Wege
+- der offizielle Public-Supportpfad bleibt manueller Datei-Import oder ein Sidecar, das in die Import-Pipeline schreibt
+- native Sync-/Backfill-/Club-Funktionen gehoeren nicht zum normalen Public-Endnutzer-Standard
 
 Compliance-Hinweis:
 - dieses Dokument ist technische Orientierung, keine Rechtsberatung
@@ -39,6 +41,11 @@ Empfohlener Standard innerhalb von Weg B:
 - nutze `import_api`, wenn Du das einfachste Setup willst
 - nutze `watch_folder` nur, wenn Du bewusst ueber einen Watch Folder arbeiten willst
 
+Betriebshinweis:
+- dieser Weg verhaelt sich weiterhin wie Public-Core-PWRX
+- Aktivitaeten kommen ueber die normale Import-Pipeline herein
+- Analytics-Refresh nach dem Import ist Teil des unterstuetzten Public-Verhaltens
+
 Vorteile:
 - unabhaengig von internen Adapter-Interfaces
 - besser update-faehig bei PWRX-Updates
@@ -61,6 +68,11 @@ Scope dieser Starter-Loesung:
 ## Weg C: Native Adapter-Integration (volle Integration, hoher Aufwand)
 
 PWRX kann ein Strava-Adapter-Modul dynamisch laden.
+
+Wichtig:
+- das ist ein betreibergetriebener Advanced-Pfad
+- in der aktuellen Praxis ist das vor allem fuer ausgewaehlte private Betreiber gedacht, nicht fuer den normalen Public-Nutzerpfad
+- wenn Du keine nativen Sync-/Backfill-/Club-Faehigkeiten brauchst, bleib bei Weg A oder Weg B
 
 Noetige Variablen:
 - `ADAPTER_STRAVA_ENABLED=true`

@@ -8,6 +8,7 @@ Simple orientation:
 - recommended advanced automation path = Sidecar
 - recommended default within Sidecar = `import_api`
 - `watch_folder` is the alternative if you deliberately want a watched-folder workflow
+- this stays on the public import path and does not require the private native sync adapter
 
 If you want a less technical walkthrough first:
 - `docs/STRAVA_SIDECAR_SIMPLE_GUIDE.de.md` (German)
@@ -32,6 +33,11 @@ Script:
 - either:
   - writes them into a watch folder (`watch_folder` mode), or
   - uploads them to PWRX import API (`import_api` mode)
+
+What it does not do:
+- it does not enable native PWRX sync/backfill/club features
+- it does not require `ADAPTER_STRAVA_ENABLED=true`
+- it does not depend on the private adapter repository
 
 ## 1) Configure
 
