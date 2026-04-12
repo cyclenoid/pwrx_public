@@ -79,6 +79,47 @@ function formatSyncError(error: any): string {
   return error?.message || 'Unknown error';
 }
 
+function formatRateLimitSnapshot(snapshot: any): string {
+  if (!snapshot) return '';
+  const segments: string[] = [];
+  const pushBucket = (label: string, bucket: any) => {
+    if (!bucket || !Number.isFinite(bucket.remaining) || !Number.isFinite(bucket.limit)) return;
+    segments.push(`${label}=${bucket.remaining}/${bucket.limit}`);
+  };
+  pushBucket('read15m', snapshot?.read?.short);
+  pushBucket('readDaily', snapshot?.read?.long);
+  pushBucket('overall15m', snapshot?.overall?.short);
+  pushBucket('overallDaily', snapshot?.overall?.long);
+  return segments.join(', ');
+}
+
+async function ensureRateLimitBudget(
+  syncAdapter: any,
+  workload: 'activity' | 'backfill' | 'club' | 'initial',
+  reason: string
+): Promise<boolean> {
+  if (!syncAdapter || typeof syncAdapter.getRateLimitGuard !== 'function') {
+    return true;
+  }
+
+  try {
+    const guard = await syncAdapter.getRateLimitGuard(workload, true);
+    const snapshotDetails = formatRateLimitSnapshot(guard?.snapshot);
+    if (!guard?.allowed) {
+      const detailText = snapshotDetails ? ` (${snapshotDetails})` : '';
+      console.log(`⏭️  Skip ${reason}: Strava API budget too low: ${guard?.reason || 'insufficient budget'}${detailText}`);
+      return false;
+    }
+    if (snapshotDetails) {
+      console.log(`📊 Strava API budget before ${reason}: ${snapshotDetails}`);
+    }
+  } catch (error: any) {
+    console.warn(`⚠️  Rate limit guard check failed for ${reason}: ${error?.message || error}`);
+  }
+
+  return true;
+}
+
 // Middleware
 app.use(compression()); // Enable gzip compression for all responses
 app.use(cors());
@@ -224,6 +265,10 @@ async function runSyncPipeline(
     let itemsProcessed = 0;
 
     try {
+      const allowed = await ensureRateLimitBudget(syncAdapter, mode, reason);
+      if (!allowed) {
+        return;
+      }
       syncLogId = await db.startSyncLog();
 
       if (mode === 'activity') {
@@ -370,6 +415,12 @@ async function runInitialSync(settings: SyncSettings, userId: number, days: numb
     ];
 
     try {
+      const allowed = await ensureRateLimitBudget(syncAdapter, 'initial', 'initial sync');
+      if (!allowed) {
+        await setUserSetting(db, userId, 'sync_initial_status', 'skipped');
+        await setUserSetting(db, userId, 'sync_initial_last_error', 'Skipped: Strava API budget too low');
+        return;
+      }
       await setUserSetting(db, userId, 'sync_initial_status', 'running');
       await setUserSetting(db, userId, 'sync_initial_started_at', new Date().toISOString());
 
@@ -433,6 +484,16 @@ async function runClubStatsExport(reason: string, days: number = 30): Promise<vo
     if (!config?.clubId || !config?.exportUrl || !config?.exportTokenConfigured) {
       console.log(`⏭️  Skip ${reason}: club export not fully configured`);
       return;
+    }
+
+    const syncAdapter = adapterRegistry.createSyncClient();
+    try {
+      const allowed = await ensureRateLimitBudget(syncAdapter, 'club', reason);
+      if (!allowed) {
+        return;
+      }
+    } finally {
+      await syncAdapter?.close?.();
     }
 
     console.log(`📤 Starting ${reason}...`);
