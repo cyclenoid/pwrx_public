@@ -22,7 +22,35 @@ export interface AdapterSyncBackfillSegmentsResult {
   rateLimited: boolean;
 }
 
+export interface AdapterRateLimitBucket {
+  usage: number;
+  limit: number;
+  remaining: number;
+}
+
+export interface AdapterRateLimitSnapshot {
+  capturedAt: string;
+  source?: string | null;
+  overall?: {
+    short?: AdapterRateLimitBucket | null;
+    long?: AdapterRateLimitBucket | null;
+  } | null;
+  read?: {
+    short?: AdapterRateLimitBucket | null;
+    long?: AdapterRateLimitBucket | null;
+  } | null;
+}
+
+export interface AdapterRateLimitGuardResult {
+  allowed: boolean;
+  workload: string;
+  reason: string;
+  budget?: Record<string, number> | null;
+  snapshot?: AdapterRateLimitSnapshot | null;
+}
+
 export interface AdapterSyncClient {
+  getRateLimitGuard?: (workload: string, refresh: boolean) => Promise<AdapterRateLimitGuardResult>;
   syncRecentActivities: (days: number, includeStreams: boolean, includeSegments: boolean) => Promise<number>;
   backfillStreams: (limit: number) => Promise<number>;
   backfillSegments: (limit: number) => Promise<AdapterSyncBackfillSegmentsResult>;
