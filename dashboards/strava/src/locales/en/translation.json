@@ -1155,7 +1155,7 @@
         "efficiency": "m/min per bpm"
       },
       "trendTitle": "Normalized pace trend",
-      "trendSubtitle": "Monthly medians. Lower is better.",
+      "trendSubtitle": "Monthly medians; months with fewer than 3 runs are hidden. Lower is better.",
       "tooltip": {
         "pace150": "Pace @150 bpm",
         "efficiency": "Efficiency",

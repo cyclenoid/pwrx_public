@@ -16,6 +16,7 @@ import { useTranslation } from 'react-i18next'
 
 export function Training() {
   const MIN_CYCLING_TREND_MONTH_SAMPLES = 3
+  const MIN_RUNNING_TREND_MONTH_SAMPLES = 3
   const { t, i18n } = useTranslation()
   const { resolvedTheme } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -185,14 +186,14 @@ export function Training() {
         return {
           month,
           label: formatMonthYear(`${month}-01`),
-          pace150: summary.medianNormalizedPace150,
+          pace150: summary.sampleCount >= MIN_RUNNING_TREND_MONTH_SAMPLES ? summary.medianNormalizedPace150 : null,
           efficiency: summary.medianEfficiency,
           avgHr: summary.avgHr,
           sampleCount: summary.sampleCount,
         }
       })
       .filter((item) => item.pace150 !== null)
-  }, [runningPerformanceSamples, dateLocale])
+  }, [runningPerformanceSamples, dateLocale, MIN_RUNNING_TREND_MONTH_SAMPLES])
 
   const runningPaceChartData = useMemo(() => {
     if (!runningActivities?.activities?.length) return []

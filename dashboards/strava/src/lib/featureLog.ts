@@ -44,12 +44,12 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
       de: [
         "Leistung @150 bpm wird bevorzugt aus geglaetteten Watt-/Puls-Fenstern nahe 150 bpm geschaetzt; falls dafuer zu wenig Daten vorhanden sind, greift Normalized Power als Fallback.",
         "HF-Zonen nutzen nun LTHR, sofern gepflegt, sonst HF-Reserve mit Ruhepuls; die verwendete Basis wird direkt in der Trainingskarte angezeigt.",
-        "Der Cycling-Trend startet bei 0, behandelt fehlende Stream-Werte nicht mehr als 0 Watt und blendet Monate mit weniger als drei verwertbaren Fahrten aus.",
+        "Rad- und Lauftrends blenden Monate mit weniger als drei verwertbaren Einheiten aus; der Cycling-Trend behandelt fehlende Stream-Werte nicht mehr als 0 Watt.",
       ],
       en: [
         "Power @150 bpm is estimated from smoothed power/heart-rate windows near 150 bpm first; if there is not enough data, normalized power is used as the fallback.",
         "HR zones now use LTHR when available, otherwise heart-rate reserve with resting HR; the selected basis is shown directly in the training card.",
-        "The cycling trend now starts at 0, no longer treats missing stream values as 0 watts, and hides months with fewer than three usable rides.",
+        "Cycling and running trends hide months with fewer than three usable sessions; the cycling trend no longer treats missing stream values as 0 watts.",
       ],
     },
   },
