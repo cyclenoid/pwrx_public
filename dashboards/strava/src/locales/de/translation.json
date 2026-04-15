@@ -116,7 +116,7 @@
       "title": "Deine Serie",
       "weeks": "Wochen",
       "subtitle": "Aktive Wochenserie 🔥",
-      "ctlLabel": "CTL Fitness",
+      "ctlLabel": "CTL Gesamt",
       "tsbLabel": "TSB",
       "ctlNoData": "CTL ohne FTP nicht verfügbar",
       "ctlTrend7d": "7-Tage-Trend",
@@ -125,7 +125,7 @@
       "formBalanced": "Ausgeglichen",
       "formTired": "Belastet",
       "streakSubShort": "Wochen aktiv",
-      "ctlSubShort": "Aktuelle Fitness"
+      "ctlSubShort": "Rad + Lauf"
     },
     "calendar": {
       "prevMonth": "Vorheriger Monat",

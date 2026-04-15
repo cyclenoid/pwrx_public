@@ -116,7 +116,7 @@
       "title": "Your streak",
       "weeks": "weeks",
       "subtitle": "Active week streak 🔥",
-      "ctlLabel": "CTL Fitness",
+      "ctlLabel": "CTL Total",
       "tsbLabel": "TSB",
       "ctlNoData": "CTL unavailable without FTP",
       "ctlTrend7d": "7-day trend",
@@ -125,7 +125,7 @@
       "formBalanced": "Balanced",
       "formTired": "Loaded",
       "streakSubShort": "Active weeks",
-      "ctlSubShort": "Current fitness"
+      "ctlSubShort": "Ride + run"
     },
     "calendar": {
       "prevMonth": "Previous month",

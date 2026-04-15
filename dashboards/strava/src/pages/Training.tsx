@@ -1,5 +1,5 @@
 import { useEffect, useState, useMemo } from 'react'
-import { keepPreviousData, useQuery } from '@tanstack/react-query'
+import { useQuery } from '@tanstack/react-query'
 import { Link, useSearchParams } from 'react-router-dom'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
 import { getTrainingLoadPMC, getHeartRateZones, getWeekdayDistribution, getMonthlyComparison, getTimeOfDayDistribution, getFTP, getRunningActivities, getBulkPowerMetrics } from '../lib/api'
@@ -252,14 +252,13 @@ export function Training() {
 
   // Fetch power metrics for the selected analysis window
   const { data: cyclingPowerMetrics, isFetching: fetchingCyclingPowerMetrics } = useQuery({
-    queryKey: ['cycling-power-metrics', activityType, analysisStartDate],
+    queryKey: ['cycling-power-metrics', activityType, analysisTimePeriod, analysisStartDate],
     queryFn: () => getBulkPowerMetrics({
       startDate: analysisStartDate,
       type: activityType || undefined,
     }),
     staleTime: ANALYTICS_STALE_MS,
     enabled: activityType === 'Ride',
-    placeholderData: keepPreviousData,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   })

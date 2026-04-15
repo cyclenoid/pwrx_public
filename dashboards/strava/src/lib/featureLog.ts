@@ -44,13 +44,13 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
       de: [
         "Leistung @150 bpm wird bevorzugt aus geglaetteten Watt-/Puls-Fenstern nahe 150 bpm geschaetzt; falls dafuer zu wenig Daten vorhanden sind, greift Normalized Power als Fallback.",
         "HF-Zonen nutzen nun LTHR, sofern gepflegt, sonst HF-Reserve mit Ruhepuls; die verwendete Basis wird direkt in der Trainingskarte angezeigt.",
-        "PMC hat jetzt die Scopes Gesamt, Rad und Laufen; Power-TSS wird bevorzugt, HF-TSS fuellt Outdoor-Fahrten ohne Powermeter und Laeufe.",
+        "PMC hat jetzt die Scopes Gesamt, Rad und Laufen; Dashboard und Training starten beide mit Gesamt-CTL, Power-TSS wird bevorzugt und HF-TSS fuellt Outdoor-Fahrten ohne Powermeter sowie Laeufe.",
         "Rad- und Lauftrends blenden Monate mit weniger als drei verwertbaren Einheiten aus; der Cycling-Trend behandelt fehlende Stream-Werte nicht mehr als 0 Watt.",
       ],
       en: [
         "Power @150 bpm is estimated from smoothed power/heart-rate windows near 150 bpm first; if there is not enough data, normalized power is used as the fallback.",
         "HR zones now use LTHR when available, otherwise heart-rate reserve with resting HR; the selected basis is shown directly in the training card.",
-        "PMC now has Total, Cycling, and Running scopes; power TSS is preferred, while HR-TSS fills outdoor rides without power meters and runs.",
+        "PMC now has Total, Cycling, and Running scopes; dashboard and training both start with total CTL, power TSS is preferred, and HR-TSS fills outdoor rides without power meters plus runs.",
         "Cycling and running trends hide months with fewer than three usable sessions; the cycling trend no longer treats missing stream values as 0 watts.",
       ],
     },

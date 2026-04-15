@@ -176,14 +176,12 @@ export function Dashboard() {
   })
 
   const { data: dashboardTrainingLoad } = useQuery({
-    queryKey: ['dashboard-training-load', ninetyDaysAgo, todayIso, ftpData?.ftp],
+    queryKey: ['dashboard-training-load', 'all', ninetyDaysAgo, todayIso],
     queryFn: () =>
       getTrainingLoadPMC({
         startDate: ninetyDaysAgo,
         endDate: todayIso,
-        type: 'Ride',
       }),
-    enabled: !!ftpData?.ftp,
     staleTime: 60 * 60 * 1000,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
