@@ -21,6 +21,7 @@ export interface UserProfile {
     ftp?: string
     max_heartrate?: string
     resting_heartrate?: string
+    lactate_threshold_heartrate?: string
     weekly_distance_goal?: string
     yearly_distance_goal?: string
     weekly_distance_goal_ride?: string
@@ -58,6 +59,7 @@ export interface UserSettings {
   ftp?: string
   max_heartrate?: string
   resting_heartrate?: string
+  lactate_threshold_heartrate?: string
   weekly_distance_goal?: string
   yearly_distance_goal?: string
   weekly_distance_goal_ride?: string

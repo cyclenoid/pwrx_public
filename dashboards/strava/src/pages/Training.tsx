@@ -15,12 +15,13 @@ import { TrainingLoadChart } from '../components/charts/TrainingLoadChart'
 import { useTranslation } from 'react-i18next'
 
 export function Training() {
+  const MIN_CYCLING_TREND_MONTH_SAMPLES = 3
   const { t, i18n } = useTranslation()
   const { resolvedTheme } = useTheme()
   const [searchParams, setSearchParams] = useSearchParams()
   const requestedActivityType = searchParams.get('type') === 'Run' ? 'Run' : 'Ride'
   const [activityType, setActivityType] = useState<string>(requestedActivityType) // 'Ride' or 'Run' - no 'All' option
-  const [analysisTimePeriod, setAnalysisTimePeriod] = useState<number>(0) // 0 = All Time
+  const [analysisTimePeriod, setAnalysisTimePeriod] = useState<number>(6) // 6 = recent training context
   const ANALYTICS_STALE_MS = 60 * 60 * 1000
 
   useEffect(() => {
@@ -283,6 +284,8 @@ export function Training() {
         distanceKm: (activity.distance_m || 0) / 1000,
         avgHr: activity.average_heartrate,
         avgPower: activity.average_power,
+        normalizedPower: activity.normalized_power,
+        powerAt150Bpm: activity.power_at_150bpm,
         decouplingPct: activity.decoupling_pct,
         durabilityPct: activity.durability_pct,
       })),
@@ -311,14 +314,13 @@ export function Training() {
         return {
           month,
           label: formatMonthYear(`${month}-01`),
-          power150: summary.medianNormalizedPower150,
+          power150: summary.sampleCount >= MIN_CYCLING_TREND_MONTH_SAMPLES ? summary.medianNormalizedPower150 : null,
           efficiency: summary.medianEfficiency,
           avgHr: summary.avgHr,
           sampleCount: summary.sampleCount,
         }
       })
-      .filter((item) => item.power150 !== null)
-  }, [cyclingPerformanceSamples, dateLocale])
+  }, [cyclingPerformanceSamples, dateLocale, MIN_CYCLING_TREND_MONTH_SAMPLES])
 
   // Legacy chartColors for backward compatibility
   const chartColors = {
@@ -546,6 +548,13 @@ export function Training() {
           {t('training.hrZones.activities', { count: hrZones?.activities_analyzed ?? 0 })}
           <span className="mx-1.5">•</span>
           {formatMinutes(hrZones?.total_minutes ?? 0)}
+          {hrZones?.max_hr_used ? (
+            <>
+              <span className="mx-1.5">•</span>
+              {t('training.hrZones.maxHrUsed', { value: hrZones.max_hr_used })}
+              {hrZones.zone_basis ? ` (${t(`training.hrZones.basis.${hrZones.zone_basis}`)})` : null}
+            </>
+          ) : null}
         </CardDescription>
       </CardHeader>
       <CardContent className="pt-0">
@@ -977,7 +986,7 @@ export function Training() {
                         </div>
                       </div>
 
-                      {cyclingPerformanceTrendData.length > 1 && (
+                      {cyclingPerformanceTrendData.filter((item) => item.power150 !== null).length > 1 && (
                         <div className="rounded-xl border border-border/60 bg-background/40 p-3">
                           <div className="mb-3">
                             <div className="text-sm font-medium">{t('training.cyclingPerformance.trendTitle')}</div>
@@ -990,7 +999,7 @@ export function Training() {
                               <YAxis
                                 stroke={chartColors.text}
                                 fontSize={11}
-                                domain={['auto', 'auto']}
+                                domain={[0, 'auto']}
                                 label={{ value: t('training.cyclingPerformance.axis'), angle: -90, position: 'insideLeft', style: { fill: chartColors.text } }}
                               />
                               <Tooltip

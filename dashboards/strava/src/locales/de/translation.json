@@ -1097,7 +1097,13 @@
     "hrZones": {
       "title": "Herzfrequenz-Zonen",
       "subtitle": "Zeitverteilung über HF-Zonen (letzte {{months}} Monate)",
-      "activities": "{{count}} Aktivitäten"
+      "activities": "{{count}} Aktivitäten",
+      "maxHrUsed": "Max HF {{value}} bpm",
+      "basis": {
+        "lthr": "LTHR",
+        "hrr": "HF-Reserve",
+        "max_hr": "MaxHF"
+      }
     },
     "pace": {
       "title": "Pace pro Lauf",
@@ -1176,8 +1182,8 @@
         "power": "Watt",
         "efficiency": "W pro bpm"
       },
-      "trendTitle": "Trend der normalisierten Leistung",
-      "trendSubtitle": "Monatliche Medianwerte. Höher ist besser.",
+      "trendTitle": "Trend Leistung @150 bpm",
+      "trendSubtitle": "Monatliche Medianwerte; Monate mit weniger als 3 Fahrten werden ausgeblendet.",
       "tooltip": {
         "power150": "Leistung @150 bpm",
         "efficiency": "Effizienz",
@@ -1194,7 +1200,7 @@
         "watch": "Prüfen",
         "noData": "N/A"
       },
-      "footnote": "Einbezogen werden nur Fahrten mit Herzfrequenz und Leistung sowie mindestens 30 Minuten Dauer. Cardiac Drift nutzt Fahrten ab 45 Minuten, Durability Fahrten ab 60 Minuten."
+      "footnote": "Einbezogen werden nur Fahrten mit Herzfrequenz und Leistung sowie mindestens 30 Minuten Dauer. Leistung @150 bpm nutzt bevorzugt gekoppelte Watt-/Puls-Streams nahe 150 bpm, sonst Normalized Power als Fallback. Cardiac Drift nutzt Fahrten ab 45 Minuten, Durability Fahrten ab 60 Minuten."
     },
     "trainingLoad": {
       "requiredTitle": "FTP erforderlich für TSS-Analyse",
@@ -1331,7 +1337,8 @@
       "weight": "Körpergewicht",
       "ftp": "FTP",
       "maxHr": "Max Herzfrequenz",
-      "restingHr": "Ruhepuls"
+      "restingHr": "Ruhepuls",
+      "lthr": "Laktatschwellenpuls"
     },
     "placeholders": {
       "firstname": "Dein Vorname",

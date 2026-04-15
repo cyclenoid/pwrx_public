@@ -603,6 +603,210 @@ type BulkPowerMetricsQuery = {
   type: string | null;
 };
 
+type TargetHrPowerEstimate = {
+  power: number | null;
+  sampleSeconds: number;
+  method: 'target_window' | 'regression' | null;
+};
+
+const medianNumber = (values: number[]): number | null => {
+  if (!values.length) return null;
+  const sorted = [...values].sort((a, b) => a - b);
+  const middle = Math.floor(sorted.length / 2);
+  return sorted.length % 2 === 0
+    ? (sorted[middle - 1] + sorted[middle]) / 2
+    : sorted[middle];
+};
+
+const estimatePowerAtHeartRate = (
+  wattsInput?: number[] | null,
+  heartrateInput?: number[] | null,
+  timeInput?: number[] | null,
+  targetHr: number = 150
+): TargetHrPowerEstimate => {
+  const watts = Array.isArray(wattsInput) ? wattsInput : [];
+  const heartrate = Array.isArray(heartrateInput) ? heartrateInput : [];
+  const time = Array.isArray(timeInput) ? timeInput : [];
+  const length = Math.min(watts.length, heartrate.length, time.length || watts.length);
+
+  if (length < 120) {
+    return { power: null, sampleSeconds: 0, method: null };
+  }
+
+  const points: Array<{ time: number; watts: number; hr: number }> = [];
+  for (let index = 0; index < length; index += 1) {
+    const wattsValue = Number(watts[index]);
+    const hrValue = Number(heartrate[index]);
+    const timeValue = time.length ? Number(time[index]) : index;
+
+    if (!Number.isFinite(wattsValue) || !Number.isFinite(hrValue) || !Number.isFinite(timeValue)) continue;
+    if (wattsValue <= 0 || wattsValue > 1200 || hrValue < 70 || hrValue > 220) continue;
+
+    points.push({ time: timeValue, watts: wattsValue, hr: hrValue });
+  }
+
+  if (points.length < 120) {
+    return { power: null, sampleSeconds: 0, method: null };
+  }
+
+  const smoothed: Array<{ hr: number; watts: number; seconds: number }> = [];
+  const windowSeconds = 60;
+  let start = 0;
+  let sumWatts = 0;
+  let sumHr = 0;
+
+  for (let end = 0; end < points.length; end += 1) {
+    sumWatts += points[end].watts;
+    sumHr += points[end].hr;
+
+    while (points[end].time - points[start].time > windowSeconds) {
+      sumWatts -= points[start].watts;
+      sumHr -= points[start].hr;
+      start += 1;
+    }
+
+    const count = end - start + 1;
+    const duration = points[end].time - points[start].time;
+    if (count < 20 || duration < 45) continue;
+
+    const nextTime = points[end + 1]?.time;
+    const previousTime = points[end - 1]?.time;
+    const seconds = Number.isFinite(nextTime)
+      ? Math.max(1, Math.min(10, Number(nextTime) - points[end].time))
+      : Number.isFinite(previousTime)
+        ? Math.max(1, Math.min(10, points[end].time - Number(previousTime)))
+        : 1;
+
+    smoothed.push({
+      hr: sumHr / count,
+      watts: sumWatts / count,
+      seconds,
+    });
+  }
+
+  if (smoothed.length < 30) {
+    return { power: null, sampleSeconds: 0, method: null };
+  }
+
+  const targetWindow = smoothed.filter((point) => Math.abs(point.hr - targetHr) <= 5);
+  const targetSampleSeconds = Math.round(targetWindow.reduce((sum, point) => sum + point.seconds, 0));
+  if (targetWindow.length >= 30 && targetSampleSeconds >= 180) {
+    const directPower = medianNumber(targetWindow.map((point) => point.watts));
+    return {
+      power: directPower !== null ? Math.round(directPower) : null,
+      sampleSeconds: targetSampleSeconds,
+      method: directPower !== null ? 'target_window' : null,
+    };
+  }
+
+  const regressionPoints = smoothed.filter((point) => point.hr >= 115 && point.hr <= 175);
+  const regressionSampleSeconds = Math.round(regressionPoints.reduce((sum, point) => sum + point.seconds, 0));
+  if (regressionPoints.length < 60 || regressionSampleSeconds < 600) {
+    return { power: null, sampleSeconds: targetSampleSeconds, method: null };
+  }
+
+  const minHr = Math.min(...regressionPoints.map((point) => point.hr));
+  const maxHr = Math.max(...regressionPoints.map((point) => point.hr));
+  if (maxHr - minHr < 8 || targetHr < minHr - 3 || targetHr > maxHr + 3) {
+    return { power: null, sampleSeconds: targetSampleSeconds, method: null };
+  }
+
+  const meanHr = regressionPoints.reduce((sum, point) => sum + point.hr, 0) / regressionPoints.length;
+  const meanPower = regressionPoints.reduce((sum, point) => sum + point.watts, 0) / regressionPoints.length;
+  const variance = regressionPoints.reduce((sum, point) => sum + ((point.hr - meanHr) ** 2), 0);
+  if (variance <= 0) {
+    return { power: null, sampleSeconds: targetSampleSeconds, method: null };
+  }
+
+  const covariance = regressionPoints.reduce(
+    (sum, point) => sum + ((point.hr - meanHr) * (point.watts - meanPower)),
+    0
+  );
+  const slope = covariance / variance;
+  const intercept = meanPower - (slope * meanHr);
+  const estimatedPower = intercept + (slope * targetHr);
+
+  if (!Number.isFinite(estimatedPower) || estimatedPower < 50 || estimatedPower > 700) {
+    return { power: null, sampleSeconds: targetSampleSeconds, method: null };
+  }
+
+  return {
+    power: Math.round(estimatedPower),
+    sampleSeconds: regressionSampleSeconds,
+    method: 'regression',
+  };
+};
+
+type HeartRateZoneBasis = 'lthr' | 'hrr' | 'max_hr';
+
+type HeartRateZoneConfig = {
+  basis: HeartRateZoneBasis;
+  maxHr: number;
+  restingHr: number | null;
+  lthr: number | null;
+  zones: Record<string, { name: string; min: number; max: number; minutes: number; color: string }>;
+};
+
+const buildHeartRateZoneConfig = (
+  maxHr: number,
+  restingHr: number | null,
+  lthr: number | null
+): HeartRateZoneConfig => {
+  if (lthr && Number.isFinite(lthr) && lthr >= 120 && lthr <= 210) {
+    return {
+      basis: 'lthr',
+      maxHr,
+      restingHr,
+      lthr,
+      zones: {
+        zone1: { name: 'Recovery', min: 0, max: Math.round(lthr * 0.81), minutes: 0, color: '#94a3b8' },
+        zone2: { name: 'Endurance', min: Math.round(lthr * 0.81), max: Math.round(lthr * 0.89), minutes: 0, color: '#22c55e' },
+        zone3: { name: 'Tempo', min: Math.round(lthr * 0.89), max: Math.round(lthr * 0.94), minutes: 0, color: '#eab308' },
+        zone4: { name: 'Threshold', min: Math.round(lthr * 0.94), max: Math.round(lthr * 1.00), minutes: 0, color: '#f97316' },
+        zone5: { name: 'VO2max', min: Math.round(lthr * 1.00), max: Math.round(lthr * 1.20), minutes: 0, color: '#ef4444' },
+      },
+    };
+  }
+
+  if (
+    restingHr &&
+    Number.isFinite(restingHr) &&
+    restingHr >= 35 &&
+    restingHr <= 100 &&
+    maxHr > restingHr
+  ) {
+    const reserve = maxHr - restingHr;
+    const fromReserve = (fraction: number) => Math.round(restingHr + (reserve * fraction));
+    return {
+      basis: 'hrr',
+      maxHr,
+      restingHr,
+      lthr,
+      zones: {
+        zone1: { name: 'Recovery', min: 0, max: fromReserve(0.60), minutes: 0, color: '#94a3b8' },
+        zone2: { name: 'Endurance', min: fromReserve(0.60), max: fromReserve(0.70), minutes: 0, color: '#22c55e' },
+        zone3: { name: 'Tempo', min: fromReserve(0.70), max: fromReserve(0.80), minutes: 0, color: '#eab308' },
+        zone4: { name: 'Threshold', min: fromReserve(0.80), max: fromReserve(0.90), minutes: 0, color: '#f97316' },
+        zone5: { name: 'VO2max', min: fromReserve(0.90), max: fromReserve(1.10), minutes: 0, color: '#ef4444' },
+      },
+    };
+  }
+
+  return {
+    basis: 'max_hr',
+    maxHr,
+    restingHr,
+    lthr,
+    zones: {
+      zone1: { name: 'Recovery', min: 0, max: Math.round(maxHr * 0.60), minutes: 0, color: '#94a3b8' },
+      zone2: { name: 'Endurance', min: Math.round(maxHr * 0.60), max: Math.round(maxHr * 0.70), minutes: 0, color: '#22c55e' },
+      zone3: { name: 'Tempo', min: Math.round(maxHr * 0.70), max: Math.round(maxHr * 0.80), minutes: 0, color: '#eab308' },
+      zone4: { name: 'Threshold', min: Math.round(maxHr * 0.80), max: Math.round(maxHr * 0.90), minutes: 0, color: '#f97316' },
+      zone5: { name: 'VO2max', min: Math.round(maxHr * 0.90), max: Math.round(maxHr * 1.10), minutes: 0, color: '#ef4444' },
+    },
+  };
+};
+
 const buildBulkPowerMetricsActivityQuery = (query: BulkPowerMetricsQuery): { activityQuery: string; params: any[] } => {
   let activityQuery = `
       SELECT a.strava_activity_id, a.name, a.start_date, a.moving_time, a.distance, a.average_heartrate, a.average_watts, a.type
@@ -687,6 +891,12 @@ const computeBulkPowerMetricsPayload = async (
       heartrate: hrStream?.data,
       time: timeStream?.data,
     });
+    const powerAt150Bpm = estimatePowerAtHeartRate(
+      wattsStream.data,
+      hrStream?.data,
+      timeStream?.data,
+      150
+    );
 
     results.push({
       activity_id: activity.strava_activity_id,
@@ -698,6 +908,9 @@ const computeBulkPowerMetricsPayload = async (
       average_heartrate: activity.average_heartrate,
       average_power: metrics.average_power,
       normalized_power: metrics.normalized_power,
+      power_at_150bpm: powerAt150Bpm.power,
+      power_at_150bpm_sample_seconds: powerAt150Bpm.sampleSeconds,
+      power_at_150bpm_method: powerAt150Bpm.method,
       intensity_factor: metrics.intensity_factor,
       training_stress_score: metrics.training_stress_score,
       decoupling_pct: enduranceMetrics.decouplingPct,
@@ -6012,7 +6225,7 @@ router.get('/analytics/heart-rate-zones', async (req: Request, res: Response) =>
 
     const settingsResult = await db.query(`
       SELECT key, value FROM strava.user_settings
-      WHERE key IN ('max_heartrate', 'resting_heartrate')
+      WHERE key IN ('max_heartrate', 'resting_heartrate', 'lactate_threshold_heartrate')
     `);
     const settings = Object.fromEntries(settingsResult.rows.map((row: any) => [row.key, row.value]));
 
@@ -6048,19 +6261,47 @@ router.get('/analytics/heart-rate-zones', async (req: Request, res: Response) =>
     `, params);
 
     const configuredMaxHr = parseFloat(settings.max_heartrate || '0');
-    const observedMaxHr = activitiesResult.rows.reduce((max: number, activity: any) => {
+    const configuredRestingHr = parseFloat(settings.resting_heartrate || '0');
+    const configuredLthr = parseFloat(settings.lactate_threshold_heartrate || '0');
+    const periodObservedMaxHr = activitiesResult.rows.reduce((max: number, activity: any) => {
       const value = Number(activity.max_heartrate);
       return Number.isFinite(value) && value > max ? value : max;
     }, 0);
-    const maxHr = configuredMaxHr > 0 ? configuredMaxHr : observedMaxHr > 0 ? observedMaxHr : 190;
 
-    const zones = {
-      zone1: { name: 'Recovery', min: 0, max: Math.round(maxHr * 0.60), minutes: 0, color: '#94a3b8' },
-      zone2: { name: 'Endurance', min: Math.round(maxHr * 0.60), max: Math.round(maxHr * 0.70), minutes: 0, color: '#22c55e' },
-      zone3: { name: 'Tempo', min: Math.round(maxHr * 0.70), max: Math.round(maxHr * 0.80), minutes: 0, color: '#eab308' },
-      zone4: { name: 'Threshold', min: Math.round(maxHr * 0.80), max: Math.round(maxHr * 0.90), minutes: 0, color: '#f97316' },
-      zone5: { name: 'VO2max', min: Math.round(maxHr * 0.90), max: Math.round(maxHr * 1.10), minutes: 0, color: '#ef4444' },
-    };
+    let typeFilterForMaxHr = '';
+    const maxHrParams: any[] = [];
+    if (type) {
+      if (type === 'Ride') {
+        typeFilterForMaxHr = "AND a.type IN ('Ride', 'VirtualRide', 'GravelRide', 'EBikeRide', 'MountainBikeRide')";
+      } else if (type === 'Run') {
+        typeFilterForMaxHr = "AND a.type IN ('Run', 'VirtualRun', 'TrailRun')";
+      } else {
+        typeFilterForMaxHr = 'AND a.type = $1';
+        maxHrParams.push(type);
+      }
+    }
+
+    const allTimeMaxHrResult = await db.query(`
+      SELECT COALESCE(MAX(a.max_heartrate), 0) AS max_heartrate
+      FROM strava.activities a
+      WHERE a.average_heartrate IS NOT NULL
+        ${typeFilterForMaxHr}
+    `, maxHrParams);
+    const allTimeObservedMaxHr = Number(allTimeMaxHrResult.rows[0]?.max_heartrate || 0);
+    const plausibleObservedMaxHr = allTimeObservedMaxHr >= 180 ? allTimeObservedMaxHr : 0;
+    const maxHr = configuredMaxHr > 0
+      ? configuredMaxHr
+      : plausibleObservedMaxHr > 0
+        ? plausibleObservedMaxHr
+        : periodObservedMaxHr >= 180
+          ? periodObservedMaxHr
+          : 190;
+    const zoneConfig = buildHeartRateZoneConfig(
+      maxHr,
+      configuredRestingHr > 0 ? configuredRestingHr : null,
+      configuredLthr > 0 ? configuredLthr : null
+    );
+    const zones = zoneConfig.zones;
 
     let totalDataPoints = 0;
     let activitiesWithStreams = 0;
@@ -6105,6 +6346,9 @@ router.get('/analytics/heart-rate-zones', async (req: Request, res: Response) =>
       total_minutes: totalMinutes,
       activities_analyzed: activitiesWithStreams,
       max_hr_used: maxHr,
+      resting_hr_used: zoneConfig.restingHr,
+      lthr_used: zoneConfig.lthr,
+      zone_basis: zoneConfig.basis,
     });
   } catch (error: any) {
     console.error('Error fetching HR zones:', error);

@@ -1097,7 +1097,13 @@
     "hrZones": {
       "title": "Heart Rate Zones",
       "subtitle": "Time distribution across HR zones (last {{months}} months)",
-      "activities": "{{count}} activities"
+      "activities": "{{count}} activities",
+      "maxHrUsed": "Max HR {{value}} bpm",
+      "basis": {
+        "lthr": "LTHR",
+        "hrr": "HR reserve",
+        "max_hr": "Max HR"
+      }
     },
     "pace": {
       "title": "Pace by run",
@@ -1176,8 +1182,8 @@
         "power": "W",
         "efficiency": "W per bpm"
       },
-      "trendTitle": "Normalized power trend",
-      "trendSubtitle": "Monthly medians. Higher is better.",
+      "trendTitle": "Power @150 bpm trend",
+      "trendSubtitle": "Monthly medians; months with fewer than 3 rides are hidden.",
       "tooltip": {
         "power150": "Power @150 bpm",
         "efficiency": "Efficiency",
@@ -1194,7 +1200,7 @@
         "watch": "Watch",
         "noData": "N/A"
       },
-      "footnote": "Only rides with heart rate, power, and at least 30 minutes moving time are included. Cardiac drift uses rides of 45 minutes or more, durability uses rides of 60 minutes or more."
+      "footnote": "Only rides with heart rate, power, and at least 30 minutes moving time are included. Power @150 bpm prefers paired power/heart-rate streams near 150 bpm, otherwise normalized power is used as fallback. Cardiac drift uses rides of 45 minutes or more, durability uses rides of 60 minutes or more."
     },
     "trainingLoad": {
       "requiredTitle": "FTP Required for TSS Analysis",
@@ -1331,7 +1337,8 @@
       "weight": "Body weight",
       "ftp": "FTP",
       "maxHr": "Max heart rate",
-      "restingHr": "Resting heart rate"
+      "restingHr": "Resting heart rate",
+      "lthr": "Lactate threshold HR"
     },
     "placeholders": {
       "firstname": "Your first name",

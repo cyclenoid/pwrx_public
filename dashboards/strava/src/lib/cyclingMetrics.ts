@@ -4,6 +4,8 @@ export interface CyclingPerformanceSource {
   distanceKm: number
   avgHr: number | null
   avgPower: number | null
+  normalizedPower?: number | null
+  powerAt150Bpm?: number | null
   decouplingPct?: number | null
   durabilityPct?: number | null
 }
@@ -14,6 +16,7 @@ export interface CyclingPerformanceSample {
   distanceKm: number
   avgHr: number
   avgPower: number
+  normalizedPower: number | null
   normalizedPower150: number
   efficiency: number
   decouplingPct: number | null
@@ -46,13 +49,21 @@ export const buildCyclingPerformanceSamples = (activities: CyclingPerformanceSou
     .map((activity) => {
       const avgHr = Number(activity.avgHr)
       const avgPower = Number(activity.avgPower)
+      const normalizedPower = Number.isFinite(Number(activity.normalizedPower))
+        ? Number(activity.normalizedPower)
+        : null
+      const streamPowerAt150 = Number.isFinite(Number(activity.powerAt150Bpm))
+        ? Number(activity.powerAt150Bpm)
+        : null
+      const powerForHrNormalization = streamPowerAt150 ?? normalizedPower ?? avgPower
       return {
         date: activity.date,
         durationSec: activity.durationSec,
         distanceKm: activity.distanceKm,
         avgHr,
         avgPower,
-        normalizedPower150: Number((avgPower * (150 / avgHr)).toFixed(2)),
+        normalizedPower,
+        normalizedPower150: Number(streamPowerAt150 ?? (powerForHrNormalization * (150 / avgHr)).toFixed(2)),
         efficiency: Number((avgPower / avgHr).toFixed(3)),
         decouplingPct: Number.isFinite(activity.decouplingPct) ? Number(activity.decouplingPct) : null,
         durabilityPct: Number.isFinite(activity.durabilityPct) ? Number(activity.durabilityPct) : null,

@@ -232,6 +232,9 @@ export interface BulkPowerMetrics {
     average_heartrate: number | null
     average_power: number | null
     normalized_power: number | null
+    power_at_150bpm: number | null
+    power_at_150bpm_sample_seconds: number | null
+    power_at_150bpm_method: 'target_window' | 'regression' | null
     intensity_factor: number | null
     training_stress_score: number | null
     decoupling_pct: number | null

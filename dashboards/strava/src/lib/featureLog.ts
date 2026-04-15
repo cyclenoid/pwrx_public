@@ -29,6 +29,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-15-training-power-hr-zones",
+    date: "2026-04-15",
+    tag: "training",
+    title: {
+      de: "Training bewertet Rad-Leistung und HF-Zonen robuster",
+      en: "Training now evaluates cycling power and HR zones more robustly",
+    },
+    summary: {
+      de: "Leistung @150 bpm nutzt jetzt gekoppelte Watt-/Puls-Streams, und HF-Zonen koennen LTHR oder HF-Reserve statt nur MaxHF verwenden.",
+      en: "Power @150 bpm now uses paired power/heart-rate streams, and HR zones can use LTHR or heart-rate reserve instead of max HR only.",
+    },
+    bullets: {
+      de: [
+        "Leistung @150 bpm wird bevorzugt aus geglaetteten Watt-/Puls-Fenstern nahe 150 bpm geschaetzt; falls dafuer zu wenig Daten vorhanden sind, greift Normalized Power als Fallback.",
+        "HF-Zonen nutzen nun LTHR, sofern gepflegt, sonst HF-Reserve mit Ruhepuls; die verwendete Basis wird direkt in der Trainingskarte angezeigt.",
+        "Der Cycling-Trend startet bei 0 und blendet Monate mit weniger als drei verwertbaren Fahrten aus.",
+      ],
+      en: [
+        "Power @150 bpm is estimated from smoothed power/heart-rate windows near 150 bpm first; if there is not enough data, normalized power is used as the fallback.",
+        "HR zones now use LTHR when available, otherwise heart-rate reserve with resting HR; the selected basis is shown directly in the training card.",
+        "The cycling trend now starts at 0 and hides months with fewer than three usable rides.",
+      ],
+    },
+  },
+  {
     id: "2026-04-11-compare-sidebar-ab",
     date: "2026-04-11",
     tag: "ui",

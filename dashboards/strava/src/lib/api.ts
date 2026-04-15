@@ -971,6 +971,9 @@ export interface HeartRateZonesResponse {
   total_minutes: number
   activities_analyzed: number
   max_hr_used?: number
+  resting_hr_used?: number | null
+  lthr_used?: number | null
+  zone_basis?: 'lthr' | 'hrr' | 'max_hr'
 }
 
 export interface EfficiencyMonth {

@@ -169,6 +169,9 @@ export default function Settings() {
       if (variables.key === 'athlete_weight' || variables.key === 'ftp') {
         await markProfileBasicsConfirmed()
       }
+      if (['max_heartrate', 'resting_heartrate', 'lactate_threshold_heartrate'].includes(variables.key)) {
+        await queryClient.invalidateQueries({ queryKey: ['hr-zones'] })
+      }
       await queryClient.invalidateQueries({ queryKey: ['user-profile'] })
       await queryClient.refetchQueries({ queryKey: ['user-profile'] })
       await queryClient.invalidateQueries({ queryKey: ['settings'] })
@@ -186,6 +189,9 @@ export default function Settings() {
     onSuccess: async (_data, updates) => {
       if (updates.some((update) => update.key === 'athlete_weight' || update.key === 'ftp')) {
         await markProfileBasicsConfirmed()
+      }
+      if (updates.some((update) => ['max_heartrate', 'resting_heartrate', 'lactate_threshold_heartrate'].includes(update.key))) {
+        await queryClient.invalidateQueries({ queryKey: ['hr-zones'] })
       }
       await queryClient.invalidateQueries({ queryKey: ['user-profile'] })
       await queryClient.refetchQueries({ queryKey: ['user-profile'] })
@@ -1038,6 +1044,7 @@ export default function Settings() {
                 {renderField(t('settings.fields.ftp'), 'ftp', profile.settings?.ftp, false, t('settings.units.watt'), '250')}
                 {renderField(t('settings.fields.maxHr'), 'max_heartrate', profile.settings?.max_heartrate, false, t('settings.units.bpm'), '190')}
                 {renderField(t('settings.fields.restingHr'), 'resting_heartrate', profile.settings?.resting_heartrate, false, t('settings.units.bpm'), '60')}
+                {renderField(t('settings.fields.lthr'), 'lactate_threshold_heartrate', profile.settings?.lactate_threshold_heartrate, false, t('settings.units.bpm'), '165')}
               </CardContent>
             </Card>
 
