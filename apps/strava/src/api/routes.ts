@@ -1173,6 +1173,21 @@ const buildEmptyTrainingLoadPayload = () => ({
     tsbInterpretation: null,
     safeRampRate: null,
   },
+  stressSummary: {
+    totalTss: 0,
+    powerTss: 0,
+    heartRateTss: 0,
+    activityCount: 0,
+    powerActivityCount: 0,
+    heartRateActivityCount: 0,
+    missingActivityCount: 0,
+    powerTssPercentage: 0,
+    heartRateTssPercentage: 0,
+    heartRateBasis: null,
+    thresholdHrUsed: null,
+    maxHrUsed: null,
+    restingHrUsed: null,
+  },
 });
 
 const computeTrainingLoadPayload = async (

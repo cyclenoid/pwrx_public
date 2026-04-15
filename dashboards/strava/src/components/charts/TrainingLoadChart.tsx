@@ -14,9 +14,25 @@ interface TrainingLoadChartProps {
   currentCTL: number
   currentATL: number
   currentTSB: number
+  scopeLabel?: string
+  sourceSummary?: {
+    totalTss: number
+    powerTss: number
+    heartRateTss: number
+    activityCount: number
+    powerActivityCount: number
+    heartRateActivityCount: number
+    missingActivityCount: number
+    powerTssPercentage: number
+    heartRateTssPercentage: number
+    heartRateBasis: 'lthr' | 'hrr_estimate' | 'max_hr_estimate' | null
+    thresholdHrUsed: number | null
+    maxHrUsed: number | null
+    restingHrUsed: number | null
+  }
 }
 
-export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: TrainingLoadChartProps) {
+export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB, scopeLabel, sourceSummary }: TrainingLoadChartProps) {
   const { resolvedTheme } = useTheme()
   const colors = getChartColors(resolvedTheme === 'dark' ? 'dark' : 'light')
   const [showExplanation, setShowExplanation] = useState(false)
@@ -80,6 +96,13 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
   }
 
   const tsbStatus = getTSBStatus(currentTSB)
+  const heartRateBasisLabel = sourceSummary?.heartRateBasis === 'lthr'
+    ? 'LTHR'
+    : sourceSummary?.heartRateBasis === 'hrr_estimate'
+      ? 'HF-Reserve'
+      : sourceSummary?.heartRateBasis === 'max_hr_estimate'
+        ? 'MaxHF'
+        : null
 
   const acwrMetrics = useMemo(() => {
     const loads = toLoadArray(orderedData)
@@ -306,9 +329,9 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
   return (
     <Card>
       <CardHeader>
-        <CardTitle>Training Load (PMC)</CardTitle>
+        <CardTitle>Training Load (PMC){scopeLabel ? ` - ${scopeLabel}` : ''}</CardTitle>
         <CardDescription>
-          Performance Management Chart - Visualisierung deiner Trainingsbelastung, Fitness und Form
+          Performance Management Chart - Power-TSS wo vorhanden, sonst HF-TSS als Fallback fuer Outdoor-Fahrten ohne Powermeter und Laeufe
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -483,6 +506,54 @@ export function TrainingLoadChart({ data, currentCTL, currentATL, currentTSB }: 
             })}
           </div>
         </div>
+
+        {sourceSummary && (
+          <div className="mb-6 rounded-xl border border-border/60 bg-background/50 p-4">
+            <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
+              <div>
+                <div className="text-sm font-semibold">TSS-Datenqualitaet</div>
+                <div className="text-xs text-muted-foreground">
+                  {sourceSummary.activityCount} Aktivitaeten im Zeitraum, {sourceSummary.missingActivityCount} ohne verwertbare Power- oder HF-Daten.
+                </div>
+              </div>
+              {heartRateBasisLabel && (
+                <div className="rounded-full border border-border/60 px-3 py-1 text-xs text-muted-foreground">
+                  HF-Basis: {heartRateBasisLabel}
+                  {sourceSummary.thresholdHrUsed ? `, Schwelle ${sourceSummary.thresholdHrUsed} bpm` : ''}
+                </div>
+              )}
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <div className="rounded-lg bg-secondary/50 p-3">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Power-TSS</div>
+                <div className="mt-1 text-xl font-semibold tabular-nums" style={{ color: ctlLineColor }}>
+                  {sourceSummary.powerTss.toFixed(0)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {sourceSummary.powerTssPercentage}% aus {sourceSummary.powerActivityCount} Aktivitaeten
+                </div>
+              </div>
+              <div className="rounded-lg bg-secondary/50 p-3">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">HF-TSS geschaetzt</div>
+                <div className="mt-1 text-xl font-semibold tabular-nums" style={{ color: atlLineColor }}>
+                  {sourceSummary.heartRateTss.toFixed(0)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  {sourceSummary.heartRateTssPercentage}% aus {sourceSummary.heartRateActivityCount} Aktivitaeten
+                </div>
+              </div>
+              <div className="rounded-lg bg-secondary/50 p-3">
+                <div className="text-[11px] uppercase tracking-wider text-muted-foreground">Gesamt-TSS</div>
+                <div className="mt-1 text-xl font-semibold tabular-nums">
+                  {sourceSummary.totalTss.toFixed(0)}
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  beste Quelle pro Aktivitaet
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Chart */}
         <ResponsiveContainer width="100%" height={400}>

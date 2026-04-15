@@ -246,6 +246,8 @@ export interface BulkPowerMetrics {
 export interface DailyTrainingLoad {
   date: string
   tss: number
+  powerTss?: number
+  heartRateTss?: number
   ctl: number
   atl: number
   tsb: number
@@ -269,4 +271,19 @@ export interface TrainingLoad {
     tsb: number
   }
   insights?: TrainingLoadInsights
+  stressSummary?: {
+    totalTss: number
+    powerTss: number
+    heartRateTss: number
+    activityCount: number
+    powerActivityCount: number
+    heartRateActivityCount: number
+    missingActivityCount: number
+    powerTssPercentage: number
+    heartRateTssPercentage: number
+    heartRateBasis: 'lthr' | 'hrr_estimate' | 'max_hr_estimate' | null
+    thresholdHrUsed: number | null
+    maxHrUsed: number | null
+    restingHrUsed: number | null
+  }
 }

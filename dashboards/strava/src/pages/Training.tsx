@@ -23,6 +23,7 @@ export function Training() {
   const requestedActivityType = searchParams.get('type') === 'Run' ? 'Run' : 'Ride'
   const [activityType, setActivityType] = useState<string>(requestedActivityType) // 'Ride' or 'Run' - no 'All' option
   const [analysisTimePeriod, setAnalysisTimePeriod] = useState<number>(6) // 6 = recent training context
+  const [pmcScope, setPmcScope] = useState<'all' | 'Ride' | 'Run'>('all')
   const ANALYTICS_STALE_MS = 60 * 60 * 1000
 
   useEffect(() => {
@@ -89,14 +90,14 @@ export function Training() {
   }, [])
 
   const { data: trainingLoad, isLoading: loadingTraining } = useQuery({
-    queryKey: ['training-load-pmc', activityType],
+    queryKey: ['training-load-pmc', pmcScope],
     queryFn: () => getTrainingLoadPMC({
       startDate: ninetyDaysAgo,
       endDate: new Date().toISOString().split('T')[0],
-      type: activityType || undefined,
+      type: pmcScope === 'all' ? undefined : pmcScope,
     }),
     staleTime: ANALYTICS_STALE_MS,
-    enabled: !!ftpData?.ftp, // Only fetch if FTP is set
+    enabled: true,
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   })
@@ -522,6 +523,11 @@ export function Training() {
     12: t('training.pace.filters.oneYear'),
     6: t('training.pace.filters.sixMonths'),
     3: t('training.pace.filters.threeMonths'),
+  }
+  const pmcScopeLabels: Record<'all' | 'Ride' | 'Run', string> = {
+    all: 'Gesamt',
+    Ride: t('training.activityTypes.ride'),
+    Run: t('training.activityTypes.run'),
   }
 
   const isLoading = loadingTraining || loadingZones || loadingWeekday || loadingMonthly || loadingTimeOfDay
@@ -1050,6 +1056,31 @@ export function Training() {
                   </Card>
                 )}
 
+                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/40 px-4 py-3">
+                  <div>
+                    <div className="text-sm font-medium">Training Load Scope</div>
+                    <div className="text-xs text-muted-foreground">
+                      Gesamt addiert Rad-Power-TSS und HF-geschaetzten Stress aus Laeufen sowie Outdoor-Fahrten ohne Powermeter.
+                    </div>
+                  </div>
+                  <div className="inline-flex rounded-full border border-border/60 bg-muted/40 p-1">
+                    {(['all', 'Ride', 'Run'] as const).map((scope) => (
+                      <button
+                        key={scope}
+                        type="button"
+                        onClick={() => setPmcScope(scope)}
+                        className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                          pmcScope === scope
+                            ? 'bg-background text-foreground shadow-sm'
+                            : 'text-muted-foreground hover:text-foreground'
+                        }`}
+                      >
+                        {pmcScopeLabels[scope]}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
                 {loadingTraining && (
                   <Card>
                     <CardContent className="py-8 text-center">
@@ -1058,23 +1089,25 @@ export function Training() {
                   </Card>
                 )}
 
-                {!loadingTraining && ftpData?.ftp && trainingLoad && trainingLoad.dailyValues.length > 0 && (
+                {!loadingTraining && trainingLoad && trainingLoad.dailyValues.length > 0 && (
                   <TrainingLoadChart
                     data={trainingLoad.dailyValues}
                     currentCTL={trainingLoad.current.ctl}
                     currentATL={trainingLoad.current.atl}
                     currentTSB={trainingLoad.current.tsb}
+                    sourceSummary={trainingLoad.stressSummary}
+                    scopeLabel={pmcScopeLabels[pmcScope]}
                   />
                 )}
 
-                {!loadingTraining && ftpData && !ftpData.ftp && (
+                {!loadingTraining && (!trainingLoad || trainingLoad.dailyValues.length === 0) && (
                   <Card>
                     <CardContent className="py-8 text-center">
                       <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted-foreground opacity-50">
                         <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
                       </svg>
-                      <h3 className="mb-2 text-lg font-medium">{t('training.trainingLoad.requiredTitle')}</h3>
-                      <p className="text-muted-foreground">{t('training.trainingLoad.requiredBody')}</p>
+                      <h3 className="mb-2 text-lg font-medium">Keine PMC-Daten im gewaehlten Scope</h3>
+                      <p className="text-muted-foreground">Fuer PMC braucht PWRX entweder Powerdaten mit FTP oder Herzfrequenzdaten mit Dauer.</p>
                     </CardContent>
                   </Card>
                 )}
