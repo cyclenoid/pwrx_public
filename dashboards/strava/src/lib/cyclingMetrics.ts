@@ -44,29 +44,35 @@ const median = (values: number[]): number | null => {
     : Number(sorted[mid].toFixed(2))
 }
 
+const toFiniteNumber = (value: unknown): number | null => {
+  if (value === null || value === undefined) return null
+  if (typeof value === 'string' && value.trim() === '') return null
+  const parsed = Number(value)
+  return Number.isFinite(parsed) ? parsed : null
+}
+
 export const buildCyclingPerformanceSamples = (activities: CyclingPerformanceSource[]): CyclingPerformanceSample[] => {
   return activities
     .map((activity) => {
-      const avgHr = Number(activity.avgHr)
-      const avgPower = Number(activity.avgPower)
-      const normalizedPower = Number.isFinite(Number(activity.normalizedPower))
-        ? Number(activity.normalizedPower)
-        : null
-      const streamPowerAt150 = Number.isFinite(Number(activity.powerAt150Bpm))
-        ? Number(activity.powerAt150Bpm)
-        : null
+      const avgHr = toFiniteNumber(activity.avgHr)
+      const avgPower = toFiniteNumber(activity.avgPower)
+      const normalizedPower = toFiniteNumber(activity.normalizedPower)
+      const streamPowerAt150 = toFiniteNumber(activity.powerAt150Bpm)
       const powerForHrNormalization = streamPowerAt150 ?? normalizedPower ?? avgPower
+      const normalizedPower150 = avgHr && powerForHrNormalization
+        ? streamPowerAt150 ?? Number((powerForHrNormalization * (150 / avgHr)).toFixed(2))
+        : null
       return {
         date: activity.date,
         durationSec: activity.durationSec,
         distanceKm: activity.distanceKm,
-        avgHr,
-        avgPower,
+        avgHr: avgHr ?? NaN,
+        avgPower: avgPower ?? NaN,
         normalizedPower,
-        normalizedPower150: Number(streamPowerAt150 ?? (powerForHrNormalization * (150 / avgHr)).toFixed(2)),
-        efficiency: Number((avgPower / avgHr).toFixed(3)),
-        decouplingPct: Number.isFinite(activity.decouplingPct) ? Number(activity.decouplingPct) : null,
-        durabilityPct: Number.isFinite(activity.durabilityPct) ? Number(activity.durabilityPct) : null,
+        normalizedPower150: normalizedPower150 ?? NaN,
+        efficiency: avgHr && avgPower ? Number((avgPower / avgHr).toFixed(3)) : NaN,
+        decouplingPct: toFiniteNumber(activity.decouplingPct),
+        durabilityPct: toFiniteNumber(activity.durabilityPct),
       }
     })
     .filter((activity) =>
@@ -78,7 +84,8 @@ export const buildCyclingPerformanceSamples = (activities: CyclingPerformanceSou
       activity.avgHr <= 200 &&
       Number.isFinite(activity.avgPower) &&
       activity.avgPower >= 80 &&
-      activity.avgPower <= 450,
+      activity.avgPower <= 450 &&
+      Number.isFinite(activity.normalizedPower150)
     )
 }
 

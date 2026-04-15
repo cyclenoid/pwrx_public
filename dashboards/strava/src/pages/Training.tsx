@@ -320,6 +320,7 @@ export function Training() {
           sampleCount: summary.sampleCount,
         }
       })
+      .filter((item) => item.power150 !== null)
   }, [cyclingPerformanceSamples, dateLocale, MIN_CYCLING_TREND_MONTH_SAMPLES])
 
   // Legacy chartColors for backward compatibility
