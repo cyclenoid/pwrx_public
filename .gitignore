@@ -35,6 +35,7 @@ nul
 **/.claude/
 backups/
 data/
+docs/
 tmp/
 apps/strava/storage/
 docker-compose.local.yml
