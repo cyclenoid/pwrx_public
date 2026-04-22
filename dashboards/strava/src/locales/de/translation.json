@@ -1162,7 +1162,7 @@
         "avgHr": "Ø HF",
         "runs": "{{count}} Läufe"
       },
-      "footnote": "Einbezogen werden nur Läufe mit Herzfrequenz, mindestens 3 km Distanz und mindestens 15 Minuten Dauer."
+      "footnote": "Einbezogen werden nur Läufe mit Herzfrequenz, mindestens 3 km Distanz und mindestens 15 Minuten Dauer. Pace @150 bpm nutzt bevorzugt gekoppelte Speed-/Puls-Streams nahe 150 bpm, sonst Ø Pace und Ø Puls als Fallback."
     },
     "cyclingPerformance": {
       "title": "Leistung vs. Puls",

@@ -4,6 +4,7 @@ export interface RawRunningMetricInput {
   movingTimeSec: number
   avgHr: number | null | undefined
   avgPaceMinPerKm?: number | null | undefined
+  paceAt150Bpm?: number | null | undefined
 }
 
 export interface RunningPerformanceSample {
@@ -40,6 +41,13 @@ export function buildRunningPerformanceSamples(
       const paceMinPerKm = toPositiveNumber(
         item.avgPaceMinPerKm ?? derivedPaceMinPerKm,
       )
+      const streamPaceAt150BpmCandidate = toPositiveNumber(item.paceAt150Bpm)
+      const streamPaceAt150Bpm =
+        streamPaceAt150BpmCandidate !== null &&
+        streamPaceAt150BpmCandidate >= 3 &&
+        streamPaceAt150BpmCandidate <= 12
+          ? streamPaceAt150BpmCandidate
+          : null
 
       if (
         !distanceKm ||
@@ -69,7 +77,7 @@ export function buildRunningPerformanceSamples(
         avgHr: validAvgHr,
         avgPaceMinPerKm: validPaceMinPerKm,
         efficiency: speedMetersPerMinute / validAvgHr,
-        normalizedPace150: validPaceMinPerKm * (validAvgHr / 150),
+        normalizedPace150: streamPaceAt150Bpm ?? validPaceMinPerKm * (validAvgHr / 150),
       }
     })
     .filter((sample): sample is RunningPerformanceSample => Boolean(sample))

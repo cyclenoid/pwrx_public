@@ -1816,6 +1816,9 @@ export interface RunningActivity {
   avg_pace_decimal: number
   avg_pace: string
   avg_hr: number | null
+  pace_at_150bpm: number | null
+  pace_at_150bpm_sample_seconds: number | null
+  pace_at_150bpm_method: 'target_window' | 'regression' | null
   type: string
 }
 

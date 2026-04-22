@@ -29,6 +29,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-22-training-run-hr-pace",
+    date: "2026-04-22",
+    tag: "training",
+    title: {
+      de: "Laufleistung gegen Puls wird belastbarer erklaert",
+      en: "Run performance against heart rate is clearer and more robust",
+    },
+    summary: {
+      de: "Die Trainingsseite nutzt fuer Pace @150 bpm bei Laeufen jetzt bevorzugt gekoppelte Speed-/Puls-Streams und zeigt den Zeitraum direkt an der Laufleistungskarte.",
+      en: "The Training page now prefers paired speed/heart-rate streams for run Pace @150 bpm and shows the selected range directly on the run performance card.",
+    },
+    bullets: {
+      de: [
+        "Pace @150 bpm fuer Laeufe nutzt nun bevorzugt Abschnitte nahe 150 bpm oder eine Stream-basierte Schaetzung.",
+        "Wenn keine passenden Streams vorhanden sind, bleibt die bisherige Durchschnittslogik als Fallback erhalten.",
+        "Der Zeitraum ist jetzt direkt in der Laufleistung-vs.-Puls-Karte steuerbar, und Monatswerte brauchen mindestens drei verwertbare Laeufe.",
+      ],
+      en: [
+        "Run Pace @150 bpm now prefers sections near 150 bpm or a stream-based estimate.",
+        "When suitable streams are unavailable, the previous average-based logic remains as fallback.",
+        "The selected range can now be changed directly in the run performance card, and monthly points require at least three usable runs.",
+      ],
+    },
+  },
+  {
     id: "2026-04-15-training-power-hr-zones",
     date: "2026-04-15",
     tag: "training",

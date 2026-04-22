@@ -161,6 +161,7 @@ export function Training() {
         movingTimeSec: activity.moving_time,
         avgHr: activity.avg_hr,
         avgPaceMinPerKm: activity.avg_pace_decimal,
+        paceAt150Bpm: activity.pace_at_150bpm,
       })),
     )
   }, [runningActivities])
@@ -1117,18 +1118,37 @@ export function Training() {
             {isRunning && runningPerformanceSummary.sampleCount > 0 && (
               <Card className="border-orange-500/20 bg-gradient-to-br from-orange-500/[0.07] via-transparent to-transparent">
                 <CardHeader className="pb-3">
-                  <CardTitle className="flex items-center gap-2">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
-                    </svg>
-                    {t('training.runPerformance.title')}
-                  </CardTitle>
-                  <CardDescription>
-                    {t('training.runPerformance.subtitle', {
-                      count: runningPerformanceSummary.sampleCount,
-                      distance: runningPerformanceSummary.totalDistanceKm.toFixed(0),
-                    })}
-                  </CardDescription>
+                  <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+                    <div>
+                      <CardTitle className="flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/>
+                        </svg>
+                        {t('training.runPerformance.title')}
+                      </CardTitle>
+                      <CardDescription>
+                        {t('training.runPerformance.subtitle', {
+                          count: runningPerformanceSummary.sampleCount,
+                          distance: runningPerformanceSummary.totalDistanceKm.toFixed(0),
+                        })}
+                      </CardDescription>
+                    </div>
+                    <div className="flex flex-wrap items-center gap-1 rounded-full bg-secondary/70 p-1">
+                      {[0, 24, 12, 6, 3].map((value) => (
+                        <button
+                          key={value}
+                          onClick={() => setAnalysisTimePeriod(value)}
+                          className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                            analysisTimePeriod === value
+                              ? 'bg-background text-foreground shadow-sm'
+                              : 'text-muted-foreground hover:text-foreground'
+                          }`}
+                        >
+                          {timeRangeLabels[value]}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </CardHeader>
                 <CardContent className="space-y-3 pt-0">
                   <div className="grid gap-3 md:grid-cols-3">

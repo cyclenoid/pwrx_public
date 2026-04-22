@@ -1162,7 +1162,7 @@
         "avgHr": "Avg HR",
         "runs": "{{count}} runs"
       },
-      "footnote": "Only runs with heart rate, at least 3 km distance and at least 15 minutes moving time are included."
+      "footnote": "Only runs with heart rate, at least 3 km distance and at least 15 minutes moving time are included. Pace @150 bpm prefers paired speed/heart-rate streams near 150 bpm, otherwise average pace and average heart rate are used as fallback."
     },
     "cyclingPerformance": {
       "title": "Power vs heart rate",

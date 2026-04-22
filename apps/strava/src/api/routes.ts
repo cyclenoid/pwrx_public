@@ -609,6 +609,12 @@ type TargetHrPowerEstimate = {
   method: 'target_window' | 'regression' | null;
 };
 
+type TargetHrPaceEstimate = {
+  paceMinPerKm: number | null;
+  sampleSeconds: number;
+  method: 'target_window' | 'regression' | null;
+};
+
 const medianNumber = (values: number[]): number | null => {
   if (!values.length) return null;
   const sorted = [...values].sort((a, b) => a - b);
@@ -732,6 +738,143 @@ const estimatePowerAtHeartRate = (
 
   return {
     power: Math.round(estimatedPower),
+    sampleSeconds: regressionSampleSeconds,
+    method: 'regression',
+  };
+};
+
+const estimatePaceAtHeartRate = (
+  input: {
+    velocity?: number[] | null;
+    distance?: number[] | null;
+    heartrate?: number[] | null;
+    time?: number[] | null;
+  },
+  targetHr: number = 150
+): TargetHrPaceEstimate => {
+  const velocity = Array.isArray(input.velocity) ? input.velocity : [];
+  const distance = Array.isArray(input.distance) ? input.distance : [];
+  const heartrate = Array.isArray(input.heartrate) ? input.heartrate : [];
+  const time = Array.isArray(input.time) ? input.time : [];
+  const speedSourceLength = velocity.length || distance.length;
+  const length = Math.min(speedSourceLength, heartrate.length, time.length || speedSourceLength);
+
+  if (length < 120) {
+    return { paceMinPerKm: null, sampleSeconds: 0, method: null };
+  }
+
+  const points: Array<{ time: number; speed: number; hr: number }> = [];
+  for (let index = 0; index < length; index += 1) {
+    const hrValue = Number(heartrate[index]);
+    const timeValue = time.length ? Number(time[index]) : index;
+    let speedValue = velocity.length ? Number(velocity[index]) : NaN;
+
+    if (!Number.isFinite(speedValue) && distance.length && index > 0) {
+      const currentDistance = Number(distance[index]);
+      const previousDistance = Number(distance[index - 1]);
+      const currentTime = time.length ? Number(time[index]) : index;
+      const previousTime = time.length ? Number(time[index - 1]) : index - 1;
+      const deltaTime = currentTime - previousTime;
+      const deltaDistance = currentDistance - previousDistance;
+      if (Number.isFinite(deltaDistance) && Number.isFinite(deltaTime) && deltaTime > 0) {
+        speedValue = deltaDistance / deltaTime;
+      }
+    }
+
+    if (!Number.isFinite(speedValue) || !Number.isFinite(hrValue) || !Number.isFinite(timeValue)) continue;
+    if (speedValue < 1 || speedValue > 8 || hrValue < 70 || hrValue > 220) continue;
+
+    points.push({ time: timeValue, speed: speedValue, hr: hrValue });
+  }
+
+  if (points.length < 120) {
+    return { paceMinPerKm: null, sampleSeconds: 0, method: null };
+  }
+
+  const smoothed: Array<{ hr: number; speed: number; seconds: number }> = [];
+  const windowSeconds = 60;
+  let start = 0;
+  let sumSpeed = 0;
+  let sumHr = 0;
+
+  for (let end = 0; end < points.length; end += 1) {
+    sumSpeed += points[end].speed;
+    sumHr += points[end].hr;
+
+    while (points[end].time - points[start].time > windowSeconds) {
+      sumSpeed -= points[start].speed;
+      sumHr -= points[start].hr;
+      start += 1;
+    }
+
+    const count = end - start + 1;
+    const duration = points[end].time - points[start].time;
+    if (count < 20 || duration < 45) continue;
+
+    const nextTime = points[end + 1]?.time;
+    const previousTime = points[end - 1]?.time;
+    const seconds = Number.isFinite(nextTime)
+      ? Math.max(1, Math.min(10, Number(nextTime) - points[end].time))
+      : Number.isFinite(previousTime)
+        ? Math.max(1, Math.min(10, points[end].time - Number(previousTime)))
+        : 1;
+
+    smoothed.push({
+      hr: sumHr / count,
+      speed: sumSpeed / count,
+      seconds,
+    });
+  }
+
+  if (smoothed.length < 30) {
+    return { paceMinPerKm: null, sampleSeconds: 0, method: null };
+  }
+
+  const speedToPace = (speedMetersPerSecond: number): number => 1000 / (speedMetersPerSecond * 60);
+  const targetWindow = smoothed.filter((point) => Math.abs(point.hr - targetHr) <= 5);
+  const targetSampleSeconds = Math.round(targetWindow.reduce((sum, point) => sum + point.seconds, 0));
+  if (targetWindow.length >= 30 && targetSampleSeconds >= 180) {
+    const directSpeed = medianNumber(targetWindow.map((point) => point.speed));
+    return {
+      paceMinPerKm: directSpeed !== null ? Number(speedToPace(directSpeed).toFixed(3)) : null,
+      sampleSeconds: targetSampleSeconds,
+      method: directSpeed !== null ? 'target_window' : null,
+    };
+  }
+
+  const regressionPoints = smoothed.filter((point) => point.hr >= 115 && point.hr <= 175);
+  const regressionSampleSeconds = Math.round(regressionPoints.reduce((sum, point) => sum + point.seconds, 0));
+  if (regressionPoints.length < 60 || regressionSampleSeconds < 600) {
+    return { paceMinPerKm: null, sampleSeconds: targetSampleSeconds, method: null };
+  }
+
+  const minHr = Math.min(...regressionPoints.map((point) => point.hr));
+  const maxHr = Math.max(...regressionPoints.map((point) => point.hr));
+  if (maxHr - minHr < 8 || targetHr < minHr - 3 || targetHr > maxHr + 3) {
+    return { paceMinPerKm: null, sampleSeconds: targetSampleSeconds, method: null };
+  }
+
+  const meanHr = regressionPoints.reduce((sum, point) => sum + point.hr, 0) / regressionPoints.length;
+  const meanSpeed = regressionPoints.reduce((sum, point) => sum + point.speed, 0) / regressionPoints.length;
+  const variance = regressionPoints.reduce((sum, point) => sum + ((point.hr - meanHr) ** 2), 0);
+  if (variance <= 0) {
+    return { paceMinPerKm: null, sampleSeconds: targetSampleSeconds, method: null };
+  }
+
+  const covariance = regressionPoints.reduce(
+    (sum, point) => sum + ((point.hr - meanHr) * (point.speed - meanSpeed)),
+    0
+  );
+  const slope = covariance / variance;
+  const intercept = meanSpeed - (slope * meanHr);
+  const estimatedSpeed = intercept + (slope * targetHr);
+
+  if (!Number.isFinite(estimatedSpeed) || estimatedSpeed < 1 || estimatedSpeed > 8) {
+    return { paceMinPerKm: null, sampleSeconds: targetSampleSeconds, method: null };
+  }
+
+  return {
+    paceMinPerKm: Number(speedToPace(estimatedSpeed).toFixed(3)),
     sampleSeconds: regressionSampleSeconds,
     method: 'regression',
   };
@@ -5188,11 +5331,23 @@ router.get('/running-activities', async (req: Request, res: Response) => {
       ORDER BY a.start_date ASC
     `, params);
 
-    const activities = result.rows.map((row: any) => {
+    const activities: any[] = [];
+    for (const row of result.rows) {
       const avgSpeedKmh = parseFloat(row.avg_speed_kmh);
       const avgPaceMinPerKm = avgSpeedKmh > 0 ? 60 / avgSpeedKmh : 0;
+      const streams = await db.getActivityStreams(row.strava_activity_id);
+      const velocityStream = streams.find(s => s.stream_type === 'velocity_smooth');
+      const distanceStream = streams.find(s => s.stream_type === 'distance');
+      const hrStream = streams.find(s => s.stream_type === 'heartrate');
+      const timeStream = streams.find(s => s.stream_type === 'time');
+      const paceAt150Bpm = estimatePaceAtHeartRate({
+        velocity: velocityStream?.data,
+        distance: distanceStream?.data,
+        heartrate: hrStream?.data,
+        time: timeStream?.data,
+      }, 150);
 
-      return {
+      activities.push({
         activity_id: row.strava_activity_id,
         name: row.name,
         date: row.start_date,
@@ -5203,9 +5358,12 @@ router.get('/running-activities', async (req: Request, res: Response) => {
         avg_pace_decimal: avgPaceMinPerKm,
         avg_pace: `${Math.floor(avgPaceMinPerKm)}:${Math.round((avgPaceMinPerKm - Math.floor(avgPaceMinPerKm)) * 60).toString().padStart(2, '0')}`,
         avg_hr: row.average_heartrate ? Math.round(parseFloat(row.average_heartrate)) : null,
+        pace_at_150bpm: paceAt150Bpm.paceMinPerKm,
+        pace_at_150bpm_sample_seconds: paceAt150Bpm.sampleSeconds,
+        pace_at_150bpm_method: paceAt150Bpm.method,
         type: row.type
-      };
-    });
+      });
+    }
 
     res.json({
       activities,
