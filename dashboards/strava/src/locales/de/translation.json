@@ -1162,6 +1162,16 @@
         "avgHr": "Ø HF",
         "runs": "{{count}} Läufe"
       },
+      "basis": {
+        "title": "Datengrundlage",
+        "summary": "Pace @150 bpm ist der Median aus {{count}} verwertbaren Läufen im Zeitraum {{period}}.",
+        "method": "Pro Lauf nutzt PWRX zuerst echte Speed-/Puls-Abschnitte bei 145-155 bpm, danach eine Stream-Regression, sonst Ø Pace × Ø HF/150.",
+        "terrain": "Gelände, Untergrund und Steigung werden dabei nicht korrigiert.",
+        "streams": "{{count}} Streamwerte",
+        "direct": "{{count}} direkt",
+        "regression": "{{count}} Regression",
+        "fallback": "{{count}} Fallback"
+      },
       "footnote": "Einbezogen werden nur Läufe mit Herzfrequenz, mindestens 3 km Distanz und mindestens 15 Minuten Dauer. Pace @150 bpm nutzt bevorzugt gekoppelte Speed-/Puls-Streams nahe 150 bpm, sonst Ø Pace und Ø Puls als Fallback."
     },
     "cyclingPerformance": {

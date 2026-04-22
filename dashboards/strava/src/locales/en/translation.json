@@ -1162,6 +1162,16 @@
         "avgHr": "Avg HR",
         "runs": "{{count}} runs"
       },
+      "basis": {
+        "title": "Data basis",
+        "summary": "Pace @150 bpm is the median from {{count}} usable runs in the {{period}} range.",
+        "method": "For each run, PWRX first uses real speed/heart-rate sections at 145-155 bpm, then a stream regression, otherwise avg pace × avg HR/150.",
+        "terrain": "Terrain, surface, and elevation are not corrected.",
+        "streams": "{{count}} stream values",
+        "direct": "{{count}} direct",
+        "regression": "{{count}} regression",
+        "fallback": "{{count}} fallback"
+      },
       "footnote": "Only runs with heart rate, at least 3 km distance and at least 15 minutes moving time are included. Pace @150 bpm prefers paired speed/heart-rate streams near 150 bpm, otherwise average pace and average heart rate are used as fallback."
     },
     "cyclingPerformance": {

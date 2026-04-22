@@ -37,18 +37,20 @@ export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
       en: "Run performance against heart rate is clearer and more robust",
     },
     summary: {
-      de: "Die Trainingsseite nutzt fuer Pace @150 bpm bei Laeufen jetzt bevorzugt gekoppelte Speed-/Puls-Streams und zeigt den Zeitraum direkt an der Laufleistungskarte.",
-      en: "The Training page now prefers paired speed/heart-rate streams for run Pace @150 bpm and shows the selected range directly on the run performance card.",
+      de: "Die Trainingsseite nutzt fuer Pace @150 bpm bei Laeufen jetzt bevorzugt gekoppelte Speed-/Puls-Streams und zeigt direkt, aus welchem Zeitraum und welcher Datenbasis der Wert entsteht.",
+      en: "The Training page now prefers paired speed/heart-rate streams for run Pace @150 bpm and shows the selected range plus the data basis behind the value.",
     },
     bullets: {
       de: [
         "Pace @150 bpm fuer Laeufe nutzt nun bevorzugt Abschnitte nahe 150 bpm oder eine Stream-basierte Schaetzung.",
         "Wenn keine passenden Streams vorhanden sind, bleibt die bisherige Durchschnittslogik als Fallback erhalten.",
+        "Die Laufleistungskarte erklaert jetzt, dass der Kennwert ein Median im gewaehlten Zeitraum ist, und zeigt Stream-, Regressions- und Fallback-Anteile.",
         "Der Zeitraum ist jetzt direkt in der Laufleistung-vs.-Puls-Karte steuerbar, und Monatswerte brauchen mindestens drei verwertbare Laeufe.",
       ],
       en: [
         "Run Pace @150 bpm now prefers sections near 150 bpm or a stream-based estimate.",
         "When suitable streams are unavailable, the previous average-based logic remains as fallback.",
+        "The run performance card now explains that the metric is a median over the selected range and shows stream, regression, and fallback counts.",
         "The selected range can now be changed directly in the run performance card, and monthly points require at least three usable runs.",
       ],
     },

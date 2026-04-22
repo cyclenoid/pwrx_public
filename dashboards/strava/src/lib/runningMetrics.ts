@@ -5,6 +5,8 @@ export interface RawRunningMetricInput {
   avgHr: number | null | undefined
   avgPaceMinPerKm?: number | null | undefined
   paceAt150Bpm?: number | null | undefined
+  paceAt150BpmMethod?: 'target_window' | 'regression' | null | undefined
+  paceAt150BpmSampleSeconds?: number | null | undefined
 }
 
 export interface RunningPerformanceSample {
@@ -15,6 +17,8 @@ export interface RunningPerformanceSample {
   avgPaceMinPerKm: number
   efficiency: number
   normalizedPace150: number
+  paceAt150BpmMethod: 'target_window' | 'regression' | 'fallback'
+  paceAt150BpmSampleSeconds: number
 }
 
 export interface RunningPerformanceSummary {
@@ -78,6 +82,8 @@ export function buildRunningPerformanceSamples(
         avgPaceMinPerKm: validPaceMinPerKm,
         efficiency: speedMetersPerMinute / validAvgHr,
         normalizedPace150: streamPaceAt150Bpm ?? validPaceMinPerKm * (validAvgHr / 150),
+        paceAt150BpmMethod: streamPaceAt150Bpm ? (item.paceAt150BpmMethod ?? 'target_window') : 'fallback',
+        paceAt150BpmSampleSeconds: streamPaceAt150Bpm ? toPositiveNumber(item.paceAt150BpmSampleSeconds) ?? 0 : 0,
       }
     })
     .filter((sample): sample is RunningPerformanceSample => Boolean(sample))

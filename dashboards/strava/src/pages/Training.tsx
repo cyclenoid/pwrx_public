@@ -162,6 +162,8 @@ export function Training() {
         avgHr: activity.avg_hr,
         avgPaceMinPerKm: activity.avg_pace_decimal,
         paceAt150Bpm: activity.pace_at_150bpm,
+        paceAt150BpmMethod: activity.pace_at_150bpm_method,
+        paceAt150BpmSampleSeconds: activity.pace_at_150bpm_sample_seconds,
       })),
     )
   }, [runningActivities])
@@ -170,6 +172,25 @@ export function Training() {
     () => summarizeRunningPerformance(runningPerformanceSamples),
     [runningPerformanceSamples],
   )
+
+  const runningPerformanceBasis = useMemo(() => {
+    const targetWindowCount = runningPerformanceSamples.filter(
+      (sample) => sample.paceAt150BpmMethod === 'target_window',
+    ).length
+    const regressionCount = runningPerformanceSamples.filter(
+      (sample) => sample.paceAt150BpmMethod === 'regression',
+    ).length
+    const fallbackCount = runningPerformanceSamples.filter(
+      (sample) => sample.paceAt150BpmMethod === 'fallback',
+    ).length
+
+    return {
+      targetWindowCount,
+      regressionCount,
+      streamCount: targetWindowCount + regressionCount,
+      fallbackCount,
+    }
+  }, [runningPerformanceSamples])
 
   const runningPerformanceTrendData = useMemo(() => {
     const grouped = new Map<string, typeof runningPerformanceSamples>()
@@ -1178,6 +1199,40 @@ export function Training() {
                         {runningPerformanceSummary.avgHr ? t('activity.units.bpm', { value: runningPerformanceSummary.avgHr }) : '—'}
                       </div>
                       <div className="mt-1 text-sm text-muted-foreground">{t('training.runPerformance.cards.avgHrHint')}</div>
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border/60 bg-background/40 p-3">
+                    <div className="flex flex-col gap-2 lg:flex-row lg:items-start lg:justify-between">
+                      <div className="min-w-0">
+                        <div className="text-sm font-medium">{t('training.runPerformance.basis.title')}</div>
+                        <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {t('training.runPerformance.basis.summary', {
+                            count: runningPerformanceSummary.sampleCount,
+                            period: timeRangeLabels[analysisTimePeriod],
+                          })}
+                        </div>
+                        <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {t('training.runPerformance.basis.method')}
+                        </div>
+                        <div className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                          {t('training.runPerformance.basis.terrain')}
+                        </div>
+                      </div>
+                      <div className="flex shrink-0 flex-wrap gap-2 text-xs">
+                        <span className="rounded-full border border-border/70 bg-background/60 px-2.5 py-1">
+                          {t('training.runPerformance.basis.streams', { count: runningPerformanceBasis.streamCount })}
+                        </span>
+                        <span className="rounded-full border border-border/70 bg-background/60 px-2.5 py-1">
+                          {t('training.runPerformance.basis.direct', { count: runningPerformanceBasis.targetWindowCount })}
+                        </span>
+                        <span className="rounded-full border border-border/70 bg-background/60 px-2.5 py-1">
+                          {t('training.runPerformance.basis.regression', { count: runningPerformanceBasis.regressionCount })}
+                        </span>
+                        <span className="rounded-full border border-border/70 bg-background/60 px-2.5 py-1">
+                          {t('training.runPerformance.basis.fallback', { count: runningPerformanceBasis.fallbackCount })}
+                        </span>
+                      </div>
                     </div>
                   </div>
 
