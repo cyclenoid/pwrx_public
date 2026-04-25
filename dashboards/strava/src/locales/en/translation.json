@@ -2081,15 +2081,19 @@
       "hours": "{{hours}}h {{minutes}}m"
     }
   },
-  "powerProfile": {
-    "title": "Power Profile",
-    "subtitle": "Your best power efforts across different durations",
-    "loading": "Loading power data...",
-    "filters": {
-      "activityType": "Activity type:",
-      "allTypes": "All types",
-      "weight": "Weight:",
-      "weightManageInSettings": "Manage in Settings"
+    "powerProfile": {
+      "title": "Power Profile",
+      "subtitle": "Your best power efforts across different durations",
+      "loading": "Loading power data...",
+      "modes": {
+        "ride": "Cycling",
+        "run": "Running"
+      },
+      "filters": {
+        "activityType": "Activity type:",
+        "allTypes": "All types",
+        "weight": "Weight:",
+        "weightManageInSettings": "Manage in Settings"
     },
     "cache": {
       "calculating": "Calculating...",
@@ -2200,15 +2204,53 @@
       "zoneLabel": "Z{{zone}}",
       "zoneRange": "{{min}}—{{max}} {{unit}}"
     },
-    "allTime": {
-      "title": "All‑time best power",
-      "subtitle": "({{count}} activities at {{weight}} kg)",
-      "key": "All-Time Best"
-    },
-    "yearlyComparison": {
-      "title": "Yearly power curve comparison",
-      "subtitle": "Compare your power profiles across years. Select up to {{count}} years to compare.",
-      "selectPrompt": "Select at least one year to display the power curve",
+      "allTime": {
+        "title": "All‑time best power",
+        "subtitle": "({{count}} activities at {{weight}} kg)",
+        "key": "All-Time Best"
+      },
+      "running": {
+        "title": "Running profile",
+        "subtitle": "Your fastest best efforts by distance with yearly comparison and all-time bests.",
+        "summaryTitle": "Running best efforts",
+        "summarySubtitle": "{{count}} runs with distance/time streams provide rolling best efforts.",
+        "cards": {
+          "activities": "Runs analyzed",
+          "activitiesHint": "All-time data basis",
+          "best100": "Best 100m",
+          "best500": "Best 500m",
+          "best1000": "Best 1 km",
+          "best5000": "Best 5 km"
+        },
+        "allTime": {
+          "title": "All-time best by distance",
+          "subtitle": "{{count}} runs across the full dataset",
+          "key": "All-Time Best",
+          "note": "These cards show the fastest rolling time for each distance. Open a card to jump to the matching activity."
+        },
+        "yearlyComparison": {
+          "title": "Yearly running curve comparison",
+          "subtitle": "Compare up to {{count}} years against your all-time bests. Lower is better.",
+          "selectPrompt": "Select at least one year to display the running curve.",
+          "note": "The curve uses pace in min/km for each distance. The gold line is your all-time best, colored lines are the selected years."
+        },
+        "chart": {
+          "distance": "Distance",
+          "distanceLabel": "Distance: {{value}}",
+          "pace": "Pace (min/km)",
+          "tooltipTime": "Time",
+          "tooltipPace": "Pace",
+          "tooltipHr": "Avg HR"
+        },
+        "empty": {
+          "title": "No running best efforts available",
+          "subtitle": "The running curve needs matching distance and time streams."
+        }
+      },
+      "yearlyComparison": {
+        "title": "Yearly power curve comparison",
+        "subtitle": "Compare your power profiles across years. Select up to {{count}} years to compare.",
+        "selectPrompt": "Select at least one year to display the power curve",
       "note": "The X-axis uses a logarithmic scale with higher resolution for short durations (1–30s) and lower resolution for long durations (up to 3 hours)."
     },
     "chart": {

@@ -1758,7 +1758,9 @@ export interface RunningBestEffort {
   distance_meters: number
   label: string
   time_seconds: number
+  time_label?: string | null
   pace: string
+  pace_min_per_km?: number | null
   activity_id: number | null
   activity_name: string | null
   activity_date: string | null

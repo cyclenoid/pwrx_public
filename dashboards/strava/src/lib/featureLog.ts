@@ -29,6 +29,33 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-25-power-bike-run-split",
+    date: "2026-04-25",
+    tag: "power",
+    title: {
+      de: "Power trennt jetzt Rad und Lauf",
+      en: "Power now separates cycling and running",
+    },
+    summary: {
+      de: "Der Power-Bereich hat jetzt einen eigenen Lauf-Tab mit Distanzkurve, Jahresvergleich und All-Time-Bestwerten statt nur Radleistung.",
+      en: "The Power area now has a dedicated running tab with a distance curve, yearly comparison, and all-time bests instead of only cycling power.",
+    },
+    bullets: {
+      de: [
+        "Oben im Power-Bereich kannst du jetzt direkt zwischen Radfahren und Laufen wechseln.",
+        "Der Lauf-Tab zeigt rollierende Bestzeiten fuer kurze bis lange Distanzen wie 100 m, 500 m, 1 km, 2 km und 5 km.",
+        "Die Laufkurve vergleicht ausgewaehlte Jahre mit deiner All-Time-Bestlinie auf Pace-Basis in min/km.",
+        "All-Time-Kacheln verlinken direkt zur Aktivitaet, in der die jeweilige Bestzeit erzielt wurde.",
+      ],
+      en: [
+        "You can now switch directly between cycling and running at the top of the Power area.",
+        "The running tab shows rolling best times for short to long distances such as 100 m, 500 m, 1 km, 2 km, and 5 km.",
+        "The running curve compares selected years against your all-time best line using pace in min/km.",
+        "All-time cards link straight to the activity where each best effort happened.",
+      ],
+    },
+  },
+  {
     id: "2026-04-22-training-run-hr-pace",
     date: "2026-04-22",
     tag: "training",

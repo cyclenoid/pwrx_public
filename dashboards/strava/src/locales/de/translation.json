@@ -2081,15 +2081,19 @@
       "hours": "{{hours}}h {{minutes}}m"
     }
   },
-  "powerProfile": {
-    "title": "Power Profil",
-    "subtitle": "Deine besten Power-Leistungen über verschiedene Dauern",
-    "loading": "Power-Daten werden geladen...",
-    "filters": {
-      "activityType": "Aktivitätstyp:",
-      "allTypes": "Alle Typen",
-      "weight": "Gewicht:",
-      "weightManageInSettings": "In Einstellungen pflegen"
+    "powerProfile": {
+      "title": "Power Profil",
+      "subtitle": "Deine besten Power-Leistungen über verschiedene Dauern",
+      "loading": "Power-Daten werden geladen...",
+      "modes": {
+        "ride": "Radfahren",
+        "run": "Laufen"
+      },
+      "filters": {
+        "activityType": "Aktivitätstyp:",
+        "allTypes": "Alle Typen",
+        "weight": "Gewicht:",
+        "weightManageInSettings": "In Einstellungen pflegen"
     },
     "cache": {
       "calculating": "Berechne...",
@@ -2200,15 +2204,53 @@
       "zoneLabel": "Z{{zone}}",
       "zoneRange": "{{min}}—{{max}} {{unit}}"
     },
-    "allTime": {
-      "title": "All-Time Best Power",
-      "subtitle": "({{count}} Aktivitäten bei {{weight}} kg)",
-      "key": "All-Time Best"
-    },
-    "yearlyComparison": {
-      "title": "Jahresvergleich der Power-Kurve",
-      "subtitle": "Vergleiche deine Power-Profile über die Jahre. Wähle bis zu {{count}} Jahre zum Vergleich.",
-      "selectPrompt": "Wähle mindestens ein Jahr, um die Power-Kurve anzuzeigen",
+      "allTime": {
+        "title": "All-Time Best Power",
+        "subtitle": "({{count}} Aktivitäten bei {{weight}} kg)",
+        "key": "All-Time Best"
+      },
+      "running": {
+        "title": "Laufprofil",
+        "subtitle": "Deine schnellsten Bestzeiten nach Distanz mit Jahresvergleich und All-Time-Best.",
+        "summaryTitle": "Lauf-Bestleistungen",
+        "summarySubtitle": "{{count}} Läufe mit Distanz-/Zeit-Streams liefern rollierende Bestzeiten.",
+        "cards": {
+          "activities": "Analysierte Läufe",
+          "activitiesHint": "All-Time Datengrundlage",
+          "best100": "Best 100m",
+          "best500": "Best 500m",
+          "best1000": "Best 1 km",
+          "best5000": "Best 5 km"
+        },
+        "allTime": {
+          "title": "All-Time Best nach Distanz",
+          "subtitle": "{{count}} Läufe im gesamten Datensatz",
+          "key": "All-Time Best",
+          "note": "Die Kacheln zeigen die schnellste rollierende Zeit je Distanz. Tippe auf einen Eintrag, um die zugehörige Aktivität zu öffnen."
+        },
+        "yearlyComparison": {
+          "title": "Jahresvergleich der Laufkurve",
+          "subtitle": "Vergleiche bis zu {{count}} Jahre gegen deine All-Time-Bestwerte. Niedriger ist besser.",
+          "selectPrompt": "Wähle mindestens ein Jahr, um die Laufkurve anzuzeigen.",
+          "note": "Die Kurve nutzt Pace in min/km pro Distanz. Die goldene Linie zeigt dein All-Time-Best, die farbigen Linien die ausgewählten Jahre."
+        },
+        "chart": {
+          "distance": "Distanz",
+          "distanceLabel": "Distanz: {{value}}",
+          "pace": "Pace (min/km)",
+          "tooltipTime": "Zeit",
+          "tooltipPace": "Pace",
+          "tooltipHr": "Ø HF"
+        },
+        "empty": {
+          "title": "Keine Lauf-Bestleistungen verfügbar",
+          "subtitle": "Für die Laufkurve fehlen passende Distanz- und Zeit-Streams."
+        }
+      },
+      "yearlyComparison": {
+        "title": "Jahresvergleich der Power-Kurve",
+        "subtitle": "Vergleiche deine Power-Profile über die Jahre. Wähle bis zu {{count}} Jahre zum Vergleich.",
+        "selectPrompt": "Wähle mindestens ein Jahr, um die Power-Kurve anzuzeigen",
       "note": "Die X-Achse nutzt eine logarithmische Skala mit höherer Auflösung für kurze Dauern (1–30s) und niedrigerer Auflösung für lange Dauern (bis 3 Stunden)."
     },
     "chart": {

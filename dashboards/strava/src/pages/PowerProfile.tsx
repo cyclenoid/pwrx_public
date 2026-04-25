@@ -1,7 +1,7 @@
 import { useState, useMemo, useEffect } from 'react'
-import { ChevronDown, ChevronUp } from 'lucide-react'
+import { ChevronDown, ChevronUp, Bike, Zap } from 'lucide-react'
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import {
   LineChart,
   Line,
@@ -34,6 +34,7 @@ import {
 import { getChartColors } from '../lib/chartTheme'
 import { useTheme } from '../components/ThemeProvider'
 import { useTranslation } from 'react-i18next'
+import { RunningPowerTab } from '../components/power/RunningPowerTab'
 
 // Generate distinct colors for each year
 const yearColors: Record<number, string> = {
@@ -87,15 +88,30 @@ export function PowerProfile() {
   const { t, i18n } = useTranslation()
   const { resolvedTheme } = useTheme()
   const queryClient = useQueryClient()
+  const [searchParams, setSearchParams] = useSearchParams()
+  const requestedActivityType = searchParams.get('type') === 'Run' ? 'Run' : 'Ride'
+  const [activityType, setActivityType] = useState<'Ride' | 'Run'>(requestedActivityType)
   const [selectedYears, setSelectedYears] = useState<number[]>([])
   const [showDetails, setShowDetails] = useState(false)
   const ANALYTICS_STALE_MS = 60 * 60 * 1000
+
+  useEffect(() => {
+    setActivityType((current) => (current === requestedActivityType ? current : requestedActivityType))
+  }, [requestedActivityType])
+
+  const updateActivityType = (nextType: 'Ride' | 'Run') => {
+    setActivityType(nextType)
+    const nextParams = new URLSearchParams(searchParams)
+    nextParams.set('type', nextType)
+    setSearchParams(nextParams, { replace: true })
+  }
 
   // Fetch user settings (including weight)
   const { data: settings } = useQuery({
     queryKey: ['settings'],
     queryFn: getSettings,
     staleTime: ANALYTICS_STALE_MS,
+    enabled: activityType === 'Ride',
     refetchOnWindowFocus: false,
   })
 
@@ -104,6 +120,7 @@ export function PowerProfile() {
     queryKey: ['ftp'],
     queryFn: getFTP,
     staleTime: ANALYTICS_STALE_MS,
+    enabled: activityType === 'Ride',
     refetchOnWindowFocus: false,
   })
 
@@ -113,6 +130,7 @@ export function PowerProfile() {
     queryFn: () => getPowerCurve({ months: 12 }),
     staleTime: 24 * 60 * 60 * 1000, // 24 hours cache
     gcTime: 24 * 60 * 60 * 1000, // Keep in cache for 24 hours
+    enabled: activityType === 'Ride',
     refetchOnMount: false,
     refetchOnWindowFocus: false,
   })
@@ -138,6 +156,7 @@ export function PowerProfile() {
     queryKey: ['power-curve-yearly-cached'],
     queryFn: () => getCachedYearlyPowerCurve(),
     staleTime: ANALYTICS_STALE_MS,
+    enabled: activityType === 'Ride',
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   })
@@ -146,6 +165,7 @@ export function PowerProfile() {
     queryKey: ['power-curve-alltime-cached'],
     queryFn: () => getCachedPowerCurve(),
     staleTime: ANALYTICS_STALE_MS,
+    enabled: activityType === 'Ride',
     refetchOnWindowFocus: false,
     refetchOnMount: false,
   })
@@ -195,7 +215,7 @@ export function PowerProfile() {
       { subject: t('powerProfile.strengths.timeTrial'), value: Math.round(powerCurveAnalysis.strengths.time_trial), fullMark: 100 },
       { subject: t('powerProfile.strengths.endurance'), value: Math.round(powerCurveAnalysis.strengths.endurance), fullMark: 100 },
     ]
-  }, [powerCurveAnalysis, i18n.language])
+  }, [powerCurveAnalysis, t])
 
   // Toggle year selection
   const toggleYear = (year: number) => {
@@ -299,13 +319,45 @@ export function PowerProfile() {
 
   return (
     <div className="space-y-8">
-      <div>
-        <h2 className="text-3xl font-bold tracking-tight">{t('powerProfile.title')}</h2>
-        <p className="text-muted-foreground">
-          {t('powerProfile.subtitle')}
-        </p>
+      <div className="flex flex-col gap-3 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <h2 className="text-3xl font-bold tracking-tight">
+            {activityType === 'Ride' ? t('powerProfile.title') : t('powerProfile.running.title')}
+          </h2>
+          <p className="text-muted-foreground">
+            {activityType === 'Ride' ? t('powerProfile.subtitle') : t('powerProfile.running.subtitle')}
+          </p>
+        </div>
+        <div className="flex items-center gap-1 rounded-full bg-secondary/70 p-1 self-start">
+          <button
+            onClick={() => updateActivityType('Ride')}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+              activityType === 'Ride'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Bike size={16} />
+            {t('powerProfile.modes.ride')}
+          </button>
+          <button
+            onClick={() => updateActivityType('Run')}
+            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+              activityType === 'Run'
+                ? 'bg-background text-foreground shadow-sm'
+                : 'text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            <Zap size={16} />
+            {t('powerProfile.modes.run')}
+          </button>
+        </div>
       </div>
 
+      {activityType === 'Run' ? (
+        <RunningPowerTab />
+      ) : (
+        <>
       {/* Filter and Settings */}
       <Card>
         <CardContent className="pt-6">
@@ -1042,6 +1094,8 @@ export function PowerProfile() {
               </CardContent>
             </Card>
           )}
+        </>
+      )}
         </>
       )}
     </div>

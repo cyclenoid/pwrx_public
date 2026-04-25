@@ -5063,7 +5063,13 @@ router.get('/running-best-efforts', async (req: Request, res: Response) => {
 
     // Standard running distances in meters
     const distances = [
+      { meters: 100, label: '100m' },
+      { meters: 200, label: '200m' },
+      { meters: 400, label: '400m' },
+      { meters: 500, label: '500m' },
       { meters: 1000, label: '1 km' },
+      { meters: 2000, label: '2 km' },
+      { meters: 3000, label: '3 km' },
       { meters: 5000, label: '5 km' },
       { meters: 10000, label: '10 km' },
       { meters: 21097, label: 'Half Marathon' },
@@ -5075,7 +5081,9 @@ router.get('/running-best-efforts', async (req: Request, res: Response) => {
       distance_meters: number;
       label: string;
       time_seconds: number | null;
+      time_label: string | null;
       pace: string | null;
+      pace_min_per_km: number | null;
       activity_id: number | null;
       activity_name: string | null;
       activity_date: string | null;
@@ -5086,7 +5094,9 @@ router.get('/running-best-efforts', async (req: Request, res: Response) => {
       distance_meters: d.meters,
       label: d.label,
       time_seconds: null,
+      time_label: null,
       pace: null,
+      pace_min_per_km: null,
       activity_id: null,
       activity_name: null,
       activity_date: null,
@@ -5156,12 +5166,22 @@ router.get('/running-best-efforts', async (req: Request, res: Response) => {
           const minutes = Math.floor(paceMinPerKm);
           const seconds = Math.round((paceMinPerKm - minutes) * 60);
           const pace = `${minutes}:${seconds.toString().padStart(2, '0')}`;
+          const totalSecondsRounded = Math.round(bestTime);
+          const totalHours = Math.floor(totalSecondsRounded / 3600);
+          const totalMinutes = Math.floor((totalSecondsRounded % 3600) / 60);
+          const totalSeconds = totalSecondsRounded % 60;
+          const timeLabel =
+            totalHours > 0
+              ? `${totalHours}:${totalMinutes.toString().padStart(2, '0')}:${totalSeconds.toString().padStart(2, '0')}`
+              : `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
 
           bestEfforts[i] = {
             distance_meters: targetDistance,
             label: distances[i].label,
-            time_seconds: Math.round(bestTime),
+            time_seconds: totalSecondsRounded,
+            time_label: timeLabel,
             pace,
+            pace_min_per_km: Number(paceMinPerKm.toFixed(3)),
             activity_id: activity.strava_activity_id,
             activity_name: activity.name,
             activity_date: activity.start_date,
@@ -6082,9 +6102,11 @@ router.get('/records/streaks', async (req: Request, res: Response) => {
 
     const params: any[] = [];
     if (type) {
-      // Support both single type and cycling category
+      // Support grouped cycling and running categories
       if (type === 'Ride') {
         query += ` WHERE type IN ('Ride', 'VirtualRide', 'EBikeRide')`;
+      } else if (type === 'Run') {
+        query += ` WHERE type IN ('Run', 'TrailRun', 'VirtualRun')`;
       } else {
         query += ` WHERE type = $1`;
         params.push(type);
