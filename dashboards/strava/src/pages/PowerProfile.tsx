@@ -328,13 +328,13 @@ export function PowerProfile() {
             {activityType === 'Ride' ? t('powerProfile.subtitle') : t('powerProfile.running.subtitle')}
           </p>
         </div>
-        <div className="flex items-center gap-1 rounded-full bg-secondary/70 p-1 self-start">
+        <div className="flex items-center gap-2 rounded-lg bg-muted/30 p-1.5 self-start">
           <button
             onClick={() => updateActivityType('Ride')}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+            className={`flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all ${
               activityType === 'Ride'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background text-orange-600 shadow-lg dark:text-orange-400'
+                : 'border-transparent text-muted-foreground hover:bg-secondary/50'
             }`}
           >
             <Bike size={16} />
@@ -342,10 +342,10 @@ export function PowerProfile() {
           </button>
           <button
             onClick={() => updateActivityType('Run')}
-            className={`flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition-colors ${
+            className={`flex cursor-pointer items-center gap-2 rounded-md border px-4 py-2 text-sm font-medium transition-all ${
               activityType === 'Run'
-                ? 'bg-background text-foreground shadow-sm'
-                : 'text-muted-foreground hover:text-foreground'
+                ? 'border-orange-500/30 bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background text-orange-600 shadow-lg dark:text-orange-400'
+                : 'border-transparent text-muted-foreground hover:bg-secondary/50'
             }`}
           >
             <Zap size={16} />
