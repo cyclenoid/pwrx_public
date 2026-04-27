@@ -143,6 +143,9 @@ services:
         ADAPTER_SRC="$${ADAPTER_STRAVA_PACKAGE:-}" &&
         SSH_KEY_FILE="$${PWRX_SSH_KEY_FILE:-/root/.ssh/id_ed25519}" &&
         if echo "$${ADAPTER_SRC}" | grep -Eq "^git\\+ssh://|^ssh://|^git@"; then
+          if [ ! -f "$${SSH_KEY_FILE}" ]; then
+            SSH_KEY_FILE="$$(find /root/.ssh -maxdepth 1 -type f ! -name "*.pub" ! -name "known_hosts*" | head -n 1)";
+          fi;
           if [ -f "$${SSH_KEY_FILE}" ]; then
             cp "$${SSH_KEY_FILE}" /tmp/pwrx_adapter_key &&
             chmod 600 /tmp/pwrx_adapter_key &&
