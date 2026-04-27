@@ -1,6 +1,6 @@
 param(
   [string]$Source = (Resolve-Path ".").Path,
-  [string]$Destination = "<public-snapshot-path>",
+  [string]$Destination = (Join-Path (Split-Path -Parent (Resolve-Path ".").Path) "pwrx-public-snapshot"),
   [switch]$InitGit
 )
 

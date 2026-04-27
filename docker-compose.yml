@@ -116,6 +116,7 @@ services:
       ADAPTER_STRAVA_ENABLED: ${ADAPTER_STRAVA_ENABLED:-false}
       ADAPTER_STRAVA_PACKAGE: ${ADAPTER_STRAVA_PACKAGE-}
       ADAPTER_STRAVA_MODULE: ${ADAPTER_STRAVA_MODULE-}
+      PWRX_SSH_KEY_FILE: ${PWRX_SSH_KEY_FILE:-/root/.ssh/id_ed25519}
     volumes:
       - ./apps/strava:/app
       - ./.git:/app/.git:ro  # enable backend version/commit display from repo metadata
@@ -139,21 +140,24 @@ services:
       if [ "${ADAPTER_STRAVA_ENABLED:-false}" = "false" ] || [ "${ADAPTER_STRAVA_ENABLED:-false}" = "0" ] || [ "${ADAPTER_STRAVA_ENABLED:-false}" = "no" ]; then
         echo "Strava adapter disabled: skip private adapter dependency";
       else
-        ADAPTER_SRC="$${ADAPTER_STRAVA_PACKAGE:-@your-org/pwrx-adapter-strava}" &&
-        if [ -f /root/.ssh/pwrx_adapter_key ]; then
-          cp /root/.ssh/pwrx_adapter_key /tmp/pwrx_adapter_key &&
-          chmod 600 /tmp/pwrx_adapter_key &&
-          export GIT_SSH_COMMAND="ssh -i /tmp/pwrx_adapter_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes" &&
-          git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/";
-        else
-          if echo "$${ADAPTER_SRC}" | grep -Eq "^git\\+ssh://|^ssh://|^git@"; then
-            echo "ADAPTER_STRAVA_PACKAGE uses SSH source but /root/.ssh/pwrx_adapter_key is missing" >&2;
+        ADAPTER_SRC="$${ADAPTER_STRAVA_PACKAGE:-}" &&
+        SSH_KEY_FILE="$${PWRX_SSH_KEY_FILE:-/root/.ssh/id_ed25519}" &&
+        if echo "$${ADAPTER_SRC}" | grep -Eq "^git\\+ssh://|^ssh://|^git@"; then
+          if [ -f "$${SSH_KEY_FILE}" ]; then
+            cp "$${SSH_KEY_FILE}" /tmp/pwrx_adapter_key &&
+            chmod 600 /tmp/pwrx_adapter_key &&
+            export GIT_SSH_COMMAND="ssh -i /tmp/pwrx_adapter_key -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -o IdentitiesOnly=yes" &&
+            git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/";
+          else
+            echo "ADAPTER_STRAVA_PACKAGE uses SSH source but PWRX_SSH_KEY_FILE is missing" >&2;
             exit 1;
           fi;
-          echo "No deploy key mounted. Trying public adapter source: $${ADAPTER_SRC}";
         fi &&
-        npm pkg set dependencies.@your-org/pwrx-adapter-strava="$${ADAPTER_SRC}" >/dev/null &&
-        npm install --package-lock-only --ignore-scripts --no-audit --no-fund;
+        if [ -n "$${ADAPTER_SRC}" ]; then
+          npm install --package-lock-only --ignore-scripts --no-audit --no-fund "$${ADAPTER_SRC}";
+        else
+          echo "ADAPTER_STRAVA_PACKAGE is empty. Assuming ADAPTER_STRAVA_MODULE is already resolvable.";
+        fi;
       fi &&
       npm ci --production=false &&
       npm run build &&

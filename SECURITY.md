@@ -44,7 +44,7 @@ For this project in particular:
 
 If you run the optional private Strava connector:
 - Protect `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`.
-- Protect CI secret `PWRX_ADAPTER_KEY` (private SSH key for optional private-adapter access checks).
+- Protect any deployment keys or package credentials used by your private connector setup.
 
 ## Recommended Hardening
 

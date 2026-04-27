@@ -30,18 +30,6 @@ jobs:
           cache: npm
           cache-dependency-path: apps/strava/package-lock.json
 
-      - name: Check adapter deploy key availability
-        id: adapter_key
-        env:
-          PWRX_ADAPTER_KEY: ${{ secrets.PWRX_ADAPTER_KEY }}
-        run: |
-          if [ -n "$PWRX_ADAPTER_KEY" ]; then
-            echo "available=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "available=false" >> "$GITHUB_OUTPUT"
-            echo "::notice::PWRX_ADAPTER_KEY is not set. Backend private-adapter checks will be skipped."
-          fi
-
       - name: Install dependencies
         run: npm ci
 
@@ -56,22 +44,6 @@ jobs:
 
       - name: Run import tests
         run: npm run test:import
-
-      - name: Optional private adapter access check
-        if: steps.adapter_key.outputs.available == 'true'
-        env:
-          PWRX_ADAPTER_KEY: ${{ secrets.PWRX_ADAPTER_KEY }}
-        run: |
-          mkdir -p ~/.ssh
-          printf '%s\n' "$PWRX_ADAPTER_KEY" > ~/.ssh/pwrx_adapter_key
-          chmod 600 ~/.ssh/pwrx_adapter_key
-          ssh-keyscan github.com >> ~/.ssh/known_hosts
-          ssh-keyscan -p 443 ssh.github.com >> ~/.ssh/known_hosts
-          git config --global url."ssh://git@ssh.github.com:443/".insteadOf "ssh://git@github.com/"
-          git config --global url."ssh://git@ssh.github.com:443/".insteadOf "git@github.com:"
-          export GIT_SSH_COMMAND="ssh -i ~/.ssh/pwrx_adapter_key -o IdentitiesOnly=yes -o UserKnownHostsFile=~/.ssh/known_hosts -o StrictHostKeyChecking=yes"
-          git ls-remote ssh://git@ssh.github.com:443/your-org/pwrx-adapter-strava.git HEAD
-          rm -f ~/.ssh/pwrx_adapter_key
 
   frontend:
     name: Frontend Lint and Build

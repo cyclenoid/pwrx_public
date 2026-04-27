@@ -5,8 +5,7 @@ type AnyFactory = (...args: any[]) => any;
 
 export type CreateStravaRoutes = (options?: { onDataChanged?: () => void }) => express.Router;
 
-const defaultStravaModulePath = '@your-org/pwrx-adapter-strava';
-const stravaModulePath = String(process.env.ADAPTER_STRAVA_MODULE || defaultStravaModulePath).trim();
+const stravaModulePath = String(process.env.ADAPTER_STRAVA_MODULE || '').trim();
 let externalModuleChecked = false;
 let externalModuleValue: any | null = null;
 let missingFactoryWarnings = new Set<string>();
