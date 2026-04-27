@@ -467,6 +467,21 @@ const TRAINING_LOAD_CACHE_MAX_ENTRIES = Math.max(
   Number(process.env.TRAINING_LOAD_CACHE_MAX_ENTRIES || 32)
 );
 const trainingLoadRefreshInProgress = new Set<string>();
+type RunningActivitiesCacheEntry = {
+  data: any;
+  timestamp: number;
+  fingerprint: string;
+  refreshedDayUtc: string;
+};
+type RunningActivitiesQuery = {
+  months: number | null;
+};
+const runningActivitiesCache = new Map<string, RunningActivitiesCacheEntry>();
+const RUNNING_ACTIVITIES_CACHE_MAX_ENTRIES = Math.max(
+  4,
+  Number(process.env.RUNNING_ACTIVITIES_CACHE_MAX_ENTRIES || 20)
+);
+const runningActivitiesRefreshInProgress = new Set<string>();
 const POWER_CURVE_SUPPORTED_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide'] as const;
 let heatmapPrewarmTimeout: NodeJS.Timeout | null = null;
 let heatmapPrewarmRunning = false;
@@ -1352,6 +1367,184 @@ const computeTrainingLoadPayload = async (
   };
 };
 
+const parseRunningActivitiesMonthsParam = (value: unknown): number | null => {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  const normalized = String(rawValue ?? '').trim().toLowerCase();
+  if (!normalized || normalized === 'undefined' || normalized === 'all') return null;
+
+  const parsed = Number.parseInt(normalized, 10);
+  if (!Number.isFinite(parsed) || parsed <= 0) return null;
+  return Math.min(parsed, 120);
+};
+
+const getMonthsAgoIso = (months: number): string => {
+  const date = new Date();
+  date.setMonth(date.getMonth() - months);
+  return date.toISOString();
+};
+
+const buildRunningActivitiesCacheKey = (query: RunningActivitiesQuery): string =>
+  `${query.months ?? 'all'}`;
+
+const trimRunningActivitiesCache = (): void => {
+  if (runningActivitiesCache.size <= RUNNING_ACTIVITIES_CACHE_MAX_ENTRIES) return;
+  const sorted = Array.from(runningActivitiesCache.entries())
+    .sort((a, b) => a[1].timestamp - b[1].timestamp);
+  while (sorted.length > 0 && runningActivitiesCache.size > RUNNING_ACTIVITIES_CACHE_MAX_ENTRIES) {
+    const oldest = sorted.shift();
+    if (!oldest) break;
+    runningActivitiesCache.delete(oldest[0]);
+  }
+};
+
+const clearRunningActivitiesCache = (reason: string = 'manual'): number => {
+  const cleared = runningActivitiesCache.size;
+  runningActivitiesCache.clear();
+  runningActivitiesRefreshInProgress.clear();
+  if (cleared > 0) {
+    console.log(`Running activities cache cleared (${cleared} entries, reason=${reason})`);
+  }
+  return cleared;
+};
+
+const setRunningActivitiesCache = (
+  cacheKey: string,
+  data: any,
+  fingerprint: string,
+  refreshedDayUtc: string = getBulkPowerMetricsUtcDayKey()
+): void => {
+  runningActivitiesCache.set(cacheKey, {
+    data,
+    timestamp: Date.now(),
+    fingerprint,
+    refreshedDayUtc,
+  });
+  trimRunningActivitiesCache();
+};
+
+const buildRunningActivitiesFingerprint = async (query: RunningActivitiesQuery): Promise<string> => {
+  const params: any[] = [];
+  let dateFilter = '';
+  if (query.months) {
+    params.push(getMonthsAgoIso(query.months));
+    dateFilter = 'AND a.start_date >= $1';
+  }
+
+  const result = await db.query(`
+    SELECT
+      COUNT(DISTINCT a.strava_activity_id)::bigint AS activity_count,
+      COALESCE(MAX(a.updated_at), TIMESTAMP 'epoch') AS max_activity_updated_at,
+      COALESCE(MAX(a.start_date), TIMESTAMP 'epoch') AS max_activity_start_date,
+      COALESCE(MAX(s.created_at), TIMESTAMP 'epoch') AS max_stream_created_at
+    FROM strava.activities a
+    LEFT JOIN strava.activity_streams s
+      ON s.activity_id = a.strava_activity_id
+      AND s.stream_type IN ('velocity_smooth', 'distance', 'heartrate', 'time')
+    WHERE (a.type = 'Run' OR a.type = 'TrailRun' OR a.type = 'VirtualRun')
+      AND a.distance > 1000
+      AND a.average_speed > 0
+      ${dateFilter}
+  `, params);
+
+  const row = result.rows[0] || {};
+  const activityCount = Number(row.activity_count || 0);
+  const maxActivityUpdatedAt = row.max_activity_updated_at
+    ? new Date(row.max_activity_updated_at).toISOString()
+    : 'epoch';
+  const maxActivityStartDate = row.max_activity_start_date
+    ? new Date(row.max_activity_start_date).toISOString()
+    : 'epoch';
+  const maxStreamCreatedAt = row.max_stream_created_at
+    ? new Date(row.max_stream_created_at).toISOString()
+    : 'epoch';
+
+  return `${activityCount}|${maxActivityUpdatedAt}|${maxActivityStartDate}|${maxStreamCreatedAt}`;
+};
+
+const formatPaceMinPerKm = (paceMinPerKm: number): string => {
+  if (!Number.isFinite(paceMinPerKm) || paceMinPerKm <= 0) return '0:00';
+  const minutes = Math.floor(paceMinPerKm);
+  const seconds = Math.round((paceMinPerKm - minutes) * 60);
+  const normalizedMinutes = seconds === 60 ? minutes + 1 : minutes;
+  const normalizedSeconds = seconds === 60 ? 0 : seconds;
+  return `${normalizedMinutes}:${normalizedSeconds.toString().padStart(2, '0')}`;
+};
+
+const computeRunningActivitiesPayload = async (
+  query: RunningActivitiesQuery
+): Promise<{ payload: any; fingerprint: string; generationTimeMs: number }> => {
+  const computeStart = Date.now();
+  const fingerprint = await buildRunningActivitiesFingerprint(query);
+  const params: any[] = [];
+  let dateFilter = '';
+  if (query.months) {
+    params.push(getMonthsAgoIso(query.months));
+    dateFilter = 'AND a.start_date >= $1';
+  }
+
+  const result = await db.query(`
+    SELECT
+      a.strava_activity_id,
+      a.name,
+      a.start_date,
+      a.distance / 1000 as distance_km,
+      a.moving_time,
+      a.total_elevation_gain,
+      a.average_speed * 3.6 as avg_speed_kmh,
+      a.average_heartrate,
+      a.type
+    FROM strava.activities a
+    WHERE (a.type = 'Run' OR a.type = 'TrailRun' OR a.type = 'VirtualRun')
+      AND a.distance > 1000
+      AND a.average_speed > 0
+      ${dateFilter}
+    ORDER BY a.start_date ASC
+  `, params);
+
+  const activities: any[] = [];
+  for (const row of result.rows) {
+    const avgSpeedKmh = parseFloat(row.avg_speed_kmh);
+    const avgPaceMinPerKm = avgSpeedKmh > 0 ? 60 / avgSpeedKmh : 0;
+    const streams = await db.getActivityStreams(row.strava_activity_id);
+    const velocityStream = streams.find(s => s.stream_type === 'velocity_smooth');
+    const distanceStream = streams.find(s => s.stream_type === 'distance');
+    const hrStream = streams.find(s => s.stream_type === 'heartrate');
+    const timeStream = streams.find(s => s.stream_type === 'time');
+    const paceAt150Bpm = estimatePaceAtHeartRate({
+      velocity: velocityStream?.data,
+      distance: distanceStream?.data,
+      heartrate: hrStream?.data,
+      time: timeStream?.data,
+    }, 150);
+
+    activities.push({
+      activity_id: row.strava_activity_id,
+      name: row.name,
+      date: row.start_date,
+      distance_km: parseFloat(row.distance_km),
+      moving_time: row.moving_time,
+      total_elevation_gain: row.total_elevation_gain ? Math.round(parseFloat(row.total_elevation_gain)) : 0,
+      avg_speed_kmh: Number.isFinite(avgSpeedKmh) ? avgSpeedKmh : 0,
+      avg_pace_decimal: avgPaceMinPerKm,
+      avg_pace: formatPaceMinPerKm(avgPaceMinPerKm),
+      avg_hr: row.average_heartrate ? Math.round(parseFloat(row.average_heartrate)) : null,
+      pace_at_150bpm: paceAt150Bpm.paceMinPerKm,
+      pace_at_150bpm_sample_seconds: paceAt150Bpm.sampleSeconds,
+      pace_at_150bpm_method: paceAt150Bpm.method,
+      type: row.type
+    });
+  }
+
+  return {
+    payload: {
+      activities,
+      total_activities: activities.length,
+    },
+    fingerprint,
+    generationTimeMs: Date.now() - computeStart,
+  };
+};
+
 const normalizeHeatmapHotspotLocationLabel = (value: string | null | undefined): string | null => {
   const normalized = String(value || '')
     .replace(/\s+/g, ' ')
@@ -1888,6 +2081,20 @@ const schedulePerformanceCachePrewarm = (reason: string = 'manual') => {
         const trainingRideKey = buildTrainingLoadCacheKey(ninetyDaysAgo, endDate, 'Ride');
         const trainingRideComputed = await computeTrainingLoadPayload(ninetyDaysAgo, endDate, 'Ride');
         setTrainingLoadCache(trainingRideKey, trainingRideComputed.payload, getBulkPowerMetricsUtcDayKey());
+
+        const runningQueries: RunningActivitiesQuery[] = [
+          { months: 6 },
+          { months: null },
+        ];
+        for (const runningQuery of runningQueries) {
+          const runningComputed = await computeRunningActivitiesPayload(runningQuery);
+          setRunningActivitiesCache(
+            buildRunningActivitiesCacheKey(runningQuery),
+            runningComputed.payload,
+            runningComputed.fingerprint,
+            getBulkPowerMetricsUtcDayKey()
+          );
+        }
 
         const userResult = await db.query(`
           WITH active_user AS (
@@ -5320,74 +5527,62 @@ router.get('/running-pace-trends', async (req: Request, res: Response) => {
  */
 router.get('/running-activities', async (req: Request, res: Response) => {
   try {
-    const { months } = req.query;
+    const query: RunningActivitiesQuery = {
+      months: parseRunningActivitiesMonthsParam(req.query.months),
+    };
+    const forceRefresh = String(req.query.refresh || '').toLowerCase() === 'true';
+    const cacheKey = buildRunningActivitiesCacheKey(query);
+    const now = Date.now();
+    const todayUtc = getBulkPowerMetricsUtcDayKey();
+    const cached = runningActivitiesCache.get(cacheKey);
 
-    let dateFilter = '';
-    const params: any[] = [];
+    if (cached && !forceRefresh) {
+      const refreshDue = cached.refreshedDayUtc !== todayUtc;
+      if (refreshDue && !runningActivitiesRefreshInProgress.has(cacheKey)) {
+        runningActivitiesRefreshInProgress.add(cacheKey);
+        void (async () => {
+          try {
+            const refreshed = await computeRunningActivitiesPayload(query);
+            setRunningActivitiesCache(
+              cacheKey,
+              refreshed.payload,
+              refreshed.fingerprint,
+              getBulkPowerMetricsUtcDayKey()
+            );
+            console.log(`Running activities cache refreshed for ${cacheKey} in ${refreshed.generationTimeMs}ms`);
+          } catch (refreshError: any) {
+            console.warn(`Running activities background refresh failed for ${cacheKey}: ${refreshError?.message || refreshError}`);
+          } finally {
+            runningActivitiesRefreshInProgress.delete(cacheKey);
+          }
+        })();
+      }
 
-    if (months && months !== 'undefined') {
-      const monthsAgo = new Date();
-      monthsAgo.setMonth(monthsAgo.getMonth() - parseInt(months as string));
-      dateFilter = 'AND a.start_date >= $1';
-      params.push(monthsAgo.toISOString());
-    }
-
-    const result = await db.query(`
-      SELECT
-        a.strava_activity_id,
-        a.name,
-        a.start_date,
-        a.distance / 1000 as distance_km,
-        a.moving_time,
-        a.total_elevation_gain,
-        a.average_speed * 3.6 as avg_speed_kmh,
-        a.average_heartrate,
-        a.type
-      FROM strava.activities a
-      WHERE (a.type = 'Run' OR a.type = 'TrailRun' OR a.type = 'VirtualRun')
-        AND a.distance > 1000
-        AND a.average_speed > 0
-        ${dateFilter}
-      ORDER BY a.start_date ASC
-    `, params);
-
-    const activities: any[] = [];
-    for (const row of result.rows) {
-      const avgSpeedKmh = parseFloat(row.avg_speed_kmh);
-      const avgPaceMinPerKm = avgSpeedKmh > 0 ? 60 / avgSpeedKmh : 0;
-      const streams = await db.getActivityStreams(row.strava_activity_id);
-      const velocityStream = streams.find(s => s.stream_type === 'velocity_smooth');
-      const distanceStream = streams.find(s => s.stream_type === 'distance');
-      const hrStream = streams.find(s => s.stream_type === 'heartrate');
-      const timeStream = streams.find(s => s.stream_type === 'time');
-      const paceAt150Bpm = estimatePaceAtHeartRate({
-        velocity: velocityStream?.data,
-        distance: distanceStream?.data,
-        heartrate: hrStream?.data,
-        time: timeStream?.data,
-      }, 150);
-
-      activities.push({
-        activity_id: row.strava_activity_id,
-        name: row.name,
-        date: row.start_date,
-        distance_km: parseFloat(row.distance_km),
-        moving_time: row.moving_time,
-        total_elevation_gain: row.total_elevation_gain ? Math.round(parseFloat(row.total_elevation_gain)) : 0,
-        avg_speed_kmh: Number.isFinite(avgSpeedKmh) ? avgSpeedKmh : 0,
-        avg_pace_decimal: avgPaceMinPerKm,
-        avg_pace: `${Math.floor(avgPaceMinPerKm)}:${Math.round((avgPaceMinPerKm - Math.floor(avgPaceMinPerKm)) * 60).toString().padStart(2, '0')}`,
-        avg_hr: row.average_heartrate ? Math.round(parseFloat(row.average_heartrate)) : null,
-        pace_at_150bpm: paceAt150Bpm.paceMinPerKm,
-        pace_at_150bpm_sample_seconds: paceAt150Bpm.sampleSeconds,
-        pace_at_150bpm_method: paceAt150Bpm.method,
-        type: row.type
+      res.json({
+        ...cached.data,
+        cached: true,
+        cache_age_seconds: Math.floor((now - cached.timestamp) / 1000),
+        stale_by_day: refreshDue,
+        refresh_in_progress: runningActivitiesRefreshInProgress.has(cacheKey),
+        cache_mode: 'cache_first_daily_refresh',
       });
+      return;
     }
+
+    const computed = await computeRunningActivitiesPayload(query);
+    setRunningActivitiesCache(
+      cacheKey,
+      computed.payload,
+      computed.fingerprint,
+      getBulkPowerMetricsUtcDayKey()
+    );
 
     res.json({
-      activities,
-      total_activities: activities.length
+      ...computed.payload,
+      cached: false,
+      generation_time_ms: computed.generationTimeMs,
+      cache_mode: 'cache_first_daily_refresh',
+      force_refresh: forceRefresh,
     });
   } catch (error: any) {
     console.error('Error fetching running activities:', error);
@@ -7637,7 +7832,13 @@ async function refreshTechStatsCache(): Promise<void> {
 }
 
 // Export for use in index.ts after sync
-export { refreshTechStatsCache, scheduleHeatmapCachePrewarm, schedulePerformanceCachePrewarm, clearTrainingLoadCache };
+export {
+  clearRunningActivitiesCache,
+  clearTrainingLoadCache,
+  refreshTechStatsCache,
+  scheduleHeatmapCachePrewarm,
+  schedulePerformanceCachePrewarm,
+};
 
 /**
  * GET /api/tech/cached
@@ -7763,11 +7964,13 @@ router.post('/cache/clear', async (req: Request, res: Response) => {
   const powerCurveCleared = clearPowerCurveAnalysisCache('api_cache_clear');
   const bulkPowerMetricsCleared = clearBulkPowerMetricsCache('api_cache_clear');
   const trainingLoadCleared = clearTrainingLoadCache('api_cache_clear');
+  const runningActivitiesCleared = clearRunningActivitiesCache('api_cache_clear');
   res.json({
     message: 'Cache cleared',
     power_curve_analysis_entries_cleared: powerCurveCleared,
     bulk_power_metrics_entries_cleared: bulkPowerMetricsCleared,
     training_load_entries_cleared: trainingLoadCleared,
+    running_activities_entries_cleared: runningActivitiesCleared,
   });
 });
 

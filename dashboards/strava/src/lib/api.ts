@@ -1827,6 +1827,10 @@ export interface RunningActivity {
 export interface RunningActivitiesResponse {
   activities: RunningActivity[]
   total_activities: number
+  cached?: boolean
+  cache_age_seconds?: number
+  generation_time_ms?: number
+  refresh_in_progress?: boolean
 }
 
 export const getRunningActivities = async (params?: {

@@ -29,6 +29,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-27-training-run-cache",
+    date: "2026-04-27",
+    tag: "training",
+    title: {
+      de: "Lauf-Training oeffnet nach dem ersten Laden schneller",
+      en: "Run training opens faster after the first load",
+    },
+    summary: {
+      de: "Die Laufanalyse nutzt jetzt denselben Cache-first-Ansatz wie die Rad-Trainingsauswertung, damit Pace-, Puls- und letzte-Laeufe-Daten nach dem ersten Aufbau direkter erscheinen.",
+      en: "Run analysis now uses the same cache-first approach as cycling training analytics, so pace, heart-rate, and recent-run data appears more directly after the first build.",
+    },
+    bullets: {
+      de: [
+        "Laufaktivitaeten mit Pace @150 bpm werden serverseitig zwischengespeichert und taeglich im Hintergrund erneuert.",
+        "Der App-Start waermt die typischen Lauf-Trainingsfenster vor, damit die neue Laufseite bei wiederholten Aufrufen weniger wartet.",
+        "Nach Syncs oder Importen werden die Laufdaten gezielt neu aufgebaut, sodass frische Trainingsdaten sichtbar bleiben.",
+      ],
+      en: [
+        "Run activities with Pace @150 bpm are cached server-side and refreshed daily in the background.",
+        "App startup prewarms the common run training windows so the new run page waits less on repeat visits.",
+        "After syncs or imports, run data is rebuilt deliberately so fresh training data remains visible.",
+      ],
+    },
+  },
+  {
     id: "2026-04-25-power-bike-run-split",
     date: "2026-04-25",
     tag: "power",

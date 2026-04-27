@@ -5,6 +5,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as cron from 'node-cron';
 import apiRoutes, {
+  clearRunningActivitiesCache,
   clearTrainingLoadCache,
   refreshTechStatsCache,
   scheduleHeatmapCachePrewarm,
@@ -53,6 +54,7 @@ const handleAnalyticsDataChanged = (reason: string): void => {
   refreshTechStatsCache();
   scheduleHeatmapCachePrewarm(reason);
   clearTrainingLoadCache(reason);
+  clearRunningActivitiesCache(reason);
   schedulePerformanceCachePrewarm(reason);
 };
 
