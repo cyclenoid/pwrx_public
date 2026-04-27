@@ -166,6 +166,7 @@ This is intentionally a separate operator path, not the recommended starting poi
 ## Security
 
 - Security policy and vulnerability reporting: `SECURITY.md`
+- Public repository hygiene: never commit internal hostnames, LAN IPs, local filesystem paths, private package URLs, deployment key names, real `.env` values, or operator-only runbooks. Use neutral placeholders in public examples and keep internal deployment notes outside this repository.
 
 ## License
 

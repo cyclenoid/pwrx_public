@@ -37,10 +37,13 @@ You can expect:
 - Use `.env` files only for local/runtime configuration.
 - Keep `.env` and any private token files out of version control.
 - Rotate compromised credentials immediately.
+- Do not commit internal infrastructure details to this public repository.
 
 For this project in particular:
 - Protect database credentials (`POSTGRES_USER`, `POSTGRES_PASSWORD`).
 - Use distinct credentials for development and production.
+- Keep private hostnames, LAN IPs, local filesystem paths, deployment key names, private package URLs, and operator-only runbooks outside this public repository.
+- Use neutral examples such as `<pwrx-api-host>`, `<clean-release-worktree>`, `<your-org>`, or `\\server\share\...` in public documentation and examples.
 
 If you run the optional private Strava connector:
 - Protect `STRAVA_CLIENT_ID`, `STRAVA_CLIENT_SECRET`, `STRAVA_REFRESH_TOKEN`.
