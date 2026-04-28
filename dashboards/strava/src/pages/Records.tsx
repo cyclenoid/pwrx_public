@@ -12,6 +12,17 @@ import type { RecordActivity } from '../types/activity'
 import { useTranslation } from 'react-i18next'
 
 type RecordCategory = 'longest_distance' | 'longest_duration' | 'most_elevation' | 'fastest_speed' | 'highest_heartrate' | 'most_calories' | 'most_kudos' | 'most_comments' | 'best_vam'
+type BestEffortQuality = 'high' | 'medium' | 'low'
+
+function getQualityBadgeClass(quality?: BestEffortQuality) {
+  if (quality === 'high') {
+    return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+  }
+  if (quality === 'medium') {
+    return 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+  }
+  return 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400'
+}
 
 function RecordValue({ activity, valueKey, suffix }: { activity: RecordActivity; valueKey: string; suffix: string }) {
   const { t } = useTranslation()
@@ -202,7 +213,7 @@ export function Records() {
           <CardDescription>
             {sportType === 'Run'
               ? runningEfforts && runningEfforts.activities_analyzed > 0
-                ? t('records.bestEfforts.runningDescWithCount', { count: runningEfforts.activities_analyzed })
+                ? `${t('records.bestEfforts.runningDescWithCount', { count: runningEfforts.activities_analyzed })}${runningEfforts.quality?.filtered_segments ? ` • ${t('records.bestEfforts.quality.filtered', { count: runningEfforts.quality.filtered_segments })}` : ''}`
                 : t('records.bestEfforts.runningDesc')
               : powerCurve && powerCurve.activities_analyzed > 0
                 ? t('records.bestEfforts.powerDescWithCount', { count: powerCurve.activities_analyzed })
@@ -241,6 +252,16 @@ export function Records() {
                       {effort.activity_date && (
                         <p className="text-[9px] text-muted-foreground/70 mt-0.5">
                           {formatActivityDate(effort.activity_date)}
+                        </p>
+                      )}
+                      {effort.quality && (
+                        <p className="mt-2">
+                          <span
+                            className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${getQualityBadgeClass(effort.quality)}`}
+                            title={t('records.bestEfforts.quality.confidence', { score: effort.confidence_score ?? 0 })}
+                          >
+                            {t(`records.bestEfforts.quality.${effort.quality}`)}
+                          </span>
                         </p>
                       )}
                     </div>

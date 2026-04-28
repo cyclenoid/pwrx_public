@@ -36,6 +36,16 @@ const yearColors: Record<number, string> = {
 
 const defaultColors = ['#fc4c02', '#3b82f6', '#22c55e', '#a855f7', '#f59e0b']
 
+function getQualityBadgeClass(quality?: RunningBestEffort['quality']) {
+  if (quality === 'high') {
+    return 'border-emerald-500/40 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400'
+  }
+  if (quality === 'medium') {
+    return 'border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400'
+  }
+  return 'border-red-500/40 bg-red-500/10 text-red-600 dark:text-red-400'
+}
+
 export function RunningPowerTab() {
   const { t, i18n } = useTranslation()
   const { resolvedTheme } = useTheme()
@@ -165,6 +175,8 @@ export function RunningPowerTab() {
       entry[`${allTimeKey}__hr`] = allTimeEffort?.avg_hr ?? null
       entry[`${allTimeKey}__activity`] = allTimeEffort?.activity_name ?? null
       entry[`${allTimeKey}__date`] = formatActivityDate(allTimeEffort?.activity_date)
+      entry[`${allTimeKey}__quality`] = allTimeEffort?.quality ?? null
+      entry[`${allTimeKey}__confidence`] = allTimeEffort?.confidence_score ?? null
 
       selectedYears.forEach((year) => {
         const effort = yearlyEffortMap
@@ -176,6 +188,8 @@ export function RunningPowerTab() {
         entry[`${year}__hr`] = effort?.avg_hr ?? null
         entry[`${year}__activity`] = effort?.activity_name ?? null
         entry[`${year}__date`] = formatActivityDate(effort?.activity_date)
+        entry[`${year}__quality`] = effort?.quality ?? null
+        entry[`${year}__confidence`] = effort?.confidence_score ?? null
       })
 
       return entry
@@ -280,6 +294,16 @@ export function RunningPowerTab() {
               <div className="mt-1 text-sm text-muted-foreground">
                 {effort ? `${formatPaceValue(getPaceMinPerKm(effort))} ${t('training.units.pace')}` : t('common.notAvailable')}
               </div>
+              {effort?.quality && (
+                <div className="mt-2">
+                  <span
+                    className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${getQualityBadgeClass(effort.quality)}`}
+                    title={t('records.bestEfforts.quality.confidence', { score: effort.confidence_score ?? 0 })}
+                  >
+                    {t(`records.bestEfforts.quality.${effort.quality}`)}
+                  </span>
+                </div>
+              )}
             </div>
           ))}
         </CardContent>
@@ -309,11 +333,26 @@ export function RunningPowerTab() {
                   {effort.activity_date && (
                     <p className="text-[10px] text-muted-foreground/70 mt-1">{formatActivityDate(effort.activity_date)}</p>
                   )}
+                  {effort.quality && (
+                    <p className="mt-2">
+                      <span
+                        className={`inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium ${getQualityBadgeClass(effort.quality)}`}
+                        title={t('records.bestEfforts.quality.confidence', { score: effort.confidence_score ?? 0 })}
+                      >
+                        {t(`records.bestEfforts.quality.${effort.quality}`)}
+                      </span>
+                    </p>
+                  )}
                 </div>
               </Link>
             ))}
           </div>
-          <p className="text-xs text-muted-foreground">{t('powerProfile.running.allTime.note')}</p>
+          <p className="text-xs text-muted-foreground">
+            {t('powerProfile.running.allTime.note')}
+            {allTimeEfforts.quality?.filtered_segments
+              ? ` ${t('records.bestEfforts.quality.filtered', { count: allTimeEfforts.quality.filtered_segments })}`
+              : ''}
+          </p>
         </CardContent>
       </Card>
 
@@ -396,6 +435,8 @@ export function RunningPowerTab() {
                           const activity = point[`${dataKey}__activity`]
                           const date = point[`${dataKey}__date`]
                           const hr = point[`${dataKey}__hr`]
+                          const quality = point[`${dataKey}__quality`]
+                          const confidence = point[`${dataKey}__confidence`]
                           if (!pace || !time) return null
                           return (
                             <div key={dataKey} className="mt-2 text-sm">
@@ -404,6 +445,9 @@ export function RunningPowerTab() {
                               <p>{t('powerProfile.running.chart.tooltipPace')}: <span className="font-medium">{pace} {t('training.units.pace')}</span></p>
                               {typeof hr === 'number' && (
                                 <p>{t('powerProfile.running.chart.tooltipHr')}: <span className="font-medium">{hr} bpm</span></p>
+                              )}
+                              {typeof quality === 'string' && (
+                                <p>{t('records.bestEfforts.quality.label')}: <span className="font-medium">{t(`records.bestEfforts.quality.${quality}`)}</span>{typeof confidence === 'number' ? ` (${t('records.bestEfforts.quality.confidence', { score: confidence })})` : ''}</p>
                               )}
                               {activity && <p className="text-muted-foreground">{activity}{date ? ` • ${date}` : ''}</p>}
                             </div>

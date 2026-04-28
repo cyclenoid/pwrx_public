@@ -1766,11 +1766,19 @@ export interface RunningBestEffort {
   activity_name: string | null
   activity_date: string | null
   avg_hr: number | null
+  quality?: 'high' | 'medium' | 'low'
+  confidence_score?: number
+  sample_count?: number
+  filtered_segments?: number
 }
 
 export interface RunningBestEffortsResponse {
   efforts: RunningBestEffort[]
   activities_analyzed: number
+  quality?: {
+    filtered_segments?: number
+    rules?: string
+  }
   cached?: boolean
   cache_age_seconds?: number
   stale_by_day?: boolean

@@ -29,6 +29,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-28-running-best-effort-quality",
+    date: "2026-04-28",
+    tag: "records",
+    title: {
+      de: "Lauf-Bestzeiten filtern GPS-Ausreisser",
+      en: "Running best efforts filter GPS outliers",
+    },
+    summary: {
+      de: "Laufrekorde pruefen kurze GPS-Segmente jetzt auf Plausibilitaet und zeigen eine Qualitaetsmarke in Power und Rekorde.",
+      en: "Running records now check short GPS segments for plausibility and show a quality badge in Power and Records.",
+    },
+    bullets: {
+      de: [
+        "Unplausible Minisegmente werden nicht mehr als Bestzeit gewertet.",
+        "Jede Lauf-Bestzeit bekommt einen Qualitaetsstatus mit Vertrauenswert.",
+        "Power und Rekorde zeigen gefilterte GPS-Ausreisser direkt bei den Laufdaten.",
+      ],
+      en: [
+        "Implausible mini-segments no longer count as personal bests.",
+        "Each running best effort gets a quality status with a confidence score.",
+        "Power and Records show filtered GPS outliers directly with the running data.",
+      ],
+    },
+  },
+  {
     id: "2026-04-28-running-power-cache",
     date: "2026-04-28",
     tag: "power",

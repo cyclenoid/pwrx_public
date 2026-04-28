@@ -36,6 +36,10 @@ nul
 backups/
 data/
 docs/
+!docs/
+docs/*
+!docs/DEPLOYMENT_RUNBOOK.md
+!docs/PRODUCT_IMPROVEMENT_BACKLOG.md
 tmp/
 apps/strava/storage/
 docker-compose.local.yml

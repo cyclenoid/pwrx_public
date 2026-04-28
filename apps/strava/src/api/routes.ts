@@ -1590,18 +1590,22 @@ const formatPaceMinPerKm = (paceMinPerKm: number): string => {
 };
 
 const RUNNING_BEST_EFFORT_DISTANCES = [
-  { meters: 100, label: '100m' },
-  { meters: 200, label: '200m' },
-  { meters: 400, label: '400m' },
-  { meters: 500, label: '500m' },
-  { meters: 1000, label: '1 km' },
-  { meters: 2000, label: '2 km' },
-  { meters: 3000, label: '3 km' },
-  { meters: 5000, label: '5 km' },
-  { meters: 10000, label: '10 km' },
-  { meters: 21097, label: 'Half Marathon' },
-  { meters: 42195, label: 'Marathon' },
+  { meters: 100, label: '100m', maxSpeedMps: 9.0, minElapsedSec: 11, minSamples: 4 },
+  { meters: 200, label: '200m', maxSpeedMps: 8.5, minElapsedSec: 23, minSamples: 6 },
+  { meters: 400, label: '400m', maxSpeedMps: 8.0, minElapsedSec: 50, minSamples: 8 },
+  { meters: 500, label: '500m', maxSpeedMps: 7.5, minElapsedSec: 66, minSamples: 10 },
+  { meters: 1000, label: '1 km', maxSpeedMps: 7.0, minElapsedSec: 140, minSamples: 20 },
+  { meters: 2000, label: '2 km', maxSpeedMps: 6.5, minElapsedSec: 300, minSamples: 40 },
+  { meters: 3000, label: '3 km', maxSpeedMps: 6.2, minElapsedSec: 470, minSamples: 60 },
+  { meters: 5000, label: '5 km', maxSpeedMps: 6.0, minElapsedSec: 820, minSamples: 100 },
+  { meters: 10000, label: '10 km', maxSpeedMps: 5.6, minElapsedSec: 1750, minSamples: 180 },
+  { meters: 21097, label: 'Half Marathon', maxSpeedMps: 5.3, minElapsedSec: 3950, minSamples: 300 },
+  { meters: 42195, label: 'Marathon', maxSpeedMps: 5.0, minElapsedSec: 8400, minSamples: 500 },
 ];
+
+type RunningBestEffortQuality = 'high' | 'medium' | 'low';
+
+type RunningBestEffortDistanceRule = typeof RUNNING_BEST_EFFORT_DISTANCES[number];
 
 type RunningBestEffort = {
   distance_meters: number;
@@ -1614,6 +1618,49 @@ type RunningBestEffort = {
   activity_name: string | null;
   activity_date: string | null;
   avg_hr: number | null;
+  quality: RunningBestEffortQuality;
+  confidence_score: number;
+  sample_count: number;
+  filtered_segments: number;
+};
+
+const assessRunningBestEffortQuality = (input: {
+  rule: RunningBestEffortDistanceRule;
+  elapsedSec: number;
+  sampleCount: number;
+  avgHr: number | null;
+  filteredSegments: number;
+}): { quality: RunningBestEffortQuality; confidenceScore: number } => {
+  const speedMps = input.rule.meters / input.elapsedSec;
+  const samplesPerSecond = input.sampleCount / input.elapsedSec;
+  let score = 100;
+
+  if (input.rule.meters < 400) score -= 35;
+  else if (input.rule.meters < 1000) score -= 20;
+
+  if (!input.avgHr) score -= 10;
+  if (samplesPerSecond < 0.35) score -= 20;
+  if (input.sampleCount < input.rule.minSamples * 1.5) score -= 10;
+  if (speedMps > input.rule.maxSpeedMps * 0.92) score -= 15;
+  if (input.filteredSegments > 0) score -= Math.min(20, Math.ceil(input.filteredSegments / 8));
+
+  const confidenceScore = Math.max(0, Math.min(100, Math.round(score)));
+  const quality: RunningBestEffortQuality =
+    confidenceScore >= 80 ? 'high' : confidenceScore >= 60 ? 'medium' : 'low';
+
+  return { quality, confidenceScore };
+};
+
+const isPlausibleRunningBestEffortCandidate = (
+  rule: RunningBestEffortDistanceRule,
+  elapsedSec: number,
+  sampleCount: number
+): boolean => {
+  if (!Number.isFinite(elapsedSec) || elapsedSec <= 0) return false;
+  if (elapsedSec < rule.minElapsedSec) return false;
+  if (sampleCount < rule.minSamples) return false;
+  const speedMps = rule.meters / elapsedSec;
+  return Number.isFinite(speedMps) && speedMps <= rule.maxSpeedMps;
 };
 
 const computeRunningBestEffortsPayload = async (
@@ -1644,7 +1691,12 @@ const computeRunningBestEffortsPayload = async (
     activity_name: null,
     activity_date: null,
     avg_hr: null,
+    quality: 'low',
+    confidence_score: 0,
+    sample_count: 0,
+    filtered_segments: 0,
   }));
+  const filteredSegmentsByDistance = RUNNING_BEST_EFFORT_DISTANCES.map(() => 0);
 
   for (const activity of activitiesResult.rows) {
     const streams = await db.getActivityStreams(activity.strava_activity_id);
@@ -1659,7 +1711,8 @@ const computeRunningBestEffortsPayload = async (
     const hrData: number[] | undefined = hrStream?.data;
 
     for (let i = 0; i < RUNNING_BEST_EFFORT_DISTANCES.length; i++) {
-      const targetDistance = RUNNING_BEST_EFFORT_DISTANCES[i].meters;
+      const rule = RUNNING_BEST_EFFORT_DISTANCES[i];
+      const targetDistance = rule.meters;
       const totalDistance = distanceData[distanceData.length - 1];
 
       if (totalDistance < targetDistance) continue;
@@ -1677,6 +1730,12 @@ const computeRunningBestEffortsPayload = async (
         if (endIdx === -1) break;
 
         const timeTaken = timeData[endIdx] - timeData[startIdx];
+        const sampleCount = endIdx - startIdx + 1;
+        if (!isPlausibleRunningBestEffortCandidate(rule, timeTaken, sampleCount)) {
+          filteredSegmentsByDistance[i] += 1;
+          continue;
+        }
+
         if (timeTaken < bestTime) {
           bestTime = timeTaken;
           bestStartIdx = startIdx;
@@ -1696,6 +1755,14 @@ const computeRunningBestEffortsPayload = async (
           }
         }
 
+        const sampleCount = bestEndIdx - bestStartIdx + 1;
+        const quality = assessRunningBestEffortQuality({
+          rule,
+          elapsedSec: bestTime,
+          sampleCount,
+          avgHr,
+          filteredSegments: filteredSegmentsByDistance[i],
+        });
         const paceMinPerKm = (bestTime / 60) / (targetDistance / 1000);
         const pace = formatPaceMinPerKm(paceMinPerKm);
         const totalSecondsRounded = Math.round(bestTime);
@@ -1709,7 +1776,7 @@ const computeRunningBestEffortsPayload = async (
 
         bestEfforts[i] = {
           distance_meters: targetDistance,
-          label: RUNNING_BEST_EFFORT_DISTANCES[i].label,
+          label: rule.label,
           time_seconds: totalSecondsRounded,
           time_label: timeLabel,
           pace,
@@ -1718,6 +1785,10 @@ const computeRunningBestEffortsPayload = async (
           activity_name: activity.name,
           activity_date: activity.start_date,
           avg_hr: avgHr,
+          quality: quality.quality,
+          confidence_score: quality.confidenceScore,
+          sample_count: sampleCount,
+          filtered_segments: filteredSegmentsByDistance[i],
         };
       }
     }
@@ -1725,8 +1796,32 @@ const computeRunningBestEffortsPayload = async (
 
   return {
     payload: {
-      efforts: bestEfforts.filter(e => e.time_seconds !== null),
+      efforts: bestEfforts
+        .filter(e => e.time_seconds !== null)
+        .map((effort) => {
+          const ruleIndex = RUNNING_BEST_EFFORT_DISTANCES.findIndex(rule => rule.meters === effort.distance_meters);
+          const finalFilteredSegments = filteredSegmentsByDistance[ruleIndex] ?? effort.filtered_segments;
+          const quality = ruleIndex >= 0
+            ? assessRunningBestEffortQuality({
+              rule: RUNNING_BEST_EFFORT_DISTANCES[ruleIndex],
+              elapsedSec: effort.time_seconds ?? 0,
+              sampleCount: effort.sample_count,
+              avgHr: effort.avg_hr,
+              filteredSegments: finalFilteredSegments,
+            })
+            : { quality: effort.quality, confidenceScore: effort.confidence_score };
+          return {
+            ...effort,
+            quality: quality.quality,
+            confidence_score: quality.confidenceScore,
+            filtered_segments: finalFilteredSegments,
+          };
+        }),
       activities_analyzed: activitiesResult.rows.length,
+      quality: {
+        filtered_segments: filteredSegmentsByDistance.reduce((sum, value) => sum + value, 0),
+        rules: 'gps_stream_plausibility_v1',
+      },
     },
     fingerprint,
     generationTimeMs: Date.now() - computeStart,

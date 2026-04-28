@@ -1698,7 +1698,15 @@
       "powerDesc": "All-time best power efforts",
       "powerDescWithCount": "All-time best power efforts • Analyzed {{count}} activities",
       "emptyRunning": "No best efforts found",
-      "emptyPower": "No power data found. Go to the Power page and click \"Generate Power Cache\"."
+      "emptyPower": "No power data found. Go to the Power page and click \"Generate Power Cache\".",
+      "quality": {
+        "label": "Quality",
+        "high": "solid",
+        "medium": "medium",
+        "low": "check",
+        "confidence": "{{score}}% confidence",
+        "filtered": "{{count}} GPS outliers filtered"
+      }
     },
     "streaks": {
       "current": {
