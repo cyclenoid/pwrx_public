@@ -482,6 +482,22 @@ const RUNNING_ACTIVITIES_CACHE_MAX_ENTRIES = Math.max(
   Number(process.env.RUNNING_ACTIVITIES_CACHE_MAX_ENTRIES || 20)
 );
 const runningActivitiesRefreshInProgress = new Set<string>();
+type RunningBestEffortsCacheEntry = {
+  data: any;
+  timestamp: number;
+  fingerprint: string;
+  refreshedDayUtc: string;
+};
+type RunningBestEffortsQuery = {
+  year: number | null;
+  months: number | null;
+};
+const runningBestEffortsCache = new Map<string, RunningBestEffortsCacheEntry>();
+const RUNNING_BEST_EFFORTS_CACHE_MAX_ENTRIES = Math.max(
+  8,
+  Number(process.env.RUNNING_BEST_EFFORTS_CACHE_MAX_ENTRIES || 32)
+);
+const runningBestEffortsRefreshInProgress = new Set<string>();
 const POWER_CURVE_SUPPORTED_TYPES = ['Ride', 'VirtualRide', 'EBikeRide', 'GravelRide', 'MountainBikeRide'] as const;
 let heatmapPrewarmTimeout: NodeJS.Timeout | null = null;
 let heatmapPrewarmRunning = false;
@@ -1383,8 +1399,22 @@ const getMonthsAgoIso = (months: number): string => {
   return date.toISOString();
 };
 
+const parseRunningBestEffortsYearParam = (value: unknown): number | null => {
+  const rawValue = Array.isArray(value) ? value[0] : value;
+  const normalized = String(rawValue ?? '').trim().toLowerCase();
+  if (!normalized || normalized === 'undefined' || normalized === 'all') return null;
+
+  const parsed = Number.parseInt(normalized, 10);
+  const currentYear = new Date().getUTCFullYear();
+  if (!Number.isFinite(parsed) || parsed < 1970 || parsed > currentYear + 1) return null;
+  return parsed;
+};
+
 const buildRunningActivitiesCacheKey = (query: RunningActivitiesQuery): string =>
   `${query.months ?? 'all'}`;
+
+const buildRunningBestEffortsCacheKey = (query: RunningBestEffortsQuery): string =>
+  `${query.year ?? 'all'}|${query.months ?? 'all'}`;
 
 const trimRunningActivitiesCache = (): void => {
   if (runningActivitiesCache.size <= RUNNING_ACTIVITIES_CACHE_MAX_ENTRIES) return;
@@ -1420,6 +1450,64 @@ const setRunningActivitiesCache = (
     refreshedDayUtc,
   });
   trimRunningActivitiesCache();
+};
+
+const trimRunningBestEffortsCache = (): void => {
+  if (runningBestEffortsCache.size <= RUNNING_BEST_EFFORTS_CACHE_MAX_ENTRIES) return;
+  const sorted = Array.from(runningBestEffortsCache.entries())
+    .sort((a, b) => a[1].timestamp - b[1].timestamp);
+  while (sorted.length > 0 && runningBestEffortsCache.size > RUNNING_BEST_EFFORTS_CACHE_MAX_ENTRIES) {
+    const oldest = sorted.shift();
+    if (!oldest) break;
+    runningBestEffortsCache.delete(oldest[0]);
+  }
+};
+
+const clearRunningBestEffortsCache = (reason: string = 'manual'): number => {
+  const cleared = runningBestEffortsCache.size;
+  runningBestEffortsCache.clear();
+  runningBestEffortsRefreshInProgress.clear();
+  if (cleared > 0) {
+    console.log(`Running best-efforts cache cleared (${cleared} entries, reason=${reason})`);
+  }
+  return cleared;
+};
+
+const setRunningBestEffortsCache = (
+  cacheKey: string,
+  data: any,
+  fingerprint: string,
+  refreshedDayUtc: string = getBulkPowerMetricsUtcDayKey()
+): void => {
+  runningBestEffortsCache.set(cacheKey, {
+    data,
+    timestamp: Date.now(),
+    fingerprint,
+    refreshedDayUtc,
+  });
+  trimRunningBestEffortsCache();
+};
+
+const buildRunningBestEffortsFilters = (
+  query: RunningBestEffortsQuery
+): { clause: string; params: any[] } => {
+  const params: any[] = [];
+  const filters: string[] = [];
+
+  if (query.year) {
+    params.push(query.year);
+    filters.push(`EXTRACT(YEAR FROM a.start_date) = $${params.length}`);
+  }
+
+  if (query.months) {
+    params.push(getMonthsAgoIso(query.months));
+    filters.push(`a.start_date >= $${params.length}`);
+  }
+
+  return {
+    clause: filters.length ? ` AND ${filters.join(' AND ')}` : '',
+    params,
+  };
 };
 
 const buildRunningActivitiesFingerprint = async (query: RunningActivitiesQuery): Promise<string> => {
@@ -1461,6 +1549,37 @@ const buildRunningActivitiesFingerprint = async (query: RunningActivitiesQuery):
   return `${activityCount}|${maxActivityUpdatedAt}|${maxActivityStartDate}|${maxStreamCreatedAt}`;
 };
 
+const buildRunningBestEffortsFingerprint = async (query: RunningBestEffortsQuery): Promise<string> => {
+  const filters = buildRunningBestEffortsFilters(query);
+  const result = await db.query(`
+    SELECT
+      COUNT(DISTINCT a.strava_activity_id)::bigint AS activity_count,
+      COALESCE(MAX(a.updated_at), TIMESTAMP 'epoch') AS max_activity_updated_at,
+      COALESCE(MAX(a.start_date), TIMESTAMP 'epoch') AS max_activity_start_date,
+      COALESCE(MAX(s.created_at), TIMESTAMP 'epoch') AS max_stream_created_at
+    FROM strava.activities a
+    LEFT JOIN strava.activity_streams s
+      ON s.activity_id = a.strava_activity_id
+      AND s.stream_type IN ('distance', 'time', 'heartrate')
+    WHERE (a.type = 'Run' OR a.type = 'TrailRun' OR a.type = 'VirtualRun')
+      ${filters.clause}
+  `, filters.params);
+
+  const row = result.rows[0] || {};
+  const activityCount = Number(row.activity_count || 0);
+  const maxActivityUpdatedAt = row.max_activity_updated_at
+    ? new Date(row.max_activity_updated_at).toISOString()
+    : 'epoch';
+  const maxActivityStartDate = row.max_activity_start_date
+    ? new Date(row.max_activity_start_date).toISOString()
+    : 'epoch';
+  const maxStreamCreatedAt = row.max_stream_created_at
+    ? new Date(row.max_stream_created_at).toISOString()
+    : 'epoch';
+
+  return `${activityCount}|${maxActivityUpdatedAt}|${maxActivityStartDate}|${maxStreamCreatedAt}`;
+};
+
 const formatPaceMinPerKm = (paceMinPerKm: number): string => {
   if (!Number.isFinite(paceMinPerKm) || paceMinPerKm <= 0) return '0:00';
   const minutes = Math.floor(paceMinPerKm);
@@ -1468,6 +1587,150 @@ const formatPaceMinPerKm = (paceMinPerKm: number): string => {
   const normalizedMinutes = seconds === 60 ? minutes + 1 : minutes;
   const normalizedSeconds = seconds === 60 ? 0 : seconds;
   return `${normalizedMinutes}:${normalizedSeconds.toString().padStart(2, '0')}`;
+};
+
+const RUNNING_BEST_EFFORT_DISTANCES = [
+  { meters: 100, label: '100m' },
+  { meters: 200, label: '200m' },
+  { meters: 400, label: '400m' },
+  { meters: 500, label: '500m' },
+  { meters: 1000, label: '1 km' },
+  { meters: 2000, label: '2 km' },
+  { meters: 3000, label: '3 km' },
+  { meters: 5000, label: '5 km' },
+  { meters: 10000, label: '10 km' },
+  { meters: 21097, label: 'Half Marathon' },
+  { meters: 42195, label: 'Marathon' },
+];
+
+type RunningBestEffort = {
+  distance_meters: number;
+  label: string;
+  time_seconds: number | null;
+  time_label: string | null;
+  pace: string | null;
+  pace_min_per_km: number | null;
+  activity_id: number | null;
+  activity_name: string | null;
+  activity_date: string | null;
+  avg_hr: number | null;
+};
+
+const computeRunningBestEffortsPayload = async (
+  query: RunningBestEffortsQuery
+): Promise<{ payload: any; fingerprint: string; generationTimeMs: number }> => {
+  const computeStart = Date.now();
+  const fingerprint = await buildRunningBestEffortsFingerprint(query);
+  const filters = buildRunningBestEffortsFilters(query);
+  const activitiesResult = await db.query(`
+    SELECT DISTINCT a.strava_activity_id, a.start_date, a.name,
+           EXTRACT(YEAR FROM a.start_date) as year
+    FROM strava.activities a
+    JOIN strava.activity_streams s ON s.activity_id = a.strava_activity_id
+    WHERE (a.type = 'Run' OR a.type = 'TrailRun' OR a.type = 'VirtualRun')
+      AND s.stream_type = 'distance'
+      ${filters.clause}
+    ORDER BY a.start_date DESC
+  `, filters.params);
+
+  const bestEfforts: RunningBestEffort[] = RUNNING_BEST_EFFORT_DISTANCES.map(d => ({
+    distance_meters: d.meters,
+    label: d.label,
+    time_seconds: null,
+    time_label: null,
+    pace: null,
+    pace_min_per_km: null,
+    activity_id: null,
+    activity_name: null,
+    activity_date: null,
+    avg_hr: null,
+  }));
+
+  for (const activity of activitiesResult.rows) {
+    const streams = await db.getActivityStreams(activity.strava_activity_id);
+    const distanceStream = streams.find(s => s.stream_type === 'distance');
+    const timeStream = streams.find(s => s.stream_type === 'time');
+    const hrStream = streams.find(s => s.stream_type === 'heartrate');
+
+    if (!distanceStream?.data || !timeStream?.data) continue;
+
+    const distanceData: number[] = distanceStream.data;
+    const timeData: number[] = timeStream.data;
+    const hrData: number[] | undefined = hrStream?.data;
+
+    for (let i = 0; i < RUNNING_BEST_EFFORT_DISTANCES.length; i++) {
+      const targetDistance = RUNNING_BEST_EFFORT_DISTANCES[i].meters;
+      const totalDistance = distanceData[distanceData.length - 1];
+
+      if (totalDistance < targetDistance) continue;
+
+      let bestTime = Infinity;
+      let bestStartIdx = 0;
+      let bestEndIdx = 0;
+
+      for (let startIdx = 0; startIdx < distanceData.length; startIdx++) {
+        const startDistance = distanceData[startIdx];
+        const endIdx = distanceData.findIndex((d, idx) =>
+          idx > startIdx && (d - startDistance) >= targetDistance
+        );
+
+        if (endIdx === -1) break;
+
+        const timeTaken = timeData[endIdx] - timeData[startIdx];
+        if (timeTaken < bestTime) {
+          bestTime = timeTaken;
+          bestStartIdx = startIdx;
+          bestEndIdx = endIdx;
+        }
+      }
+
+      if (
+        bestTime !== Infinity &&
+        (bestEfforts[i].time_seconds === null || bestTime < bestEfforts[i].time_seconds!)
+      ) {
+        let avgHr: number | null = null;
+        if (hrData) {
+          const hrSegment = hrData.slice(bestStartIdx, bestEndIdx + 1).filter(hr => hr > 0);
+          if (hrSegment.length > 0) {
+            avgHr = Math.round(hrSegment.reduce((a, b) => a + b, 0) / hrSegment.length);
+          }
+        }
+
+        const paceMinPerKm = (bestTime / 60) / (targetDistance / 1000);
+        const pace = formatPaceMinPerKm(paceMinPerKm);
+        const totalSecondsRounded = Math.round(bestTime);
+        const totalHours = Math.floor(totalSecondsRounded / 3600);
+        const totalMinutes = Math.floor((totalSecondsRounded % 3600) / 60);
+        const totalSeconds = totalSecondsRounded % 60;
+        const timeLabel =
+          totalHours > 0
+            ? `${totalHours}:${totalMinutes.toString().padStart(2, '0')}:${totalSeconds.toString().padStart(2, '0')}`
+            : `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
+
+        bestEfforts[i] = {
+          distance_meters: targetDistance,
+          label: RUNNING_BEST_EFFORT_DISTANCES[i].label,
+          time_seconds: totalSecondsRounded,
+          time_label: timeLabel,
+          pace,
+          pace_min_per_km: Number(paceMinPerKm.toFixed(3)),
+          activity_id: activity.strava_activity_id,
+          activity_name: activity.name,
+          activity_date: activity.start_date,
+          avg_hr: avgHr,
+        };
+      }
+    }
+  }
+
+  return {
+    payload: {
+      efforts: bestEfforts.filter(e => e.time_seconds !== null),
+      activities_analyzed: activitiesResult.rows.length,
+    },
+    fingerprint,
+    generationTimeMs: Date.now() - computeStart,
+  };
 };
 
 const computeRunningActivitiesPayload = async (
@@ -2092,6 +2355,31 @@ const schedulePerformanceCachePrewarm = (reason: string = 'manual') => {
             buildRunningActivitiesCacheKey(runningQuery),
             runningComputed.payload,
             runningComputed.fingerprint,
+            getBulkPowerMetricsUtcDayKey()
+          );
+        }
+
+        const runningYearResult = await db.query(`
+          SELECT EXTRACT(YEAR FROM start_date)::int AS year
+          FROM strava.activities
+          WHERE (type = 'Run' OR type = 'TrailRun' OR type = 'VirtualRun')
+          GROUP BY EXTRACT(YEAR FROM start_date)::int
+          ORDER BY year DESC
+          LIMIT 5
+        `);
+        const runningBestEffortQueries: RunningBestEffortsQuery[] = [
+          { year: null, months: null },
+          ...runningYearResult.rows
+            .map((row: any) => Number(row.year))
+            .filter((year: number) => Number.isFinite(year) && year > 0)
+            .map((year: number) => ({ year, months: null })),
+        ];
+        for (const runningBestEffortQuery of runningBestEffortQueries) {
+          const bestEffortsComputed = await computeRunningBestEffortsPayload(runningBestEffortQuery);
+          setRunningBestEffortsCache(
+            buildRunningBestEffortsCacheKey(runningBestEffortQuery),
+            bestEffortsComputed.payload,
+            bestEffortsComputed.fingerprint,
             getBulkPowerMetricsUtcDayKey()
           );
         }
@@ -5240,168 +5528,63 @@ router.get('/top-vam-activities', async (req: Request, res: Response) => {
  */
 router.get('/running-best-efforts', async (req: Request, res: Response) => {
   try {
-    const { year, months } = req.query;
+    const query: RunningBestEffortsQuery = {
+      year: parseRunningBestEffortsYearParam(req.query.year),
+      months: parseRunningActivitiesMonthsParam(req.query.months),
+    };
+    const forceRefresh = String(req.query.refresh || '').toLowerCase() === 'true';
+    const cacheKey = buildRunningBestEffortsCacheKey(query);
+    const now = Date.now();
+    const todayUtc = getBulkPowerMetricsUtcDayKey();
+    const cached = runningBestEffortsCache.get(cacheKey);
 
-    // Build query to get running activities with distance/time streams
-    let activityQuery = `
-      SELECT DISTINCT a.strava_activity_id, a.start_date, a.name,
-             EXTRACT(YEAR FROM a.start_date) as year
-      FROM strava.activities a
-      JOIN strava.activity_streams s ON s.activity_id = a.strava_activity_id
-      WHERE (a.type = 'Run' OR a.type = 'TrailRun' OR a.type = 'VirtualRun')
-        AND s.stream_type = 'distance'
-    `;
-
-    const params: any[] = [];
-    let paramIdx = 1;
-
-    if (year) {
-      activityQuery += ` AND EXTRACT(YEAR FROM a.start_date) = $${paramIdx}`;
-      params.push(parseInt(year as string));
-      paramIdx++;
-    }
-
-    if (months) {
-      activityQuery += ` AND a.start_date >= NOW() - INTERVAL '${parseInt(months as string)} months'`;
-    }
-
-    activityQuery += ` ORDER BY a.start_date DESC`;
-
-    const activitiesResult = await db.query(activityQuery, params);
-
-    // Standard running distances in meters
-    const distances = [
-      { meters: 100, label: '100m' },
-      { meters: 200, label: '200m' },
-      { meters: 400, label: '400m' },
-      { meters: 500, label: '500m' },
-      { meters: 1000, label: '1 km' },
-      { meters: 2000, label: '2 km' },
-      { meters: 3000, label: '3 km' },
-      { meters: 5000, label: '5 km' },
-      { meters: 10000, label: '10 km' },
-      { meters: 21097, label: 'Half Marathon' },
-      { meters: 42195, label: 'Marathon' },
-    ];
-
-    // Initialize best efforts
-    interface BestEffort {
-      distance_meters: number;
-      label: string;
-      time_seconds: number | null;
-      time_label: string | null;
-      pace: string | null;
-      pace_min_per_km: number | null;
-      activity_id: number | null;
-      activity_name: string | null;
-      activity_date: string | null;
-      avg_hr: number | null;
-    }
-
-    const bestEfforts: BestEffort[] = distances.map(d => ({
-      distance_meters: d.meters,
-      label: d.label,
-      time_seconds: null,
-      time_label: null,
-      pace: null,
-      pace_min_per_km: null,
-      activity_id: null,
-      activity_name: null,
-      activity_date: null,
-      avg_hr: null,
-    }));
-
-    // Process each activity
-    for (const activity of activitiesResult.rows) {
-      const streams = await db.getActivityStreams(activity.strava_activity_id);
-      const distanceStream = streams.find(s => s.stream_type === 'distance');
-      const timeStream = streams.find(s => s.stream_type === 'time');
-      const hrStream = streams.find(s => s.stream_type === 'heartrate');
-
-      if (!distanceStream?.data || !timeStream?.data) continue;
-
-      const distanceData: number[] = distanceStream.data;
-      const timeData: number[] = timeStream.data;
-      const hrData: number[] | undefined = hrStream?.data;
-
-      // Check each target distance
-      for (let i = 0; i < distances.length; i++) {
-        const targetDistance = distances[i].meters;
-        const totalDistance = distanceData[distanceData.length - 1];
-
-        // Skip if activity is shorter than target distance
-        if (totalDistance < targetDistance) continue;
-
-        // Find best rolling average for this distance
-        let bestTime = Infinity;
-        let bestStartIdx = 0;
-        let bestEndIdx = 0;
-
-        for (let startIdx = 0; startIdx < distanceData.length; startIdx++) {
-          const startDistance = distanceData[startIdx];
-
-          // Find where we reach target distance from this start point
-          const endIdx = distanceData.findIndex((d, idx) =>
-            idx > startIdx && (d - startDistance) >= targetDistance
-          );
-
-          if (endIdx === -1) break;
-
-          const timeTaken = timeData[endIdx] - timeData[startIdx];
-
-          if (timeTaken < bestTime) {
-            bestTime = timeTaken;
-            bestStartIdx = startIdx;
-            bestEndIdx = endIdx;
+    if (cached && !forceRefresh) {
+      const refreshDue = cached.refreshedDayUtc !== todayUtc;
+      if (refreshDue && !runningBestEffortsRefreshInProgress.has(cacheKey)) {
+        runningBestEffortsRefreshInProgress.add(cacheKey);
+        void (async () => {
+          try {
+            const refreshed = await computeRunningBestEffortsPayload(query);
+            setRunningBestEffortsCache(
+              cacheKey,
+              refreshed.payload,
+              refreshed.fingerprint,
+              getBulkPowerMetricsUtcDayKey()
+            );
+            console.log(`Running best-efforts cache refreshed for ${cacheKey} in ${refreshed.generationTimeMs}ms`);
+          } catch (refreshError: any) {
+            console.warn(`Running best-efforts background refresh failed for ${cacheKey}: ${refreshError?.message || refreshError}`);
+          } finally {
+            runningBestEffortsRefreshInProgress.delete(cacheKey);
           }
-        }
-
-        // Update best effort if this is faster
-        if (bestTime !== Infinity &&
-            (bestEfforts[i].time_seconds === null || bestTime < bestEfforts[i].time_seconds!)) {
-
-          // Calculate average HR for this segment
-          let avgHr: number | null = null;
-          if (hrData) {
-            const hrSegment = hrData.slice(bestStartIdx, bestEndIdx + 1).filter(hr => hr > 0);
-            if (hrSegment.length > 0) {
-              avgHr = Math.round(hrSegment.reduce((a, b) => a + b, 0) / hrSegment.length);
-            }
-          }
-
-          // Calculate pace (min/km)
-          const paceMinPerKm = (bestTime / 60) / (targetDistance / 1000);
-          const minutes = Math.floor(paceMinPerKm);
-          const seconds = Math.round((paceMinPerKm - minutes) * 60);
-          const pace = `${minutes}:${seconds.toString().padStart(2, '0')}`;
-          const totalSecondsRounded = Math.round(bestTime);
-          const totalHours = Math.floor(totalSecondsRounded / 3600);
-          const totalMinutes = Math.floor((totalSecondsRounded % 3600) / 60);
-          const totalSeconds = totalSecondsRounded % 60;
-          const timeLabel =
-            totalHours > 0
-              ? `${totalHours}:${totalMinutes.toString().padStart(2, '0')}:${totalSeconds.toString().padStart(2, '0')}`
-              : `${totalMinutes}:${totalSeconds.toString().padStart(2, '0')}`;
-
-          bestEfforts[i] = {
-            distance_meters: targetDistance,
-            label: distances[i].label,
-            time_seconds: totalSecondsRounded,
-            time_label: timeLabel,
-            pace,
-            pace_min_per_km: Number(paceMinPerKm.toFixed(3)),
-            activity_id: activity.strava_activity_id,
-            activity_name: activity.name,
-            activity_date: activity.start_date,
-            avg_hr: avgHr,
-          };
-        }
+        })();
       }
+
+      res.json({
+        ...cached.data,
+        cached: true,
+        cache_age_seconds: Math.floor((now - cached.timestamp) / 1000),
+        stale_by_day: refreshDue,
+        refresh_in_progress: runningBestEffortsRefreshInProgress.has(cacheKey),
+        cache_mode: 'cache_first_daily_refresh',
+      });
+      return;
     }
+
+    const computed = await computeRunningBestEffortsPayload(query);
+    setRunningBestEffortsCache(
+      cacheKey,
+      computed.payload,
+      computed.fingerprint,
+      getBulkPowerMetricsUtcDayKey()
+    );
 
     res.json({
-      efforts: bestEfforts.filter(e => e.time_seconds !== null),
-      activities_analyzed: activitiesResult.rows.length,
+      ...computed.payload,
+      cached: false,
+      generation_time_ms: computed.generationTimeMs,
+      cache_mode: 'cache_first_daily_refresh',
+      force_refresh: forceRefresh,
     });
   } catch (error: any) {
     console.error('Error calculating running best efforts:', error);
@@ -7834,6 +8017,7 @@ async function refreshTechStatsCache(): Promise<void> {
 
 // Export for use in index.ts after sync
 export {
+  clearRunningBestEffortsCache,
   clearRunningActivitiesCache,
   clearTrainingLoadCache,
   refreshTechStatsCache,
@@ -7966,12 +8150,14 @@ router.post('/cache/clear', async (req: Request, res: Response) => {
   const bulkPowerMetricsCleared = clearBulkPowerMetricsCache('api_cache_clear');
   const trainingLoadCleared = clearTrainingLoadCache('api_cache_clear');
   const runningActivitiesCleared = clearRunningActivitiesCache('api_cache_clear');
+  const runningBestEffortsCleared = clearRunningBestEffortsCache('api_cache_clear');
   res.json({
     message: 'Cache cleared',
     power_curve_analysis_entries_cleared: powerCurveCleared,
     bulk_power_metrics_entries_cleared: bulkPowerMetricsCleared,
     training_load_entries_cleared: trainingLoadCleared,
     running_activities_entries_cleared: runningActivitiesCleared,
+    running_best_efforts_entries_cleared: runningBestEffortsCleared,
   });
 });
 

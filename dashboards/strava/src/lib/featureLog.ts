@@ -29,6 +29,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-28-running-power-cache",
+    date: "2026-04-28",
+    tag: "power",
+    title: {
+      de: "Lauf-Power oeffnet Bestzeiten schneller",
+      en: "Run power opens best efforts faster",
+    },
+    summary: {
+      de: "Die Laufansicht im Power-Bereich nutzt jetzt denselben Cache-first-Ansatz wie die Rad-Power-Auswertung.",
+      en: "The running view in Power now uses the same cache-first approach as cycling power analysis.",
+    },
+    bullets: {
+      de: [
+        "All-Time- und Jahres-Bestzeiten fuer Laeufe werden nach dem ersten Aufbau direkt aus dem Cache geladen.",
+        "Neue Syncs oder Imports leeren den Lauf-Bestzeiten-Cache automatisch.",
+        "Beim App-Start werden All-Time und die juengsten Laufjahre vorbereitet.",
+      ],
+      en: [
+        "All-time and yearly running best efforts load from cache after the first build.",
+        "New syncs or imports automatically clear the running best-efforts cache.",
+        "At app startup, all-time and recent running years are prepared in advance.",
+      ],
+    },
+  },
+  {
     id: "2026-04-28-release-version-label",
     date: "2026-04-28",
     tag: "release",

@@ -1,6 +1,6 @@
 {
   "name": "strava-tracker-backend",
-  "version": "1.1.0",
+  "version": "1.1.1",
   "description": "Strava activity tracker and analytics backend",
   "main": "dist/index.js",
   "scripts": {

@@ -1771,6 +1771,12 @@ export interface RunningBestEffort {
 export interface RunningBestEffortsResponse {
   efforts: RunningBestEffort[]
   activities_analyzed: number
+  cached?: boolean
+  cache_age_seconds?: number
+  stale_by_day?: boolean
+  refresh_in_progress?: boolean
+  generation_time_ms?: number
+  cache_mode?: string
 }
 
 export const getRunningBestEfforts = async (params?: {

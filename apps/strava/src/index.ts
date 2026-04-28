@@ -5,6 +5,7 @@ import * as dotenv from 'dotenv';
 import * as path from 'path';
 import * as cron from 'node-cron';
 import apiRoutes, {
+  clearRunningBestEffortsCache,
   clearRunningActivitiesCache,
   clearTrainingLoadCache,
   refreshTechStatsCache,
@@ -55,6 +56,7 @@ const handleAnalyticsDataChanged = (reason: string): void => {
   scheduleHeatmapCachePrewarm(reason);
   clearTrainingLoadCache(reason);
   clearRunningActivitiesCache(reason);
+  clearRunningBestEffortsCache(reason);
   schedulePerformanceCachePrewarm(reason);
 };
 
@@ -143,7 +145,7 @@ if (stravaAdapterEnabled) {
 app.get('/', (req, res) => {
   res.json({
     name: 'Strava Tracker API',
-    version: '1.0.0',
+    version: process.env.APP_VERSION || process.env.npm_package_version || '1.1.1',
     endpoints: {
       capabilities: '/api/capabilities',
       activities: '/api/activities',
