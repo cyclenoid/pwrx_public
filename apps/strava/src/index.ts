@@ -145,7 +145,7 @@ if (stravaAdapterEnabled) {
 app.get('/', (req, res) => {
   res.json({
     name: 'Strava Tracker API',
-    version: process.env.APP_VERSION || process.env.npm_package_version || '1.1.2',
+    version: process.env.APP_VERSION || process.env.npm_package_version || '1.1.3',
     endpoints: {
       capabilities: '/api/capabilities',
       activities: '/api/activities',

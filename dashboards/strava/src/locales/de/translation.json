@@ -1699,6 +1699,10 @@
       "powerDescWithCount": "Beste Power-Leistungen aller Zeiten • Analysiert {{count}} Aktivitäten",
       "emptyRunning": "Keine Bestleistungen gefunden",
       "emptyPower": "Keine Power-Daten gefunden. Gehe zur Power-Seite und klicke auf \"Generate Power Cache\".",
+      "scopes": {
+        "allTime": "All-Time",
+        "currentYear": "{{year}}"
+      },
       "quality": {
         "label": "Qualitaet",
         "high": "sicher",

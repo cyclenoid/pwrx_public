@@ -70,6 +70,7 @@ export function Records() {
   const { resolvedTheme } = useTheme()
   const [selectedCategory, setSelectedCategory] = useState<RecordCategory>('longest_distance')
   const [sportType, setSportType] = useState<'Ride' | 'Run'>('Ride')
+  const currentYear = new Date().getFullYear()
   const dateLocale = i18n.language?.startsWith('de') ? 'de-DE' : 'en-US'
   const formatMonthYear = (value: string) => new Intl.DateTimeFormat(dateLocale, { month: 'short', year: 'numeric' }).format(new Date(value))
   const formatShortDate = (value: string) => new Intl.DateTimeFormat(dateLocale, { month: 'short', day: '2-digit', year: 'numeric' }).format(new Date(value))
@@ -101,15 +102,29 @@ export function Records() {
 
   // Preload both running and cycling best efforts for smooth switching
   const { data: runningEfforts, isLoading: runningEffortsLoading } = useQuery({
-    queryKey: ['running-best-efforts'],
+    queryKey: ['running-best-efforts', 'all-time'],
     queryFn: () => getRunningBestEfforts({ months: undefined }),
     staleTime: 5 * 60 * 1000,
   })
 
+  const { data: runningCurrentYearEfforts, isLoading: runningCurrentYearLoading } = useQuery({
+    queryKey: ['running-best-efforts', currentYear],
+    queryFn: () => getRunningBestEfforts({ year: currentYear }),
+    staleTime: 60 * 60 * 1000,
+    enabled: sportType === 'Run',
+  })
+
   const { data: powerCurve, isLoading: powerCurveLoading } = useQuery({
-    queryKey: ['power-curve-best-efforts'],
+    queryKey: ['power-curve-best-efforts', 'all-time'],
     queryFn: () => getCachedPowerCurve(),
     staleTime: 60 * 60 * 1000, // 1 hour cache like on Power page
+  })
+
+  const { data: powerCurrentYearCurve, isLoading: powerCurrentYearLoading } = useQuery({
+    queryKey: ['power-curve-best-efforts', currentYear],
+    queryFn: () => getCachedPowerCurve({ year: currentYear }),
+    staleTime: 60 * 60 * 1000,
+    enabled: sportType === 'Ride',
   })
 
   // Fetch top VAM activities
@@ -153,6 +168,12 @@ export function Records() {
   }
 
   const categoryInfo = categoryLabels[selectedCategory]
+  const runningCurrentYearByDistance = new Map(
+    (runningCurrentYearEfforts?.efforts ?? []).map((effort) => [effort.distance_meters, effort])
+  )
+  const powerCurrentYearByDuration = new Map(
+    (powerCurrentYearCurve?.durations ?? []).map((point) => [point.duration, point])
+  )
 
   return (
     <div className="space-y-6">
@@ -224,26 +245,48 @@ export function Records() {
         <CardContent>
           {sportType === 'Run' ? (
             // Running Best Efforts - Compact Grid
-            runningEffortsLoading ? (
+            runningEffortsLoading || runningCurrentYearLoading ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                 {[...Array(6)].map((_, i) => (
-                  <div key={i} className="h-24 bg-secondary/30 rounded-lg animate-pulse" />
+                  <div key={i} className="h-36 bg-secondary/30 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : runningEfforts && runningEfforts.efforts.length > 0 ? (
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
-                {runningEfforts.efforts.map((effort, idx) => (
+                {runningEfforts.efforts.map((effort, idx) => {
+                  const currentYearEffort = runningCurrentYearByDistance.get(effort.distance_meters)
+                  return (
                   <Link
                     key={idx}
                     to={`/activity/${effort.activity_id}`}
                     className="block cursor-pointer hover:scale-105 transition-transform"
                   >
-                    <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg p-3 text-center border border-green-500/30">
+                    <div className="bg-gradient-to-br from-green-500/20 to-emerald-500/20 rounded-lg p-3 text-center border border-green-500/30 h-full">
                       <p className="text-xs text-muted-foreground mb-1">{effort.label}</p>
-                      <p className="text-xl font-bold text-green-500">{effort.pace}</p>
-                      <p className="text-xs text-muted-foreground mt-1">
-                        {formatDuration(effort.time_seconds)}
-                      </p>
+                      <div className="space-y-2">
+                        <div>
+                          <p className="text-[10px] uppercase text-muted-foreground/70">{t('records.bestEfforts.scopes.allTime')}</p>
+                          <p className="text-xl font-bold text-green-500">{effort.pace}</p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            {formatDuration(effort.time_seconds)}
+                          </p>
+                        </div>
+                        <div className="rounded-md border border-green-500/20 bg-background/35 px-2 py-1.5">
+                          <p className="text-[10px] uppercase text-muted-foreground/70">
+                            {t('records.bestEfforts.scopes.currentYear', { year: currentYear })}
+                          </p>
+                          {currentYearEffort ? (
+                            <>
+                              <p className="text-sm font-semibold text-green-500">{currentYearEffort.pace}</p>
+                              <p className="text-[10px] text-muted-foreground">
+                                {formatDuration(currentYearEffort.time_seconds)}
+                              </p>
+                            </>
+                          ) : (
+                            <p className="text-sm font-semibold text-muted-foreground">{t('common.notAvailable')}</p>
+                          )}
+                        </div>
+                      </div>
                       {effort.avg_hr && (
                         <p className="text-[10px] text-muted-foreground/70 mt-1">
                           {effort.avg_hr} bpm
@@ -266,37 +309,60 @@ export function Records() {
                       )}
                     </div>
                   </Link>
-                ))}
+                  )
+                })}
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8">{t('records.bestEfforts.emptyRunning')}</p>
             )
           ) : (
             // Cycling Power Efforts - Compact Grid
-            powerCurveLoading ? (
+            powerCurveLoading || powerCurrentYearLoading ? (
               <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-3">
                 {[...Array(9)].map((_, i) => (
-                  <div key={i} className="h-24 bg-secondary/30 rounded-lg animate-pulse" />
+                  <div key={i} className="h-36 bg-secondary/30 rounded-lg animate-pulse" />
                 ))}
               </div>
             ) : powerCurve && powerCurve.durations && powerCurve.durations.length > 0 ? (
               <div className="grid grid-cols-3 md:grid-cols-5 lg:grid-cols-9 gap-3">
                 {powerCurve.durations
                   .slice(0, 9) // Show first 9 durations from cache
-                  .map((point, idx) => (
+                  .map((point, idx) => {
+                    const currentYearPoint = powerCurrentYearByDuration.get(point.duration)
+                    return (
                     <Link
                       key={idx}
                       to={point.activity_id ? `/activity/${point.activity_id}` : '#'}
                       className={`block ${point.activity_id ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
                     >
-                      <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg p-3 text-center border border-yellow-500/30">
+                      <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg p-3 text-center border border-yellow-500/30 h-full">
                         <p className="text-xs text-muted-foreground mb-1">{point.label}</p>
-                        <p className="text-xl font-bold text-yellow-500">
-                          {point.watts > 0 ? point.watts : t('common.notAvailable')}W
-                        </p>
-                        <p className="text-xs text-muted-foreground mt-1">
-                          {point.watts_per_kg ? `${point.watts_per_kg.toFixed(1)} W/kg` : t('common.notAvailable')}
-                        </p>
+                        <div className="space-y-2">
+                          <div>
+                            <p className="text-[10px] uppercase text-muted-foreground/70">{t('records.bestEfforts.scopes.allTime')}</p>
+                            <p className="text-xl font-bold text-yellow-500">
+                              {point.watts > 0 ? point.watts : t('common.notAvailable')}W
+                            </p>
+                            <p className="text-xs text-muted-foreground mt-1">
+                              {point.watts_per_kg ? `${point.watts_per_kg.toFixed(1)} W/kg` : t('common.notAvailable')}
+                            </p>
+                          </div>
+                          <div className="rounded-md border border-yellow-500/20 bg-background/35 px-2 py-1.5">
+                            <p className="text-[10px] uppercase text-muted-foreground/70">
+                              {t('records.bestEfforts.scopes.currentYear', { year: currentYear })}
+                            </p>
+                            {currentYearPoint?.watts ? (
+                              <>
+                                <p className="text-sm font-semibold text-yellow-500">{currentYearPoint.watts}W</p>
+                                <p className="text-[10px] text-muted-foreground">
+                                  {currentYearPoint.watts_per_kg ? `${currentYearPoint.watts_per_kg.toFixed(1)} W/kg` : t('common.notAvailable')}
+                                </p>
+                              </>
+                            ) : (
+                              <p className="text-sm font-semibold text-muted-foreground">{t('common.notAvailable')}</p>
+                            )}
+                          </div>
+                        </div>
                         {point.activity_date && (
                           <p className="text-[9px] text-muted-foreground/70 mt-0.5">
                             {formatActivityDate(point.activity_date)}
@@ -304,7 +370,8 @@ export function Records() {
                         )}
                       </div>
                     </Link>
-                  ))}
+                    )
+                  })}
               </div>
             ) : (
               <p className="text-center text-muted-foreground py-8">{t('records.bestEfforts.emptyPower')}</p>

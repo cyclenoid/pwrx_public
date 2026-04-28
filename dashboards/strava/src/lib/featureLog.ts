@@ -29,6 +29,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-28-current-year-best-efforts",
+    date: "2026-04-28",
+    tag: "records",
+    title: {
+      de: "Rekorde zeigen aktuelles Jahr und All-Time",
+      en: "Records show current year and all-time",
+    },
+    summary: {
+      de: "Die Rekorde-Seite vergleicht Bestwerte jetzt direkt zwischen aktuellem Jahr und All-Time.",
+      en: "The Records page now compares best efforts directly between the current year and all-time.",
+    },
+    bullets: {
+      de: [
+        "Lauf-Bestzeiten zeigen pro Distanz All-Time und den besten Wert des laufenden Jahres.",
+        "Rad-Power-Bestwerte zeigen pro Dauer All-Time und den besten Wert des laufenden Jahres.",
+        "Die Vergleichswerte nutzen die bestehenden Cache-Endpunkte und bleiben dadurch schnell.",
+      ],
+      en: [
+        "Running best efforts show all-time and the current year's best value for each distance.",
+        "Cycling power best efforts show all-time and the current year's best value for each duration.",
+        "The comparison uses the existing cached endpoints, keeping the view fast.",
+      ],
+    },
+  },
+  {
     id: "2026-04-28-running-best-effort-quality",
     date: "2026-04-28",
     tag: "records",
