@@ -29,6 +29,31 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-04-28-release-version-label",
+    date: "2026-04-28",
+    tag: "release",
+    title: {
+      de: "Version 1.1.0 ist direkt in der App sichtbar",
+      en: "Version 1.1.0 is visible directly in the app",
+    },
+    summary: {
+      de: "PWRX zeigt neben dem technischen Git-Commit jetzt eine verstaendliche Release-Version wie v1.1.0 an.",
+      en: "PWRX now shows a readable release version such as v1.1.0 alongside the technical Git commit.",
+    },
+    bullets: {
+      de: [
+        "Dashboard und Einstellungen zeigen eine klare App-Version wie v1.1.0.",
+        "Der Git-Commit bleibt in den technischen Details sichtbar, damit Installationen exakt nachvollziehbar sind.",
+        "Feature-Verlauf und Website-Status nutzen dieselbe Release-Information.",
+      ],
+      en: [
+        "Dashboard and settings show a clear app version such as v1.1.0.",
+        "The Git commit remains visible in technical details so installations stay exactly traceable.",
+        "Feature history and website status use the same release information.",
+      ],
+    },
+  },
+  {
     id: "2026-04-27-training-run-cache",
     date: "2026-04-27",
     tag: "training",

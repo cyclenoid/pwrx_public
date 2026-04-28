@@ -119,6 +119,16 @@ Check status:
 docker compose exec strava-tracker npm run db:check
 ```
 
+The app shows a readable release version such as `v1.1.0` in addition to the
+technical Git commit. For user-visible releases, maintainers update the package
+versions, feature log, and website metadata together.
+
+## Public repository hygiene
+
+This repository is public. Do not commit internal workspace paths, private
+hostnames, private IP addresses, deploy keys, tokens, credentials, customer data,
+or operator-only runbooks. Keep local deployment notes outside this repository.
+
 ## FAQ (short)
 
 **Can I use PWRX without a 24/7 machine?**  

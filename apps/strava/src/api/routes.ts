@@ -265,10 +265,10 @@ const backendVersionCommit = String(process.env.PWRX_GIT_SHA || process.env.GIT_
 const backendVersionLabel = (() => {
   const explicit = String(process.env.PWRX_VERSION_LABEL || '').trim();
   if (explicit) return explicit;
-  if (backendGitVersionMeta.tag) return backendGitVersionMeta.tag;
-  if (backendGitVersionMeta.commitShort) return backendGitVersionMeta.commitShort;
-  if (!backendPackageVersion || backendPackageVersion === 'unknown') return 'unknown';
-  return backendPackageVersion.startsWith('v') ? backendPackageVersion : `v${backendPackageVersion}`;
+  if (backendPackageVersion && backendPackageVersion !== 'unknown') {
+    return backendPackageVersion.startsWith('v') ? backendPackageVersion : `v${backendPackageVersion}`;
+  }
+  return backendGitVersionMeta.tag || backendGitVersionMeta.commitShort || 'unknown';
 })();
 
 type StravaExportChunkSessionMeta = {
@@ -2515,6 +2515,7 @@ router.get('/capabilities', async (req: Request, res: Response) => {
         backend: backendPackageVersion,
         label: backendVersionLabel,
         commit: backendVersionCommit,
+        commit_short: backendVersionCommit ? backendVersionCommit.slice(0, 7) : null,
       },
     });
   } catch (error: any) {

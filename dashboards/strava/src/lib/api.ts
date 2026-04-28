@@ -62,6 +62,7 @@ export interface CapabilitiesResponse {
     backend?: string | null
     label?: string | null
     commit?: string | null
+    commit_short?: string | null
   }
 }
 

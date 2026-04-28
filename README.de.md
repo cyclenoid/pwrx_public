@@ -117,6 +117,17 @@ Status pruefen:
 docker compose exec strava-tracker npm run db:check
 ```
 
+Die App zeigt zusaetzlich zum technischen Git-Commit eine verstaendliche
+Release-Version wie `v1.1.0`. Bei nutzerrelevanten Releases werden
+Paketversionen, Feature-Log und Website-Metadaten gemeinsam aktualisiert.
+
+## Public-Repo-Hygiene
+
+Dieses Repository ist oeffentlich. Keine internen Workspace-Pfade, privaten
+Hostnamen, privaten IP-Adressen, Deploy-Keys, Tokens, Zugangsdaten,
+Kundendaten oder nur intern gueltigen Runbooks committen. Lokale
+Deployment-Notizen gehoeren ausserhalb dieses Repositories.
+
 ## FAQ (kurz)
 
 **Kann ich PWRX ohne 24/7-Rechner nutzen?**  
