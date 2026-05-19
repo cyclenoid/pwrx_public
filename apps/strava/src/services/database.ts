@@ -242,6 +242,54 @@ export interface ImportMetrics {
   lastRunAt: Date | null;
 }
 
+export type ExerciseUnit = 'reps' | 'seconds';
+
+export interface ExerciseType {
+  id?: number;
+  name: string;
+  default_unit: ExerciseUnit;
+  category?: string;
+  is_archived?: boolean;
+  entry_count?: number;
+  last_performed_at?: Date | null;
+  best_value?: number | null;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface ExerciseEntry {
+  id?: number;
+  exercise_type_id: number;
+  exercise_name?: string;
+  category?: string;
+  performed_at: Date;
+  value: number;
+  unit: ExerciseUnit;
+  notes?: string | null;
+  activity_id?: number | null;
+  created_at?: Date;
+  updated_at?: Date;
+}
+
+export interface ExerciseSummary {
+  windowDays: number;
+  totalEntries: number;
+  activeTypes: number;
+  bests: Array<{
+    exercise_type_id: number;
+    exercise_name: string;
+    unit: ExerciseUnit;
+    best_value: number;
+    last_performed_at: Date | null;
+  }>;
+  weeklyTotals: Array<{
+    week_start: string;
+    entries: number;
+    reps: number;
+    seconds: number;
+  }>;
+}
+
 export class DatabaseService {
   private pool: Pool;
   private schema: string;
@@ -1363,6 +1411,219 @@ export class DatabaseService {
       [fingerprint]
     );
     return result.rows.length > 0 ? result.rows[0] : null;
+  }
+
+  /**
+   * List manual exercise types with lightweight usage stats.
+   */
+  async listExerciseTypes(includeArchived: boolean = false): Promise<ExerciseType[]> {
+    const result = await this.pool.query(
+      `
+      SELECT
+        et.*,
+        COUNT(ee.id)::int AS entry_count,
+        MAX(ee.performed_at) AS last_performed_at,
+        MAX(CASE WHEN ee.unit = et.default_unit THEN ee.value ELSE NULL END) AS best_value
+      FROM exercise_types et
+      LEFT JOIN exercise_entries ee ON ee.exercise_type_id = et.id
+      WHERE ($1::boolean = true OR et.is_archived = false)
+      GROUP BY et.id
+      ORDER BY
+        MAX(ee.performed_at) DESC NULLS LAST,
+        LOWER(et.name) ASC
+      `,
+      [includeArchived]
+    );
+    return result.rows.map((row) => ({
+      ...row,
+      entry_count: Number(row.entry_count || 0),
+      best_value: row.best_value === null || row.best_value === undefined ? null : Number(row.best_value),
+    }));
+  }
+
+  /**
+   * Create a manual exercise type.
+   */
+  async createExerciseType(input: {
+    name: string;
+    default_unit: ExerciseUnit;
+    category?: string;
+  }): Promise<ExerciseType> {
+    const result = await this.pool.query(
+      `
+      INSERT INTO exercise_types (name, default_unit, category)
+      VALUES ($1, $2, $3)
+      ON CONFLICT (LOWER(name)) WHERE is_archived = false
+      DO UPDATE SET
+        default_unit = EXCLUDED.default_unit,
+        category = EXCLUDED.category,
+        updated_at = CURRENT_TIMESTAMP
+      RETURNING *
+      `,
+      [
+        input.name,
+        input.default_unit,
+        input.category || 'custom',
+      ]
+    );
+    return {
+      ...result.rows[0],
+      entry_count: 0,
+      best_value: null,
+      last_performed_at: null,
+    };
+  }
+
+  /**
+   * List manual exercise entries.
+   */
+  async listExerciseEntries(filters: {
+    exerciseTypeId?: number;
+    days?: number;
+    limit?: number;
+  } = {}): Promise<ExerciseEntry[]> {
+    const values: any[] = [];
+    const clauses: string[] = [];
+
+    if (filters.exerciseTypeId && Number.isFinite(filters.exerciseTypeId)) {
+      values.push(filters.exerciseTypeId);
+      clauses.push(`ee.exercise_type_id = $${values.length}`);
+    }
+
+    if (filters.days && Number.isFinite(filters.days)) {
+      values.push(Math.max(1, Math.min(Math.floor(filters.days), 3650)));
+      clauses.push(`ee.performed_at >= (NOW() - ($${values.length}::int * INTERVAL '1 day'))`);
+    }
+
+    const safeLimit = filters.limit && Number.isFinite(filters.limit)
+      ? Math.max(1, Math.min(Math.floor(filters.limit), 500))
+      : 100;
+    values.push(safeLimit);
+
+    const whereSql = clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '';
+    const result = await this.pool.query(
+      `
+      SELECT
+        ee.*,
+        et.name AS exercise_name,
+        et.category
+      FROM exercise_entries ee
+      JOIN exercise_types et ON et.id = ee.exercise_type_id
+      ${whereSql}
+      ORDER BY ee.performed_at DESC, ee.id DESC
+      LIMIT $${values.length}
+      `,
+      values
+    );
+    return result.rows.map((row) => ({
+      ...row,
+      value: Number(row.value),
+    }));
+  }
+
+  /**
+   * Create one manual exercise entry.
+   */
+  async createExerciseEntry(input: {
+    exercise_type_id: number;
+    performed_at: Date;
+    value: number;
+    unit: ExerciseUnit;
+    notes?: string | null;
+    activity_id?: number | null;
+  }): Promise<ExerciseEntry> {
+    const result = await this.pool.query(
+      `
+      INSERT INTO exercise_entries (
+        exercise_type_id, performed_at, value, unit, notes, activity_id
+      )
+      VALUES ($1, $2, $3, $4, $5, $6)
+      RETURNING *
+      `,
+      [
+        input.exercise_type_id,
+        input.performed_at,
+        input.value,
+        input.unit,
+        input.notes || null,
+        input.activity_id ?? null,
+      ]
+    );
+    const created = result.rows[0];
+    return {
+      ...created,
+      value: Number(created.value),
+    };
+  }
+
+  /**
+   * Aggregate manual exercise log metrics.
+   */
+  async getExerciseSummary(days: number = 90): Promise<ExerciseSummary> {
+    const safeDays = Number.isFinite(days) ? Math.max(1, Math.min(Math.floor(days), 3650)) : 90;
+
+    const totals = await this.pool.query(
+      `
+      SELECT
+        COUNT(*)::int AS total_entries,
+        COUNT(DISTINCT exercise_type_id)::int AS active_types
+      FROM exercise_entries
+      WHERE performed_at >= (NOW() - ($1::int * INTERVAL '1 day'))
+      `,
+      [safeDays]
+    );
+
+    const bests = await this.pool.query(
+      `
+      SELECT DISTINCT ON (ee.exercise_type_id, ee.unit)
+        ee.exercise_type_id,
+        et.name AS exercise_name,
+        ee.unit,
+        MAX(ee.value) OVER (PARTITION BY ee.exercise_type_id, ee.unit) AS best_value,
+        MAX(ee.performed_at) OVER (PARTITION BY ee.exercise_type_id, ee.unit) AS last_performed_at
+      FROM exercise_entries ee
+      JOIN exercise_types et ON et.id = ee.exercise_type_id
+      WHERE ee.performed_at >= (NOW() - ($1::int * INTERVAL '1 day'))
+      ORDER BY ee.exercise_type_id, ee.unit, best_value DESC
+      LIMIT 20
+      `,
+      [safeDays]
+    );
+
+    const weekly = await this.pool.query(
+      `
+      SELECT
+        DATE_TRUNC('week', performed_at)::date AS week_start,
+        COUNT(*)::int AS entries,
+        COALESCE(SUM(CASE WHEN unit = 'reps' THEN value ELSE 0 END), 0) AS reps,
+        COALESCE(SUM(CASE WHEN unit = 'seconds' THEN value ELSE 0 END), 0) AS seconds
+      FROM exercise_entries
+      WHERE performed_at >= (NOW() - ($1::int * INTERVAL '1 day'))
+      GROUP BY DATE_TRUNC('week', performed_at)::date
+      ORDER BY week_start ASC
+      `,
+      [safeDays]
+    );
+
+    const totalRow = totals.rows[0] || {};
+    return {
+      windowDays: safeDays,
+      totalEntries: Number(totalRow.total_entries || 0),
+      activeTypes: Number(totalRow.active_types || 0),
+      bests: bests.rows.map((row) => ({
+        exercise_type_id: Number(row.exercise_type_id),
+        exercise_name: String(row.exercise_name),
+        unit: row.unit,
+        best_value: Number(row.best_value),
+        last_performed_at: row.last_performed_at ? new Date(row.last_performed_at) : null,
+      })),
+      weeklyTotals: weekly.rows.map((row) => ({
+        week_start: String(row.week_start),
+        entries: Number(row.entries || 0),
+        reps: Number(row.reps || 0),
+        seconds: Number(row.seconds || 0),
+      })),
+    };
   }
 
   /**

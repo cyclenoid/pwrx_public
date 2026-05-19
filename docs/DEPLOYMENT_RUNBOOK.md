@@ -69,6 +69,8 @@ git fetch origin --prune
 git checkout main
 git pull --ff-only origin main
 docker compose up -d --build strava-tracker strava-dashboard
+docker compose exec -T -w /tmp/pwrx-app strava-tracker npm run db:migrate
+docker compose exec -T -w /tmp/pwrx-app strava-tracker npm run db:check
 ```
 
 ## Verification checklist

@@ -4,16 +4,101 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "activities": "Activities",
     "records": "Records",
     "heatmap": "Heatmap",
     "training": "Training",
+    "exercises": "Exercises",
     "power": "Power",
     "segments": "Segments",
     "climbs": "Segments",
     "import": "Import",
     "club": "Club",
     "gear": "Gear",
-    "settings": "Settings"
+    "settings": "Settings",
+    "groups": {
+      "data": "Data",
+      "analysis": "Endurance",
+      "training": "Strength & Training"
+    }
+  },
+  "exercises": {
+    "kicker": "Manual log",
+    "title": "Exercises",
+    "subtitle": "Track reps and timed holds alongside your imported training data.",
+    "windowDays": "{{days}}d",
+    "stats": {
+      "entries": "Entries",
+      "activeTypes": "Active exercises",
+      "last": "Last entry"
+    },
+    "fields": {
+      "name": "Name",
+      "unit": "Unit",
+      "category": "Category",
+      "exercise": "Exercise",
+      "value": "Value",
+      "date": "Date",
+      "notes": "Notes"
+    },
+    "units": {
+      "reps": "Repetitions",
+      "seconds": "Seconds",
+      "repsShort": "reps",
+      "secondsShort": "s"
+    },
+    "categories": {
+      "strength": "Strength",
+      "core": "Core",
+      "mobility": "Mobility",
+      "hold": "Hold",
+      "custom": "Custom"
+    },
+    "typeForm": {
+      "title": "Create exercise",
+      "subtitle": "Add the movement once, then log values over time.",
+      "namePlaceholder": "Push-ups"
+    },
+    "entryForm": {
+      "title": "Log entry",
+      "subtitle": "Record one value for the selected exercise.",
+      "selectExercise": "Select exercise"
+    },
+    "actions": {
+      "createType": "Create exercise",
+      "creating": "Creating...",
+      "openLog": "Log entry",
+      "saveEntry": "Save entry",
+      "saving": "Saving..."
+    },
+    "cards": {
+      "logs": "Logs",
+      "best": "Best",
+      "last": "Last",
+      "value": "Value",
+      "empty": "No values"
+    },
+    "filters": {
+      "all": "All exercises"
+    },
+    "progress": {
+      "title": "Progress",
+      "allSubtitle": "All logged exercises in the selected window.",
+      "best": "Best"
+    },
+    "types": {
+      "title": "Units & results",
+      "subtitle": "Select an exercise to inspect its results or log a new value."
+    },
+    "entries": {
+      "title": "Recent entries",
+      "subtitle": "Filtered by exercise and time window."
+    },
+    "empty": {
+      "types": "Create your first exercise, then log values from the quick entry panel.",
+      "chart": "No exercise entries yet.",
+      "entries": "No entries match this filter."
+    }
   },
   "club": {
     "kicker": "Strava Club",

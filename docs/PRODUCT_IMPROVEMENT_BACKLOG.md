@@ -3,6 +3,9 @@
 This document keeps product and analytics ideas close to the public codebase
 without mixing them into operator-only deployment notes.
 
+Planning notes for the next product tracks live in
+`docs/NEXT_PRODUCT_STEPS.md`.
+
 ## Active baseline
 
 - Cycling power and running best efforts use cache-first API endpoints.

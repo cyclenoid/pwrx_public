@@ -3,7 +3,7 @@ import * as path from 'path';
 import * as fs from 'fs';
 import { createHash, randomUUID } from 'crypto';
 import multer from 'multer';
-import DatabaseService from '../services/database';
+import DatabaseService, { type ExerciseUnit } from '../services/database';
 import { loadSyncSettings } from '../services/syncSettings';
 import { checkPendingMigrations } from '../services/migrations';
 import {
@@ -378,6 +378,22 @@ const parseManualGearType = (value: unknown): 'bike' | 'shoes' | null => {
 const createManualGearId = (type: 'bike' | 'shoes') => {
   const prefix = type === 'bike' ? 'mb' : 'mg';
   return `${prefix}_${randomUUID().replace(/-/g, '').slice(0, 18)}`;
+};
+
+const parseExerciseUnit = (value: unknown): ExerciseUnit | null => {
+  const normalized = String(value || '').trim().toLowerCase();
+  if (['reps', 'rep', 'repetitions', 'wiederholungen'].includes(normalized)) return 'reps';
+  if (['seconds', 'second', 'sec', 'secs', 'time', 'duration', 'sekunden'].includes(normalized)) return 'seconds';
+  return null;
+};
+
+const sanitizeExerciseCategory = (value: unknown): string => {
+  const normalized = String(value || 'custom')
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9_-]+/g, '_')
+    .replace(/^_+|_+$/g, '');
+  return normalized || 'custom';
 };
 
 // Heatmap cache - stores pre-computed heatmap data
@@ -2904,6 +2920,139 @@ router.get('/capabilities', async (req: Request, res: Response) => {
   } catch (error: any) {
     console.error('Error fetching capabilities:', error);
     return res.status(500).json({ error: 'Failed to fetch capabilities' });
+  }
+});
+
+/**
+ * GET /api/exercises/types
+ * List manual exercise types with usage stats.
+ */
+router.get('/exercises/types', async (req: Request, res: Response) => {
+  try {
+    const includeArchived = parseBooleanLike(req.query.includeArchived ?? req.query.include_archived) ?? false;
+    const types = await db.listExerciseTypes(includeArchived);
+    return res.json({ types, count: types.length });
+  } catch (error: any) {
+    console.error('Error fetching exercise types:', error);
+    return res.status(500).json({ error: 'Failed to fetch exercise types' });
+  }
+});
+
+/**
+ * POST /api/exercises/types
+ * Create or update a manual exercise type by active name.
+ */
+router.post('/exercises/types', async (req: Request, res: Response) => {
+  try {
+    const name = String(req.body?.name || '').trim();
+    if (name.length < 2 || name.length > 80) {
+      return res.status(400).json({ error: 'Exercise name must be between 2 and 80 characters' });
+    }
+
+    const defaultUnit = parseExerciseUnit(req.body?.default_unit ?? req.body?.defaultUnit);
+    if (!defaultUnit) {
+      return res.status(400).json({ error: 'default_unit must be reps or seconds' });
+    }
+
+    const type = await db.createExerciseType({
+      name,
+      default_unit: defaultUnit,
+      category: sanitizeExerciseCategory(req.body?.category),
+    });
+    return res.status(201).json(type);
+  } catch (error: any) {
+    console.error('Error creating exercise type:', error);
+    return res.status(500).json({ error: 'Failed to create exercise type' });
+  }
+});
+
+/**
+ * GET /api/exercises/entries
+ * List manual exercise log entries.
+ */
+router.get('/exercises/entries', async (req: Request, res: Response) => {
+  try {
+    const rawTypeId = Number(req.query.exerciseTypeId ?? req.query.exercise_type_id);
+    const rawDays = Number(req.query.days);
+    const rawLimit = Number(req.query.limit);
+    const entries = await db.listExerciseEntries({
+      exerciseTypeId: Number.isFinite(rawTypeId) && rawTypeId > 0 ? rawTypeId : undefined,
+      days: Number.isFinite(rawDays) && rawDays > 0 ? rawDays : undefined,
+      limit: Number.isFinite(rawLimit) && rawLimit > 0 ? rawLimit : undefined,
+    });
+    return res.json({ entries, count: entries.length });
+  } catch (error: any) {
+    console.error('Error fetching exercise entries:', error);
+    return res.status(500).json({ error: 'Failed to fetch exercise entries' });
+  }
+});
+
+/**
+ * POST /api/exercises/entries
+ * Create one manual exercise log entry.
+ */
+router.post('/exercises/entries', async (req: Request, res: Response) => {
+  try {
+    const exerciseTypeId = Number(req.body?.exercise_type_id ?? req.body?.exerciseTypeId);
+    if (!Number.isInteger(exerciseTypeId) || exerciseTypeId <= 0) {
+      return res.status(400).json({ error: 'exercise_type_id is required' });
+    }
+
+    const value = Number(req.body?.value);
+    if (!Number.isFinite(value) || value <= 0) {
+      return res.status(400).json({ error: 'value must be greater than zero' });
+    }
+
+    const unit = parseExerciseUnit(req.body?.unit);
+    if (!unit) {
+      return res.status(400).json({ error: 'unit must be reps or seconds' });
+    }
+
+    const performedAtRaw = req.body?.performed_at ?? req.body?.performedAt;
+    const performedAt = performedAtRaw ? new Date(String(performedAtRaw)) : new Date();
+    if (Number.isNaN(performedAt.getTime())) {
+      return res.status(400).json({ error: 'performed_at must be a valid date' });
+    }
+
+    const activityIdRaw = req.body?.activity_id ?? req.body?.activityId;
+    const activityId = activityIdRaw === undefined || activityIdRaw === null || activityIdRaw === ''
+      ? null
+      : Number(activityIdRaw);
+    if (activityId !== null && !Number.isInteger(activityId)) {
+      return res.status(400).json({ error: 'activity_id must be an integer when provided' });
+    }
+
+    const notes = String(req.body?.notes || '').trim();
+    const entry = await db.createExerciseEntry({
+      exercise_type_id: exerciseTypeId,
+      performed_at: performedAt,
+      value,
+      unit,
+      notes: notes || null,
+      activity_id: activityId,
+    });
+    return res.status(201).json(entry);
+  } catch (error: any) {
+    if (String(error?.code) === '23503') {
+      return res.status(404).json({ error: 'Exercise type or linked activity not found' });
+    }
+    console.error('Error creating exercise entry:', error);
+    return res.status(500).json({ error: 'Failed to create exercise entry' });
+  }
+});
+
+/**
+ * GET /api/exercises/summary
+ * Aggregate manual exercise log metrics.
+ */
+router.get('/exercises/summary', async (req: Request, res: Response) => {
+  try {
+    const rawDays = Number(req.query.days);
+    const summary = await db.getExerciseSummary(Number.isFinite(rawDays) && rawDays > 0 ? rawDays : 90);
+    return res.json(summary);
+  } catch (error: any) {
+    console.error('Error fetching exercise summary:', error);
+    return res.status(500).json({ error: 'Failed to fetch exercise summary' });
   }
 });
 

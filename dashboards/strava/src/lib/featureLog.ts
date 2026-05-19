@@ -29,6 +29,33 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-05-19-manual-exercise-log",
+    date: "2026-05-19",
+    tag: "training",
+    title: {
+      de: "Kraftuebungen manuell erfassen",
+      en: "Log strength exercises manually",
+    },
+    summary: {
+      de: "PWRX kann jetzt Uebungen wie Liegestuetze, Wandsitz oder Plank mit Wiederholungen und Haltezeiten dokumentieren.",
+      en: "PWRX can now track exercises such as push-ups, wall sits, or planks with reps and hold times.",
+    },
+    bullets: {
+      de: [
+        "Neue Uebungen lassen sich mit Einheit und Kategorie anlegen.",
+        "Eintraege werden in einer kompakten Tabelle erfasst und gefiltert.",
+        "Kacheln mit kleinen Diagrammen zeigen den Verlauf je Uebung.",
+        "Die Navigation trennt Ausdauer, Kraft & Training sowie Daten klarer voneinander.",
+      ],
+      en: [
+        "New exercises can be created with a unit and category.",
+        "Entries are logged and filtered in a compact table view.",
+        "Small chart cards show progress for each exercise.",
+        "Navigation now separates endurance, strength & training, and data more clearly.",
+      ],
+    },
+  },
+  {
     id: "2026-04-28-current-year-best-efforts",
     date: "2026-04-28",
     tag: "records",

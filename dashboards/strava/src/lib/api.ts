@@ -769,6 +769,103 @@ export const updateGearMaintenance = async (
   return data
 }
 
+export type ExerciseUnit = 'reps' | 'seconds'
+
+export interface ExerciseType {
+  id: number
+  name: string
+  default_unit: ExerciseUnit
+  category: string
+  is_archived: boolean
+  entry_count: number
+  last_performed_at?: string | null
+  best_value?: number | null
+}
+
+export interface ExerciseEntry {
+  id: number
+  exercise_type_id: number
+  exercise_name: string
+  category: string
+  performed_at: string
+  value: number
+  unit: ExerciseUnit
+  notes?: string | null
+  activity_id?: number | null
+}
+
+export interface ExerciseSummary {
+  windowDays: number
+  totalEntries: number
+  activeTypes: number
+  bests: Array<{
+    exercise_type_id: number
+    exercise_name: string
+    unit: ExerciseUnit
+    best_value: number
+    last_performed_at?: string | null
+  }>
+  weeklyTotals: Array<{
+    week_start: string
+    entries: number
+    reps: number
+    seconds: number
+  }>
+}
+
+export const getExerciseTypes = async (): Promise<ExerciseType[]> => {
+  const { data } = await api.get<{ types: ExerciseType[]; count: number }>('/exercises/types')
+  return data.types
+}
+
+export const createExerciseType = async (payload: {
+  name: string
+  defaultUnit: ExerciseUnit
+  category?: string
+}): Promise<ExerciseType> => {
+  const { data } = await api.post<ExerciseType>('/exercises/types', {
+    name: payload.name,
+    default_unit: payload.defaultUnit,
+    category: payload.category || 'custom',
+  })
+  return data
+}
+
+export const getExerciseEntries = async (params?: {
+  exerciseTypeId?: number
+  days?: number
+  limit?: number
+}): Promise<ExerciseEntry[]> => {
+  const { data } = await api.get<{ entries: ExerciseEntry[]; count: number }>('/exercises/entries', {
+    params,
+  })
+  return data.entries
+}
+
+export const createExerciseEntry = async (payload: {
+  exerciseTypeId: number
+  performedAt: string
+  value: number
+  unit: ExerciseUnit
+  notes?: string
+  activityId?: number | null
+}): Promise<ExerciseEntry> => {
+  const { data } = await api.post<ExerciseEntry>('/exercises/entries', {
+    exercise_type_id: payload.exerciseTypeId,
+    performed_at: payload.performedAt,
+    value: payload.value,
+    unit: payload.unit,
+    notes: payload.notes || undefined,
+    activity_id: payload.activityId ?? undefined,
+  })
+  return data
+}
+
+export const getExerciseSummary = async (days = 90): Promise<ExerciseSummary> => {
+  const { data } = await api.get<ExerciseSummary>('/exercises/summary', { params: { days } })
+  return data
+}
+
 // Heatmap API
 export interface HeatmapActivity {
   strava_activity_id: number

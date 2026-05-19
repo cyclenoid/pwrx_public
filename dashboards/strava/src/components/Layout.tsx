@@ -2,7 +2,22 @@ import { Link, Outlet, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
 import { ThemeToggle } from './ThemeToggle'
 import { useTranslation } from 'react-i18next'
-import { LayoutDashboard, Trophy, Map, Activity, Zap, Bike, Settings, Flag, FileUp, Users, Coffee } from 'lucide-react'
+import {
+  Activity,
+  Bike,
+  ChevronDown,
+  Coffee,
+  Database,
+  Dumbbell,
+  FileUp,
+  Flag,
+  LayoutDashboard,
+  Map,
+  Settings,
+  Trophy,
+  Users as UsersIcon,
+  Zap,
+} from 'lucide-react'
 import { useCapabilities } from '../hooks/useCapabilities'
 
 export function Layout() {
@@ -15,50 +30,100 @@ export function Layout() {
     i18n.changeLanguage(next)
   }
 
-  const navItems = [
+  const standaloneNavItems = [
     {
       path: '/',
       label: t('nav.dashboard'),
       icon: <LayoutDashboard size={16} />,
     },
+  ]
+
+  const navGroups = [
     {
-      path: '/records',
-      label: t('nav.records'),
-      icon: <Trophy size={16} />,
-    },
-    {
-      path: '/heatmap',
-      label: t('nav.heatmap'),
-      icon: <Map size={16} />,
-    },
-    {
-      path: '/training',
-      label: t('nav.training'),
-      icon: <Activity size={16} />,
-    },
-    {
-      path: '/power',
-      label: t('nav.power'),
+      label: t('nav.groups.analysis'),
       icon: <Zap size={16} />,
+      items: [
+        {
+          path: '/records',
+          label: t('nav.records'),
+          icon: <Trophy size={16} />,
+        },
+        {
+          path: '/training',
+          label: t('nav.training'),
+          icon: <Activity size={16} />,
+        },
+        {
+          path: '/power',
+          label: t('nav.power'),
+          icon: <Zap size={16} />,
+        },
+        {
+          path: '/heatmap',
+          label: t('nav.heatmap'),
+          icon: <Map size={16} />,
+        },
+        {
+          path: '/segments',
+          label: t('nav.segments'),
+          icon: <Flag size={16} />,
+          enabled: capabilities.supportsSegments,
+        },
+        {
+          path: '/gear',
+          label: t('nav.gear'),
+          icon: <Bike size={16} />,
+        },
+      ],
     },
     {
-      path: '/segments',
-      label: t('nav.segments'),
-      icon: <Flag size={16} />,
-      enabled: capabilities.supportsSegments,
+      label: t('nav.groups.training'),
+      icon: <Dumbbell size={16} />,
+      items: [
+        {
+          path: '/exercises',
+          label: t('nav.exercises'),
+          icon: <Dumbbell size={16} />,
+        },
+        {
+          path: '/club',
+          label: t('nav.club'),
+          icon: <UsersIcon size={16} />,
+          enabled: capabilities.supportsClubs,
+        },
+      ],
     },
     {
-      path: '/gear',
-      label: t('nav.gear'),
-      icon: <Bike size={16} />,
+      label: t('nav.groups.data'),
+      icon: <Database size={16} />,
+      items: [
+        {
+          path: '/activities',
+          label: t('nav.activities'),
+          icon: <Activity size={16} />,
+        },
+        {
+          path: '/import',
+          label: t('nav.import'),
+          icon: <FileUp size={16} />,
+        },
+      ],
     },
-    {
-      path: '/club',
-      label: t('nav.club'),
-      icon: <Users size={16} />,
-      enabled: capabilities.supportsClubs,
-    },
-  ].filter((item) => item.enabled !== false)
+  ].map((group) => ({
+    ...group,
+    items: group.items.filter((item) => item.enabled !== false),
+  })).filter((group) => group.items.length > 0)
+
+  const isPathActive = (path: string) => path === '/'
+    ? location.pathname === '/'
+    : location.pathname.startsWith(path)
+
+  const navLinkClass = (isActive: boolean) => cn(
+    "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
+    isActive
+      ? "bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg"
+      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+  )
 
   return (
     <div className="min-h-screen bg-background">
@@ -77,26 +142,55 @@ export function Layout() {
 
             {/* Navigation */}
             <div className="flex min-w-0 flex-1 items-center justify-end gap-2">
-              <nav className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-x-auto whitespace-nowrap pr-2">
-                {navItems.map((item) => {
-                  const isActive = item.path === '/'
-                    ? location.pathname === '/'
-                    : location.pathname.startsWith(item.path)
+              <nav className="flex min-w-0 flex-1 flex-wrap items-center justify-end gap-1 whitespace-nowrap pr-2">
+                {standaloneNavItems.map((item) => (
+                  <Link
+                    key={item.path}
+                    to={item.path}
+                    className={navLinkClass(isPathActive(item.path))}
+                  >
+                    {item.icon}
+                    {item.label}
+                  </Link>
+                ))}
 
+                {navGroups.map((group) => {
+                  const isActive = group.items.some((item) => isPathActive(item.path))
                   return (
-                    <Link
-                      key={item.path}
-                      to={item.path}
-                      className={cn(
-                        "flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all",
-                        isActive
-                          ? "bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg"
-                          : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                      )}
-                    >
-                      {item.icon}
-                      {item.label}
-                    </Link>
+                    <div key={group.label} className="group relative">
+                      <button
+                        type="button"
+                        className={cn(
+                          "flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-medium transition-all",
+                          isActive
+                            ? "bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg"
+                            : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                        )}
+                      >
+                        {group.icon}
+                        {group.label}
+                        <ChevronDown size={14} />
+                      </button>
+                      <div className="invisible absolute right-0 top-full z-50 min-w-52 pt-2 opacity-0 transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+                        <div className="overflow-hidden rounded-lg border border-border bg-[hsl(var(--popover))] p-1 shadow-2xl ring-1 ring-black/10 dark:ring-white/10">
+                          {group.items.map((item) => (
+                            <Link
+                              key={item.path}
+                              to={item.path}
+                              className={cn(
+                                "flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors",
+                                isPathActive(item.path)
+                                  ? "bg-primary/10 text-primary"
+                                  : "text-muted-foreground hover:bg-secondary hover:text-foreground"
+                              )}
+                            >
+                              {item.icon}
+                              {item.label}
+                            </Link>
+                          ))}
+                        </div>
+                      </div>
+                    </div>
                   )
                 })}
               </nav>
@@ -107,20 +201,6 @@ export function Layout() {
 
                 {/* Theme Toggle */}
                 <ThemeToggle />
-
-                {/* Import Link */}
-                <Link
-                  to="/import"
-                  className={cn(
-                    "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all",
-                    location.pathname.startsWith('/import')
-                      ? "bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  )}
-                  title={t('nav.import')}
-                >
-                  <FileUp size={20} />
-                </Link>
 
                 {/* Settings Link */}
                 <Link

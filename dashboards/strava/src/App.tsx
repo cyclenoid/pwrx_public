@@ -11,6 +11,7 @@ import { SegmentsDashboard } from "./pages/SegmentsDashboard";
 import { Records } from "./pages/Records";
 import { Heatmap } from "./pages/Heatmap";
 import { Training } from "./pages/Training";
+import { Exercises } from "./pages/Exercises";
 import { PowerProfile } from "./pages/PowerProfile";
 import { Gear } from "./pages/Gear";
 import { Club } from "./pages/Club";
@@ -52,6 +53,7 @@ function App() {
               <Route path="import" element={<ImportPage />} />
               <Route path="records" element={<Records />} />
               <Route path="training" element={<Training />} />
+              <Route path="exercises" element={<Exercises />} />
               <Route path="power" element={<PowerProfile />} />
               <Route path="gear" element={<Gear />} />
               <Route path="gear/:id" element={<Gear />} />

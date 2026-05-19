@@ -109,12 +109,12 @@ docker compose up -d
 
 Wenn ein Release DB-Aenderungen enthaelt, Migration ausfuehren:
 ```bash
-docker compose exec strava-tracker npm run db:migrate
+docker compose exec -T -w /tmp/pwrx-app strava-tracker npm run db:migrate
 ```
 
 Status pruefen:
 ```bash
-docker compose exec strava-tracker npm run db:check
+docker compose exec -T -w /tmp/pwrx-app strava-tracker npm run db:check
 ```
 
 Die App zeigt zusaetzlich zum technischen Git-Commit eine verstaendliche

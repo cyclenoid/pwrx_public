@@ -111,12 +111,12 @@ docker compose up -d
 
 If a release includes DB schema changes, run migration:
 ```bash
-docker compose exec strava-tracker npm run db:migrate
+docker compose exec -T -w /tmp/pwrx-app strava-tracker npm run db:migrate
 ```
 
 Check status:
 ```bash
-docker compose exec strava-tracker npm run db:check
+docker compose exec -T -w /tmp/pwrx-app strava-tracker npm run db:check
 ```
 
 The app shows a readable release version such as `v1.1.0` in addition to the

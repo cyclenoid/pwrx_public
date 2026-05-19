@@ -4,16 +4,101 @@
   },
   "nav": {
     "dashboard": "Dashboard",
+    "activities": "Aktivitäten",
     "records": "Rekorde",
     "heatmap": "Heatmap",
     "training": "Training",
+    "exercises": "Übungen",
     "power": "Power",
     "segments": "Segmente",
     "climbs": "Segmente",
     "import": "Import",
     "club": "Club",
     "gear": "Gear",
-    "settings": "Einstellungen"
+    "settings": "Einstellungen",
+    "groups": {
+      "data": "Daten",
+      "analysis": "Ausdauer",
+      "training": "Kraft & Training"
+    }
+  },
+  "exercises": {
+    "kicker": "Manuelles Log",
+    "title": "Übungen",
+    "subtitle": "Erfasse Wiederholungen und Haltezeiten neben deinen importierten Trainingsdaten.",
+    "windowDays": "{{days}} T",
+    "stats": {
+      "entries": "Einträge",
+      "activeTypes": "Aktive Übungen",
+      "last": "Letzter Eintrag"
+    },
+    "fields": {
+      "name": "Name",
+      "unit": "Einheit",
+      "category": "Kategorie",
+      "exercise": "Übung",
+      "value": "Wert",
+      "date": "Datum",
+      "notes": "Notiz"
+    },
+    "units": {
+      "reps": "Wiederholungen",
+      "seconds": "Sekunden",
+      "repsShort": "Wdh.",
+      "secondsShort": "s"
+    },
+    "categories": {
+      "strength": "Kraft",
+      "core": "Core",
+      "mobility": "Mobilität",
+      "hold": "Halten",
+      "custom": "Eigene"
+    },
+    "typeForm": {
+      "title": "Übung anlegen",
+      "subtitle": "Lege eine Bewegung einmal an und erfasse danach Werte im Verlauf.",
+      "namePlaceholder": "Liegestütze"
+    },
+    "entryForm": {
+      "title": "Eintrag erfassen",
+      "subtitle": "Speichere einen Wert für die ausgewählte Übung.",
+      "selectExercise": "Übung auswählen"
+    },
+    "actions": {
+      "createType": "Übung anlegen",
+      "creating": "Lege an...",
+      "openLog": "Erfassen",
+      "saveEntry": "Eintrag speichern",
+      "saving": "Speichere..."
+    },
+    "cards": {
+      "logs": "Logs",
+      "best": "Bestwert",
+      "last": "Zuletzt",
+      "value": "Wert",
+      "empty": "Keine Werte"
+    },
+    "filters": {
+      "all": "Alle Übungen"
+    },
+    "progress": {
+      "title": "Verlauf",
+      "allSubtitle": "Alle erfassten Übungen im gewählten Zeitraum.",
+      "best": "Bestwert"
+    },
+    "types": {
+      "title": "Einheiten & Ergebnisse",
+      "subtitle": "Wähle eine Übung, um Ergebnisse anzusehen oder direkt einen neuen Wert zu erfassen."
+    },
+    "entries": {
+      "title": "Letzte Einträge",
+      "subtitle": "Gefiltert nach Übung und Zeitraum."
+    },
+    "empty": {
+      "types": "Lege deine erste Übung an, danach kannst du Werte rechts im Schnellformular erfassen.",
+      "chart": "Noch keine Übungseinträge vorhanden.",
+      "entries": "Keine Einträge für diesen Filter."
+    }
   },
   "club": {
     "kicker": "Strava Club",

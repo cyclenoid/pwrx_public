@@ -39,6 +39,7 @@ docs/
 !docs/
 docs/*
 !docs/DEPLOYMENT_RUNBOOK.md
+!docs/NEXT_PRODUCT_STEPS.md
 !docs/PRODUCT_IMPROVEMENT_BACKLOG.md
 tmp/
 apps/strava/storage/
