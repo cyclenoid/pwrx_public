@@ -16,6 +16,24 @@ The app can run on:
 - macOS (Docker Desktop)
 - NAS systems (including Unraid)
 
+## Maintainer Unraid deployment
+
+The maintainer-operated Unraid instance is our own personal PWRX app.
+It is not the public default setup. It intentionally runs the advanced
+private Strava API sync path in addition to the normal file import flow.
+
+Keep this distinction clear when deploying:
+- public baseline: file import first, no Strava API setup required
+- personal Unraid deployment: private operator setup with Strava API sync enabled
+- concrete Unraid hostnames, LAN IPs, app paths, deploy-key names, adapter URLs,
+  tokens, and `.env` values stay outside this public repository
+- use placeholders in this runbook and keep machine-specific notes in private
+  operator documentation
+
+For the personal Unraid stack, verify after every deploy that the private
+Strava adapter is still active and that API sync jobs can run. See
+`Operator checks for Strava mode` below.
+
 ## Scope of this runbook
 
 Use this guide when you:
@@ -73,6 +91,10 @@ docker compose exec -T -w /tmp/pwrx-app strava-tracker npm run db:migrate
 docker compose exec -T -w /tmp/pwrx-app strava-tracker npm run db:check
 ```
 
+For the personal Unraid deployment, run the same commands in the private Unraid
+checkout. The local Windows/Docker Desktop stack is only a verification target
+unless the user explicitly asks for a local-only deploy.
+
 ## Verification checklist
 
 ```bash
@@ -112,7 +134,10 @@ Do not commit real adapter URLs, deploy-key names, tokens, or credentials.
 ### Operator checks for Strava mode
 
 - after deploy, verify Strava capability still enabled:
-  - `capabilities.adapters.strava.enabled = true`
+  - `adapters[]` entry with `id = "strava"` has `enabled = true`
+  - merged `capabilities.supportsSync = true`
+  - merged `capabilities.supportsClubs = false` unless a future release
+    deliberately reintroduces a maintained club feature
 - if disabled:
   - verify env vars
   - recreate backend container

@@ -170,6 +170,7 @@ Important:
 - Strava API connectivity is not part of the public default support path.
 - Any sidecar/adapter usage is operator-owned and must comply with Strava API Agreement and app review/capacity rules.
 - The public sidecar script is a technical reference only and does not remove API compliance obligations.
+- The maintainer-operated Unraid deployment is a personal PWRX instance and intentionally uses the private Strava API sync path. Its hostnames, paths, adapter URLs, deploy keys, tokens, and `.env` values are kept outside this public repository.
 
 This is intentionally a separate operator path, not the recommended starting point for normal users.
 

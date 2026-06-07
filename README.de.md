@@ -169,6 +169,7 @@ Wichtig:
 - Strava-API-Konnektivitaet ist nicht Teil des oeffentlichen Standard-Supports.
 - Sidecar-/Adapter-Betrieb liegt beim Betreiber und muss den Strava-API-Bedingungen inkl. Review-/Capacity-Regeln entsprechen.
 - Das oeffentliche Sidecar-Skript ist nur eine technische Referenz und ersetzt keine Compliance-Pflichten.
+- Das maintainer-betriebene Unraid-Deployment ist eine persoenliche PWRX-Instanz und nutzt bewusst den privaten Strava-API-Sync-Pfad. Hostnamen, Pfade, Adapter-URLs, Deploy-Keys, Tokens und `.env`-Werte bleiben ausserhalb dieses oeffentlichen Repositories.
 
 Das ist absichtlich ein separater Operator-Pfad und nicht der empfohlene Start fuer normale Nutzer.
 
