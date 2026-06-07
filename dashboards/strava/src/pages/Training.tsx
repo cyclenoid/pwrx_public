@@ -363,7 +363,7 @@ export function Training() {
 
   // Format time of day data for chart
   const timeOfDayChartData = useMemo(() => {
-    if (!timeOfDayData) return []
+    if (!Array.isArray(timeOfDayData)) return []
     return timeOfDayData.map(slot => ({
       slot: slot.time_slot,
       activities: parseInt(slot.activity_count),
@@ -375,7 +375,7 @@ export function Training() {
 
   // Format HR zones for pie chart - now using the zones array from API
   const hrZoneData = useMemo(() => {
-    if (!hrZones || !hrZones.zones) return []
+    if (!hrZones || !Array.isArray(hrZones.zones)) return []
     if (hrZones.total_minutes === 0) return []
     return hrZones.zones.map(zone => ({
       name: zone.name,
@@ -387,7 +387,7 @@ export function Training() {
 
   // Format weekday distribution data
   const weekdayChartData = useMemo(() => {
-    if (!weekdayData) return []
+    if (!Array.isArray(weekdayData)) return []
     // Reorder so Monday is first
     const dayOrder = [1, 2, 3, 4, 5, 6, 0] // Mon-Sun
     return dayOrder.map(day => {
@@ -403,7 +403,7 @@ export function Training() {
 
   // Format monthly comparison data - group by year for comparison
   const monthlyChartData = useMemo(() => {
-    if (!monthlyData) return []
+    if (!Array.isArray(monthlyData)) return []
     return monthlyData.map(m => ({
       month: `${m.month_name} ${m.year}`,
       year: m.year,
@@ -801,6 +801,66 @@ export function Training() {
     </Card>
   )
 
+  const renderTrainingLoadSection = () => (
+    <>
+      <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/40 px-4 py-3">
+        <div>
+          <div className="text-sm font-medium">Trainingslast Scope</div>
+          <div className="text-xs text-muted-foreground">
+            Gesamt addiert Rad-Power-TSS und HF-geschaetzten Stress aus Laeufen sowie Outdoor-Fahrten ohne Powermeter.
+          </div>
+        </div>
+        <div className="inline-flex rounded-full border border-border/60 bg-muted/40 p-1">
+          {(['all', 'Ride', 'Run'] as const).map((scope) => (
+            <button
+              key={scope}
+              type="button"
+              onClick={() => setPmcScope(scope)}
+              className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
+                pmcScope === scope
+                  ? 'bg-background text-foreground shadow-sm'
+                  : 'text-muted-foreground hover:text-foreground'
+              }`}
+            >
+              {pmcScopeLabels[scope]}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {loadingTraining && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <div className="text-muted-foreground">{t('training.loading.trainingLoad')}</div>
+          </CardContent>
+        </Card>
+      )}
+
+      {!loadingTraining && trainingLoad && Array.isArray(trainingLoad.dailyValues) && trainingLoad.dailyValues.length > 0 && (
+        <TrainingLoadChart
+          data={trainingLoad.dailyValues}
+          currentCTL={trainingLoad.current.ctl}
+          currentATL={trainingLoad.current.atl}
+          currentTSB={trainingLoad.current.tsb}
+          sourceSummary={trainingLoad.stressSummary}
+          scopeLabel={pmcScopeLabels[pmcScope]}
+        />
+      )}
+
+      {!loadingTraining && (!trainingLoad || !Array.isArray(trainingLoad.dailyValues) || trainingLoad.dailyValues.length === 0) && (
+        <Card>
+          <CardContent className="py-8 text-center">
+            <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted-foreground opacity-50">
+              <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
+            </svg>
+            <h3 className="mb-2 text-lg font-medium">Keine PMC-Daten im gewaehlten Scope</h3>
+            <p className="text-muted-foreground">Fuer PMC braucht PWRX entweder Powerdaten mit FTP oder Herzfrequenzdaten mit Dauer.</p>
+          </CardContent>
+        </Card>
+      )}
+    </>
+  )
+
   return (
     <div className="space-y-5">
       <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
@@ -853,6 +913,8 @@ export function Training() {
       ) : (
         <div className="flex flex-col gap-5 xl:flex-row xl:items-start">
           <div className="min-w-0 flex-1 space-y-5">
+            {renderTrainingLoadSection()}
+
             {activityType === 'Ride' && (
               <>
                 {showCyclingPerformanceLoading && (
@@ -1073,62 +1135,6 @@ export function Training() {
                       )}
 
                       <div className="text-xs text-muted-foreground">{t('training.cyclingPerformance.footnote')}</div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                <div className="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border/60 bg-background/40 px-4 py-3">
-                  <div>
-                    <div className="text-sm font-medium">Training Load Scope</div>
-                    <div className="text-xs text-muted-foreground">
-                      Gesamt addiert Rad-Power-TSS und HF-geschaetzten Stress aus Laeufen sowie Outdoor-Fahrten ohne Powermeter.
-                    </div>
-                  </div>
-                  <div className="inline-flex rounded-full border border-border/60 bg-muted/40 p-1">
-                    {(['all', 'Ride', 'Run'] as const).map((scope) => (
-                      <button
-                        key={scope}
-                        type="button"
-                        onClick={() => setPmcScope(scope)}
-                        className={`rounded-full px-3 py-1 text-xs font-semibold transition-colors ${
-                          pmcScope === scope
-                            ? 'bg-background text-foreground shadow-sm'
-                            : 'text-muted-foreground hover:text-foreground'
-                        }`}
-                      >
-                        {pmcScopeLabels[scope]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {loadingTraining && (
-                  <Card>
-                    <CardContent className="py-8 text-center">
-                      <div className="text-muted-foreground">{t('training.loading.trainingLoad')}</div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {!loadingTraining && trainingLoad && trainingLoad.dailyValues.length > 0 && (
-                  <TrainingLoadChart
-                    data={trainingLoad.dailyValues}
-                    currentCTL={trainingLoad.current.ctl}
-                    currentATL={trainingLoad.current.atl}
-                    currentTSB={trainingLoad.current.tsb}
-                    sourceSummary={trainingLoad.stressSummary}
-                    scopeLabel={pmcScopeLabels[pmcScope]}
-                  />
-                )}
-
-                {!loadingTraining && (!trainingLoad || trainingLoad.dailyValues.length === 0) && (
-                  <Card>
-                    <CardContent className="py-8 text-center">
-                      <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1" className="mx-auto mb-4 text-muted-foreground opacity-50">
-                        <path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/>
-                      </svg>
-                      <h3 className="mb-2 text-lg font-medium">Keine PMC-Daten im gewaehlten Scope</h3>
-                      <p className="text-muted-foreground">Fuer PMC braucht PWRX entweder Powerdaten mit FTP oder Herzfrequenzdaten mit Dauer.</p>
                     </CardContent>
                   </Card>
                 )}

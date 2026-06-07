@@ -14,7 +14,6 @@ import { Training } from "./pages/Training";
 import { Exercises } from "./pages/Exercises";
 import { PowerProfile } from "./pages/PowerProfile";
 import { Gear } from "./pages/Gear";
-import { Club } from "./pages/Club";
 import { FeatureLog } from "./pages/FeatureLog";
 import HelpSidecar from "./pages/HelpSidecar";
 import ImportPage from "./pages/Import";
@@ -57,7 +56,7 @@ function App() {
               <Route path="power" element={<PowerProfile />} />
               <Route path="gear" element={<Gear />} />
               <Route path="gear/:id" element={<Gear />} />
-              <Route path="club" element={<Club />} />
+              <Route path="club" element={<Navigate to="/import" replace />} />
               <Route path="feature-log" element={<FeatureLog />} />
               <Route path="help/sidecar" element={<HelpSidecar />} />
               <Route path="settings" element={<Settings />} />

@@ -8,7 +8,6 @@ import {
   emptyCapabilities,
 } from './types';
 import {
-  loadStravaCapabilityOverrides,
   loadStravaSyncClientFactory,
   loadStravaUserClientFactory,
 } from './stravaModuleLoader';
@@ -105,7 +104,6 @@ const buildDefaultRegistry = (): AdapterRegistry => {
   const stravaRequested = parseEnabled(process.env.ADAPTER_STRAVA_ENABLED, true);
   const stravaSyncFactory = stravaRequested ? loadStravaSyncClientFactory() : undefined;
   const stravaUserFactory = stravaRequested ? loadStravaUserClientFactory() : undefined;
-  const stravaCapabilityOverrides = stravaRequested ? loadStravaCapabilityOverrides() : undefined;
   const supportsSync = typeof stravaSyncFactory === 'function';
   const supportsOAuth = typeof stravaUserFactory === 'function';
   const stravaEnabled = stravaRequested && (supportsSync || supportsOAuth);
@@ -126,7 +124,7 @@ const buildDefaultRegistry = (): AdapterRegistry => {
       supportsSegments: stravaEnabled && supportsSync,
       supportsSync: stravaEnabled && supportsSync,
       supportsPhotos: stravaEnabled && supportsSync,
-      supportsClubs: stravaEnabled && Boolean(stravaCapabilityOverrides?.supportsClubs),
+      supportsClubs: false,
     },
   });
 

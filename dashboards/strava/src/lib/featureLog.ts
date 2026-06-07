@@ -29,6 +29,33 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-06-07-training-load-gauges-flat-nav",
+    date: "2026-06-07",
+    tag: "training",
+    title: {
+      de: "Training Load wird klarer eingeordnet",
+      en: "Training load is easier to interpret",
+    },
+    summary: {
+      de: "Die Trainingsseite stellt PMC-Werte jetzt als einordnende Gauges dar, und die Navigation ist wieder flach aufgebaut.",
+      en: "The Training page now presents PMC values as interpretive gauges, and navigation is flat again.",
+    },
+    bullets: {
+      de: [
+        "Fitness-Aufbau (CTL), akute Ermuedung (ATL) und Form und Frische (TSB) zeigen sprechende Bezeichnungen mit Abkuerzung in Klammern.",
+        "Gauges und Statuslabels ordnen Werte direkt als stabil, Aufbau, belastet oder erhoeht ein.",
+        "Training Load startet wieder als globale Trainingswirkung; Rad- und Laufanalysen bleiben als sportartspezifische Detailbereiche erhalten.",
+        "Das Club-Feature wurde aus der App-Navigation entfernt, und das Hauptmenue ist wieder flach.",
+      ],
+      en: [
+        "Fitness build (CTL), acute fatigue (ATL), and form and freshness (TSB) now use descriptive labels with abbreviations in parentheses.",
+        "Gauges and status labels classify values directly as stable, building, loaded, or elevated.",
+        "Training Load is presented again as a global training effect, while cycling and running remain sport-specific detail sections.",
+        "The Club feature has been removed from app navigation, and the main menu is flat again.",
+      ],
+    },
+  },
+  {
     id: "2026-05-19-manual-exercise-log",
     date: "2026-05-19",
     tag: "training",
