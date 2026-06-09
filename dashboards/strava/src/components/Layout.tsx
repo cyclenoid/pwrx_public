@@ -1,3 +1,4 @@
+import { useEffect, useRef, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router-dom'
 import { cn } from '../lib/utils'
 import { ThemeToggle } from './ThemeToggle'
@@ -11,7 +12,7 @@ import {
   Flag,
   LayoutDashboard,
   Map,
-  Settings,
+  Settings as SettingsIcon,
   Trophy,
   Zap,
 } from 'lucide-react'
@@ -21,11 +22,35 @@ export function Layout() {
   const location = useLocation()
   const { t, i18n } = useTranslation()
   const { capabilities } = useCapabilities()
+  const [isUtilityMenuOpen, setIsUtilityMenuOpen] = useState(false)
+  const utilityMenuRef = useRef<HTMLDivElement | null>(null)
 
   const toggleLanguage = () => {
     const next = i18n.language?.startsWith('de') ? 'en' : 'de'
     i18n.changeLanguage(next)
   }
+
+  useEffect(() => {
+    const handlePointerDown = (event: MouseEvent) => {
+      if (!utilityMenuRef.current?.contains(event.target as Node)) {
+        setIsUtilityMenuOpen(false)
+      }
+    }
+
+    const handleEscape = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') {
+        setIsUtilityMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handlePointerDown)
+    document.addEventListener('keydown', handleEscape)
+
+    return () => {
+      document.removeEventListener('mousedown', handlePointerDown)
+      document.removeEventListener('keydown', handleEscape)
+    }
+  }, [])
 
   const navItems = [
     {
@@ -60,19 +85,9 @@ export function Layout() {
       enabled: capabilities.supportsSegments,
     },
     {
-      path: '/gear',
-      label: t('nav.gear'),
-      icon: <Bike size={16} />,
-    },
-    {
       path: '/exercises',
       label: t('nav.exercises'),
       icon: <Dumbbell size={16} />,
-    },
-    {
-      path: '/activities',
-      label: t('nav.activities'),
-      icon: <Activity size={16} />,
     },
     {
       path: '/import',
@@ -91,6 +106,15 @@ export function Layout() {
       ? "bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg"
       : "text-muted-foreground hover:text-foreground hover:bg-secondary"
   )
+
+  const utilityLinkClass = (isActive: boolean) => cn(
+    'flex items-center gap-2 rounded-md px-3 py-2 text-sm transition-colors',
+    isActive
+      ? 'bg-orange-500/10 text-orange-600 dark:text-orange-400'
+      : 'text-muted-foreground hover:bg-secondary hover:text-foreground'
+  )
+
+  const utilityMenuActive = location.pathname.startsWith('/settings') || location.pathname.startsWith('/gear')
 
   return (
     <div className="min-h-screen bg-background">
@@ -129,19 +153,45 @@ export function Layout() {
                 {/* Theme Toggle */}
                 <ThemeToggle />
 
-                {/* Settings Link */}
-                <Link
-                  to="/settings"
-                  className={cn(
-                    "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all",
-                    location.pathname.startsWith('/settings')
-                      ? "bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                <div className="relative" ref={utilityMenuRef}>
+                  <button
+                    type="button"
+                    onClick={() => setIsUtilityMenuOpen((current) => !current)}
+                    className={cn(
+                      "inline-flex h-9 w-9 items-center justify-center rounded-lg transition-all",
+                      utilityMenuActive
+                        ? "bg-gradient-to-br from-orange-500/20 via-orange-500/10 to-background border-orange-500/30 text-orange-600 dark:text-orange-400 shadow-lg"
+                        : "text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    )}
+                    title={t('nav.settings')}
+                    aria-label={t('nav.settings')}
+                    aria-expanded={isUtilityMenuOpen}
+                    aria-haspopup="menu"
+                  >
+                    <SettingsIcon size={20} />
+                  </button>
+
+                  {isUtilityMenuOpen && (
+                    <div className="absolute right-0 top-11 z-50 min-w-44 rounded-lg border border-border bg-background p-1.5 shadow-xl">
+                      <Link
+                        to="/gear"
+                        onClick={() => setIsUtilityMenuOpen(false)}
+                        className={utilityLinkClass(location.pathname.startsWith('/gear'))}
+                      >
+                        <Bike size={16} />
+                        {t('nav.gear')}
+                      </Link>
+                      <Link
+                        to="/settings"
+                        onClick={() => setIsUtilityMenuOpen(false)}
+                        className={utilityLinkClass(location.pathname.startsWith('/settings'))}
+                      >
+                        <SettingsIcon size={16} />
+                        {t('nav.settings')}
+                      </Link>
+                    </div>
                   )}
-                  title={t('nav.settings')}
-                >
-                  <Settings size={20} />
-                </Link>
+                </div>
 
                 {/* Language Toggle */}
                 <button
