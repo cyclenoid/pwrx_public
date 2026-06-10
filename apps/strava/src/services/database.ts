@@ -1475,6 +1475,61 @@ export class DatabaseService {
   }
 
   /**
+   * Update a manual exercise type.
+   */
+  async updateExerciseType(
+    id: number,
+    input: {
+      name: string;
+      default_unit: ExerciseUnit;
+      category?: string;
+    }
+  ): Promise<ExerciseType | null> {
+    const result = await this.pool.query(
+      `
+      UPDATE exercise_types
+      SET
+        name = $2,
+        default_unit = $3,
+        category = $4,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+        AND is_archived = false
+      RETURNING *
+      `,
+      [
+        id,
+        input.name,
+        input.default_unit,
+        input.category || 'custom',
+      ]
+    );
+
+    const row = result.rows[0];
+    if (!row) return null;
+
+    const stats = await this.pool.query(
+      `
+      SELECT
+        COUNT(id)::int AS entry_count,
+        MAX(performed_at) AS last_performed_at,
+        MAX(CASE WHEN unit = $2 THEN value ELSE NULL END) AS best_value
+      FROM exercise_entries
+      WHERE exercise_type_id = $1
+      `,
+      [id, input.default_unit]
+    );
+
+    const statsRow = stats.rows[0] || {};
+    return {
+      ...row,
+      entry_count: Number(statsRow.entry_count || 0),
+      last_performed_at: statsRow.last_performed_at ? new Date(statsRow.last_performed_at) : null,
+      best_value: statsRow.best_value === null || statsRow.best_value === undefined ? null : Number(statsRow.best_value),
+    };
+  }
+
+  /**
    * List manual exercise entries.
    */
   async listExerciseEntries(filters: {
@@ -1553,6 +1608,67 @@ export class DatabaseService {
     return {
       ...created,
       value: Number(created.value),
+    };
+  }
+
+  /**
+   * Update one manual exercise entry.
+   */
+  async updateExerciseEntry(
+    id: number,
+    input: {
+      exercise_type_id: number;
+      performed_at: Date;
+      value: number;
+      unit: ExerciseUnit;
+      notes?: string | null;
+      activity_id?: number | null;
+    }
+  ): Promise<ExerciseEntry | null> {
+    const result = await this.pool.query(
+      `
+      UPDATE exercise_entries
+      SET
+        exercise_type_id = $2,
+        performed_at = $3,
+        value = $4,
+        unit = $5,
+        notes = $6,
+        activity_id = $7,
+        updated_at = CURRENT_TIMESTAMP
+      WHERE id = $1
+      RETURNING *
+      `,
+      [
+        id,
+        input.exercise_type_id,
+        input.performed_at,
+        input.value,
+        input.unit,
+        input.notes || null,
+        input.activity_id ?? null,
+      ]
+    );
+
+    const updated = result.rows[0];
+    if (!updated) return null;
+
+    const typeResult = await this.pool.query(
+      `
+      SELECT name, category
+      FROM exercise_types
+      WHERE id = $1
+      LIMIT 1
+      `,
+      [updated.exercise_type_id]
+    );
+    const typeRow = typeResult.rows[0] || {};
+
+    return {
+      ...updated,
+      exercise_name: typeRow.name ? String(typeRow.name) : undefined,
+      category: typeRow.category ? String(typeRow.category) : undefined,
+      value: Number(updated.value),
     };
   }
 

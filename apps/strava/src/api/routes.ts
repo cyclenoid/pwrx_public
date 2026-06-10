@@ -2967,6 +2967,47 @@ router.post('/exercises/types', async (req: Request, res: Response) => {
 });
 
 /**
+ * PATCH /api/exercises/types/:id
+ * Update a manual exercise type.
+ */
+router.patch('/exercises/types/:id', async (req: Request, res: Response) => {
+  try {
+    const typeId = Number(req.params.id);
+    if (!Number.isInteger(typeId) || typeId <= 0) {
+      return res.status(400).json({ error: 'Invalid exercise type id' });
+    }
+
+    const name = String(req.body?.name || '').trim();
+    if (name.length < 2 || name.length > 80) {
+      return res.status(400).json({ error: 'Exercise name must be between 2 and 80 characters' });
+    }
+
+    const defaultUnit = parseExerciseUnit(req.body?.default_unit ?? req.body?.defaultUnit);
+    if (!defaultUnit) {
+      return res.status(400).json({ error: 'default_unit must be reps or seconds' });
+    }
+
+    const type = await db.updateExerciseType(typeId, {
+      name,
+      default_unit: defaultUnit,
+      category: sanitizeExerciseCategory(req.body?.category),
+    });
+
+    if (!type) {
+      return res.status(404).json({ error: 'Exercise type not found' });
+    }
+
+    return res.json(type);
+  } catch (error: any) {
+    if (String(error?.code) === '23505') {
+      return res.status(409).json({ error: 'An active exercise with this name already exists' });
+    }
+    console.error('Error updating exercise type:', error);
+    return res.status(500).json({ error: 'Failed to update exercise type' });
+  }
+});
+
+/**
  * GET /api/exercises/entries
  * List manual exercise log entries.
  */
@@ -3038,6 +3079,70 @@ router.post('/exercises/entries', async (req: Request, res: Response) => {
     }
     console.error('Error creating exercise entry:', error);
     return res.status(500).json({ error: 'Failed to create exercise entry' });
+  }
+});
+
+/**
+ * PATCH /api/exercises/entries/:id
+ * Update one manual exercise log entry.
+ */
+router.patch('/exercises/entries/:id', async (req: Request, res: Response) => {
+  try {
+    const entryId = Number(req.params.id);
+    if (!Number.isInteger(entryId) || entryId <= 0) {
+      return res.status(400).json({ error: 'Invalid exercise entry id' });
+    }
+
+    const exerciseTypeId = Number(req.body?.exercise_type_id ?? req.body?.exerciseTypeId);
+    if (!Number.isInteger(exerciseTypeId) || exerciseTypeId <= 0) {
+      return res.status(400).json({ error: 'exercise_type_id is required' });
+    }
+
+    const value = Number(req.body?.value);
+    if (!Number.isFinite(value) || value <= 0) {
+      return res.status(400).json({ error: 'value must be greater than zero' });
+    }
+
+    const unit = parseExerciseUnit(req.body?.unit);
+    if (!unit) {
+      return res.status(400).json({ error: 'unit must be reps or seconds' });
+    }
+
+    const performedAtRaw = req.body?.performed_at ?? req.body?.performedAt;
+    const performedAt = performedAtRaw ? new Date(String(performedAtRaw)) : new Date();
+    if (Number.isNaN(performedAt.getTime())) {
+      return res.status(400).json({ error: 'performed_at must be a valid date' });
+    }
+
+    const activityIdRaw = req.body?.activity_id ?? req.body?.activityId;
+    const activityId = activityIdRaw === undefined || activityIdRaw === null || activityIdRaw === ''
+      ? null
+      : Number(activityIdRaw);
+    if (activityId !== null && !Number.isInteger(activityId)) {
+      return res.status(400).json({ error: 'activity_id must be an integer when provided' });
+    }
+
+    const notes = String(req.body?.notes || '').trim();
+    const entry = await db.updateExerciseEntry(entryId, {
+      exercise_type_id: exerciseTypeId,
+      performed_at: performedAt,
+      value,
+      unit,
+      notes: notes || null,
+      activity_id: activityId,
+    });
+
+    if (!entry) {
+      return res.status(404).json({ error: 'Exercise entry not found' });
+    }
+
+    return res.json(entry);
+  } catch (error: any) {
+    if (String(error?.code) === '23503') {
+      return res.status(404).json({ error: 'Exercise type or linked activity not found' });
+    }
+    console.error('Error updating exercise entry:', error);
+    return res.status(500).json({ error: 'Failed to update exercise entry' });
   }
 });
 

@@ -69,7 +69,14 @@
       "creating": "Creating...",
       "openLog": "Log entry",
       "saveEntry": "Save entry",
-      "saving": "Saving..."
+      "saving": "Saving...",
+      "editEntry": "Edit",
+      "updateEntry": "Save changes",
+      "editType": "Edit exercise",
+      "updateType": "Save exercise",
+      "updating": "Updating...",
+      "resetEntry": "Reset form",
+      "resetType": "Reset form"
     },
     "cards": {
       "logs": "Logs",
@@ -93,6 +100,23 @@
     "entries": {
       "title": "Recent entries",
       "subtitle": "Filtered by exercise and time window."
+    },
+    "focus": {
+      "title": "Selected exercise",
+      "subtitle": "Use the sidebar to add a new value or correct an existing one.",
+      "empty": "Select an exercise card to inspect its recent log."
+    },
+    "sidebar": {
+      "title": "Workspace",
+      "subtitle": "Keep input and corrections in one place without blocking the training overview.",
+      "editEntryTitle": "Edit entry",
+      "editEntrySubtitle": "Correct value, time, unit or note for the selected log.",
+      "editTypeTitle": "Edit exercise",
+      "editTypeSubtitle": "Adjust name, unit or category without leaving the overview."
+    },
+    "messages": {
+      "entrySaveError": "Entry could not be saved.",
+      "typeSaveError": "Exercise could not be saved."
     },
     "empty": {
       "types": "Create your first exercise, then log values from the quick entry panel.",

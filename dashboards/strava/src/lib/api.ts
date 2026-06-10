@@ -831,6 +831,19 @@ export const createExerciseType = async (payload: {
   return data
 }
 
+export const updateExerciseType = async (typeId: number, payload: {
+  name: string
+  defaultUnit: ExerciseUnit
+  category?: string
+}): Promise<ExerciseType> => {
+  const { data } = await api.patch<ExerciseType>(`/exercises/types/${typeId}`, {
+    name: payload.name,
+    default_unit: payload.defaultUnit,
+    category: payload.category || 'custom',
+  })
+  return data
+}
+
 export const getExerciseEntries = async (params?: {
   exerciseTypeId?: number
   days?: number
@@ -851,6 +864,25 @@ export const createExerciseEntry = async (payload: {
   activityId?: number | null
 }): Promise<ExerciseEntry> => {
   const { data } = await api.post<ExerciseEntry>('/exercises/entries', {
+    exercise_type_id: payload.exerciseTypeId,
+    performed_at: payload.performedAt,
+    value: payload.value,
+    unit: payload.unit,
+    notes: payload.notes || undefined,
+    activity_id: payload.activityId ?? undefined,
+  })
+  return data
+}
+
+export const updateExerciseEntry = async (entryId: number, payload: {
+  exerciseTypeId: number
+  performedAt: string
+  value: number
+  unit: ExerciseUnit
+  notes?: string
+  activityId?: number | null
+}): Promise<ExerciseEntry> => {
+  const { data } = await api.patch<ExerciseEntry>(`/exercises/entries/${entryId}`, {
     exercise_type_id: payload.exerciseTypeId,
     performed_at: payload.performedAt,
     value: payload.value,

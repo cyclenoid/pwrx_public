@@ -69,7 +69,14 @@
       "creating": "Lege an...",
       "openLog": "Erfassen",
       "saveEntry": "Eintrag speichern",
-      "saving": "Speichere..."
+      "saving": "Speichere...",
+      "editEntry": "Bearbeiten",
+      "updateEntry": "Änderungen speichern",
+      "editType": "Übung bearbeiten",
+      "updateType": "Übung speichern",
+      "updating": "Aktualisiere...",
+      "resetEntry": "Formular zurücksetzen",
+      "resetType": "Formular zurücksetzen"
     },
     "cards": {
       "logs": "Logs",
@@ -93,6 +100,23 @@
     "entries": {
       "title": "Letzte Einträge",
       "subtitle": "Gefiltert nach Übung und Zeitraum."
+    },
+    "focus": {
+      "title": "Ausgewählte Übung",
+      "subtitle": "Nutze die Seitenleiste, um neue Werte zu erfassen oder bestehende Einträge zu korrigieren.",
+      "empty": "Wähle eine Übungskarte aus, um den letzten Verlauf zu sehen."
+    },
+    "sidebar": {
+      "title": "Arbeitsbereich",
+      "subtitle": "Erfassen und korrigieren, ohne die Übersicht aus dem Blick zu verlieren.",
+      "editEntryTitle": "Eintrag bearbeiten",
+      "editEntrySubtitle": "Passe Wert, Zeitpunkt, Einheit oder Notiz für den ausgewählten Log an.",
+      "editTypeTitle": "Übung bearbeiten",
+      "editTypeSubtitle": "Ändere Name, Einheit oder Kategorie direkt neben der Auswertung."
+    },
+    "messages": {
+      "entrySaveError": "Eintrag konnte nicht gespeichert werden.",
+      "typeSaveError": "Übung konnte nicht gespeichert werden."
     },
     "empty": {
       "types": "Lege deine erste Übung an, danach kannst du Werte rechts im Schnellformular erfassen.",
