@@ -41,6 +41,7 @@ import { cn } from '../lib/utils'
 
 const categoryOptions = ['strength', 'core', 'mobility', 'hold', 'custom']
 const windowOptions = [30, 90, 365]
+const inputClassName = 'w-full rounded-xl border border-border/60 bg-background/60 px-3 py-2 text-sm transition-colors focus:border-primary/40 focus:outline-none'
 
 type SidebarMode = 'create-entry' | 'edit-entry' | 'create-type' | 'edit-type'
 
@@ -88,14 +89,16 @@ const formatShortDate = (value?: string | null, locale?: string) => {
 
 const formatExerciseValue = (value: number, unit: ExerciseUnit, labels: { reps: string; seconds: string }) => {
   if (unit === 'seconds') {
-    if (value >= 60) {
-      const minutes = Math.floor(value / 60)
-      const seconds = Math.round(value % 60)
-      return `${minutes}:${seconds.toString().padStart(2, '0')} ${labels.seconds}`
-    }
     return `${formatNumber(value, value % 1 === 0 ? 0 : 1)} ${labels.seconds}`
   }
   return `${formatNumber(value, value % 1 === 0 ? 0 : 1)} ${labels.reps}`
+}
+
+const formatDurationHint = (value: number) => {
+  if (!Number.isFinite(value) || value < 60) return null
+  const minutes = Math.floor(value / 60)
+  const seconds = Math.round(value % 60)
+  return `${minutes}:${seconds.toString().padStart(2, '0')} min`
 }
 
 const createEntryDraft = (type?: ExerciseType | null): EntryDraft => ({
@@ -137,8 +140,8 @@ function SummaryPill({
   icon: ReactNode
 }) {
   return (
-    <div className="flex min-w-0 items-center gap-3 rounded-lg border border-border/70 bg-card px-4 py-3">
-      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
+    <div className="flex min-w-0 items-center gap-3 rounded-2xl border border-white/5 bg-gradient-to-br from-primary/[0.08] via-card to-card px-4 py-3 shadow-sm">
+      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/12 text-primary">
         {icon}
       </div>
       <div className="min-w-0">
@@ -149,10 +152,26 @@ function SummaryPill({
   )
 }
 
+function getCategoryBadgeClass(category: string) {
+  switch (category) {
+    case 'strength':
+      return 'border-orange-500/30 bg-orange-500/10 text-orange-200'
+    case 'core':
+      return 'border-sky-500/30 bg-sky-500/10 text-sky-200'
+    case 'mobility':
+      return 'border-emerald-500/30 bg-emerald-500/10 text-emerald-200'
+    case 'hold':
+      return 'border-fuchsia-500/30 bg-fuchsia-500/10 text-fuchsia-200'
+    default:
+      return 'border-border/70 bg-secondary/40 text-muted-foreground'
+  }
+}
+
 function ExerciseChartCard({
   type,
   entries,
   unitLabels,
+  unitLongLabels,
   cardLabels,
   categoryLabel,
   locale,
@@ -163,6 +182,7 @@ function ExerciseChartCard({
   type: ExerciseType
   entries: ExerciseEntry[]
   unitLabels: { reps: string; seconds: string }
+  unitLongLabels: { reps: string; seconds: string }
   cardLabels: { logs: string; best: string; last: string; value: string; empty: string; log: string }
   categoryLabel: string
   locale?: string
@@ -183,12 +203,13 @@ function ExerciseChartCard({
   const bestValue = type.best_value !== null && type.best_value !== undefined
     ? Number(type.best_value)
     : sortedEntries.reduce((best, entry) => Math.max(best, Number(entry.value)), 0)
+  const bestDurationHint = type.default_unit === 'seconds' ? formatDurationHint(bestValue) : null
 
   return (
     <Card
       className={cn(
-        'overflow-hidden transition-colors',
-        isSelected ? 'border-primary/50 bg-primary/[0.04]' : 'hover:border-primary/25'
+        'overflow-hidden rounded-2xl border border-white/5 bg-gradient-to-br from-primary/[0.07] via-card to-card shadow-sm transition-colors',
+        isSelected ? 'border-primary/30 ring-1 ring-primary/20' : 'hover:border-primary/20'
       )}
     >
       <CardHeader className="pb-3">
@@ -198,11 +219,13 @@ function ExerciseChartCard({
             onClick={onSelect}
             className="min-w-0 text-left"
           >
-            <CardTitle className="truncate text-base">{type.name}</CardTitle>
+            <CardTitle className="truncate text-lg">{type.name}</CardTitle>
             <div className="mt-2 flex flex-wrap items-center gap-2">
-              <Badge variant="outline">{categoryLabel}</Badge>
-              <Badge variant="secondary">
-                {type.default_unit === 'seconds' ? unitLabels.seconds : unitLabels.reps}
+              <Badge variant="outline" className={getCategoryBadgeClass(type.category || 'custom')}>
+                {categoryLabel}
+              </Badge>
+              <Badge variant="secondary" className="bg-background/70 text-muted-foreground">
+                {type.default_unit === 'seconds' ? unitLongLabels.seconds : unitLongLabels.reps}
               </Badge>
             </div>
           </button>
@@ -212,20 +235,21 @@ function ExerciseChartCard({
         </div>
       </CardHeader>
       <CardContent className="space-y-3">
-        <div className="grid grid-cols-3 gap-2 text-sm">
+        <div className="grid grid-cols-3 gap-3 text-sm">
           <div>
-            <div className="text-xs text-muted-foreground">{cardLabels.logs}</div>
-            <div className="mt-1 font-semibold">{entries.length}</div>
+            <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{cardLabels.logs}</div>
+            <div className="mt-1 text-lg font-semibold">{entries.length}</div>
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">{cardLabels.best}</div>
-            <div className="mt-1 truncate font-semibold">
+            <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{cardLabels.best}</div>
+            <div className="mt-1 truncate text-lg font-semibold">
               {bestValue > 0 ? formatExerciseValue(bestValue, type.default_unit, unitLabels) : '-'}
             </div>
+            {bestDurationHint && <div className="text-xs text-muted-foreground">{bestDurationHint}</div>}
           </div>
           <div>
-            <div className="text-xs text-muted-foreground">{cardLabels.last}</div>
-            <div className="mt-1 truncate font-semibold">{formatShortDate(latest?.performed_at, locale)}</div>
+            <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">{cardLabels.last}</div>
+            <div className="mt-1 truncate text-lg font-semibold">{formatShortDate(latest?.performed_at, locale)}</div>
           </div>
         </div>
 
@@ -233,7 +257,7 @@ function ExerciseChartCard({
           <div className="h-32">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={chartData} margin={{ top: 8, right: 8, bottom: 0, left: -18 }}>
-                <CartesianGrid strokeDasharray="3 3" className="stroke-border" />
+                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.14)" />
                 <XAxis dataKey="label" hide />
                 <YAxis hide domain={['dataMin - 5', 'dataMax + 5']} />
                 <Tooltip
@@ -273,6 +297,7 @@ export function Exercises() {
   const [selectedTypeId, setSelectedTypeId] = useState<number | null>(null)
   const [selectedEntryId, setSelectedEntryId] = useState<number | null>(null)
   const [windowDays, setWindowDays] = useState(90)
+  const [entryFilterTypeId, setEntryFilterTypeId] = useState<number | 'all'>('all')
   const [sidebarMode, setSidebarMode] = useState<SidebarMode>('create-entry')
   const [entryDraft, setEntryDraft] = useState<EntryDraft>(() => createEntryDraft(null))
   const [typeDraft, setTypeDraft] = useState<TypeDraft>(() => createTypeDraft(null))
@@ -282,6 +307,10 @@ export function Exercises() {
   const unitLabels = {
     reps: t('exercises.units.repsShort', { defaultValue: 'reps' }),
     seconds: t('exercises.units.secondsShort', { defaultValue: 's' }),
+  }
+  const unitLongLabels = {
+    reps: t('exercises.units.reps', { defaultValue: 'Repetitions' }),
+    seconds: t('exercises.units.seconds', { defaultValue: 'Seconds' }),
   }
   const cardLabels = {
     logs: t('exercises.cards.logs', { defaultValue: 'Logs' }),
@@ -334,9 +363,9 @@ export function Exercises() {
     [entries, selectedEntryId]
   )
 
-  const selectedTypeEntries = useMemo(
-    () => [...(selectedType ? entriesByType.get(selectedType.id) || [] : [])],
-    [entriesByType, selectedType]
+  const filteredEntries = useMemo(
+    () => entries.filter((entry) => entryFilterTypeId === 'all' || entry.exercise_type_id === entryFilterTypeId),
+    [entries, entryFilterTypeId]
   )
 
   const createTypeMutation = useMutation({
@@ -561,7 +590,8 @@ export function Exercises() {
 
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_360px]">
         <div className="space-y-6">
-          <section>
+          <section className="rounded-[28px] bg-gradient-to-br from-primary/[0.05] via-transparent to-transparent p-1">
+            <div className="rounded-[24px] bg-background/70 px-5 py-5">
             <div className="mb-3 flex items-center justify-between gap-3">
               <div>
                 <h2 className="text-lg font-semibold">{t('exercises.types.title', { defaultValue: 'Exercise types' })}</h2>
@@ -585,6 +615,7 @@ export function Exercises() {
                     type={type}
                     entries={entriesByType.get(type.id) || []}
                     unitLabels={unitLabels}
+                    unitLongLabels={unitLongLabels}
                     cardLabels={cardLabels}
                     categoryLabel={t(`exercises.categories.${type.category}`, { defaultValue: type.category })}
                     locale={i18n.language}
@@ -601,121 +632,68 @@ export function Exercises() {
                 </CardContent>
               </Card>
             )}
+            </div>
           </section>
 
-          <Card>
+          <Card className="rounded-[24px] border-white/5 bg-gradient-to-br from-card via-card to-primary/[0.03] shadow-sm">
             <CardHeader className="pb-4">
-              <div className="flex flex-wrap items-start justify-between gap-3">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
                 <div>
-                  <CardTitle className="text-lg">
-                    {selectedType?.name || t('exercises.focus.title', { defaultValue: 'Selected exercise' })}
+                  <CardTitle className="flex items-center gap-2 text-lg">
+                    <Table2 size={18} />
+                    {t('exercises.entries.title', { defaultValue: 'Recent entries' })}
                   </CardTitle>
                   <CardDescription>
-                    {selectedType
-                      ? t('exercises.focus.subtitle', { defaultValue: 'Use the sidebar to add a new value or correct an existing one.' })
-                      : t('exercises.focus.empty', { defaultValue: 'Select an exercise card to inspect its recent log.' })}
+                    {t('exercises.entries.subtitle', { defaultValue: 'Filtered by exercise and time window.' })}
                   </CardDescription>
                 </div>
-                {selectedType && (
-                  <div className="flex flex-wrap gap-2">
-                    <Badge variant="outline">
-                      {t(`exercises.categories.${selectedType.category}`, { defaultValue: selectedType.category })}
-                    </Badge>
-                    <Badge variant="secondary">
-                      {selectedType.default_unit === 'seconds' ? unitLabels.seconds : unitLabels.reps}
-                    </Badge>
-                  </div>
-                )}
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              {selectedType ? (
-                <>
-                  <div className="grid gap-3 md:grid-cols-3">
-                    <div className="rounded-lg border border-border/70 bg-secondary/20 px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                        {t('exercises.cards.logs', { defaultValue: 'Logs' })}
-                      </div>
-                      <div className="mt-1 text-xl font-semibold">{selectedTypeEntries.length}</div>
-                    </div>
-                    <div className="rounded-lg border border-border/70 bg-secondary/20 px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                        {t('exercises.cards.best', { defaultValue: 'Best' })}
-                      </div>
-                      <div className="mt-1 text-xl font-semibold">
-                        {selectedType.best_value !== null && selectedType.best_value !== undefined
-                          ? formatExerciseValue(Number(selectedType.best_value), selectedType.default_unit, unitLabels)
-                          : '-'}
-                      </div>
-                    </div>
-                    <div className="rounded-lg border border-border/70 bg-secondary/20 px-4 py-3">
-                      <div className="text-xs uppercase tracking-[0.14em] text-muted-foreground">
-                        {t('exercises.cards.last', { defaultValue: 'Last' })}
-                      </div>
-                      <div className="mt-1 text-xl font-semibold">
-                        {formatDateTime(selectedType.last_performed_at, i18n.language)}
-                      </div>
-                    </div>
-                  </div>
 
-                  <div className="space-y-2">
-                    {selectedTypeEntries.slice(0, 6).map((entry) => (
-                      <div
-                        key={entry.id}
-                        className={cn(
-                          'flex flex-wrap items-center justify-between gap-3 rounded-lg border px-4 py-3',
-                          selectedEntryId === entry.id ? 'border-primary/50 bg-primary/[0.05]' : 'border-border/70 bg-card'
-                        )}
-                      >
-                        <div>
-                          <div className="font-medium">
-                            {formatExerciseValue(Number(entry.value), entry.unit, unitLabels)}
-                          </div>
-                          <div className="text-sm text-muted-foreground">
-                            {formatDateTime(entry.performed_at, i18n.language)}
-                            {entry.notes ? ` · ${entry.notes}` : ''}
-                          </div>
-                        </div>
-                        <Button type="button" variant="outline" size="sm" className="gap-2" onClick={() => startEditEntry(entry)}>
-                          <PencilLine size={14} />
-                          {t('exercises.actions.editEntry', { defaultValue: 'Edit' })}
-                        </Button>
-                      </div>
+                <div className="flex flex-wrap items-center gap-2">
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant={entryFilterTypeId === 'all' ? 'default' : 'outline'}
+                    onClick={() => setEntryFilterTypeId('all')}
+                  >
+                    {t('exercises.filters.all', { defaultValue: 'All exercises' })}
+                  </Button>
+                  {selectedType && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant={entryFilterTypeId === selectedType.id ? 'default' : 'outline'}
+                      onClick={() => setEntryFilterTypeId(selectedType.id)}
+                    >
+                      {selectedType.name}
+                    </Button>
+                  )}
+                  <select
+                    value={entryFilterTypeId}
+                    onChange={(event) => {
+                      const nextValue = event.target.value
+                      setEntryFilterTypeId(nextValue === 'all' ? 'all' : Number(nextValue))
+                    }}
+                    className="h-9 min-w-44 rounded-xl border border-border/60 bg-background/60 px-3 text-sm"
+                  >
+                    <option value="all">{t('exercises.filters.all', { defaultValue: 'All exercises' })}</option>
+                    {exerciseTypes.map((type) => (
+                      <option key={type.id} value={type.id}>
+                        {type.name}
+                      </option>
                     ))}
-                    {selectedTypeEntries.length === 0 && (
-                      <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                        {t('exercises.empty.chart', { defaultValue: 'No exercise entries yet.' })}
-                      </div>
-                    )}
-                  </div>
-                </>
-              ) : (
-                <div className="rounded-lg border border-dashed border-border px-4 py-8 text-center text-sm text-muted-foreground">
-                  {t('exercises.focus.empty', { defaultValue: 'Select an exercise card to inspect its recent log.' })}
+                  </select>
                 </div>
-              )}
-            </CardContent>
-          </Card>
-
-          <Card>
-            <CardHeader className="pb-4">
-              <CardTitle className="flex items-center gap-2 text-lg">
-                <Table2 size={18} />
-                {t('exercises.entries.title', { defaultValue: 'Recent entries' })}
-              </CardTitle>
-              <CardDescription>
-                {t('exercises.entries.subtitle', { defaultValue: 'Filtered by exercise and time window.' })}
-              </CardDescription>
+              </div>
             </CardHeader>
             <CardContent>
               {isEntriesLoading || isTypesLoading ? (
                 <div className="flex h-60 items-center justify-center text-sm text-muted-foreground">
                   {t('common.loading', { defaultValue: 'Loading...' })}
                 </div>
-              ) : entries.length > 0 ? (
-                <div className="overflow-hidden rounded-lg border border-border">
+              ) : filteredEntries.length > 0 ? (
+                <div className="overflow-hidden rounded-2xl border border-white/5 bg-background/40">
                   <table className="w-full text-sm">
-                    <thead className="bg-secondary/60 text-xs uppercase text-muted-foreground">
+                    <thead className="bg-white/[0.03] text-xs uppercase text-muted-foreground">
                       <tr>
                         <th className="px-3 py-2 text-left font-medium">{t('exercises.fields.date', { defaultValue: 'Date' })}</th>
                         <th className="px-3 py-2 text-left font-medium">{t('exercises.fields.exercise', { defaultValue: 'Exercise' })}</th>
@@ -725,12 +703,12 @@ export function Exercises() {
                       </tr>
                     </thead>
                     <tbody>
-                      {entries.slice(0, 18).map((entry) => (
+                      {filteredEntries.slice(0, 24).map((entry) => (
                         <tr
                           key={entry.id}
                           className={cn(
-                            'border-t border-border/70 transition-colors',
-                            selectedEntryId === entry.id ? 'bg-primary/[0.05]' : 'hover:bg-primary/[0.03]'
+                            'border-t border-white/5 transition-colors',
+                            selectedEntryId === entry.id ? 'bg-primary/[0.08]' : 'hover:bg-white/[0.03]'
                           )}
                         >
                           <td className="whitespace-nowrap px-3 py-2 text-muted-foreground">
@@ -752,7 +730,10 @@ export function Exercises() {
                             {entry.notes || '—'}
                           </td>
                           <td className="whitespace-nowrap px-3 py-2 text-right font-semibold text-primary">
-                            {formatExerciseValue(Number(entry.value), entry.unit, unitLabels)}
+                            <div>{formatExerciseValue(Number(entry.value), entry.unit, unitLabels)}</div>
+                            {entry.unit === 'seconds' && formatDurationHint(Number(entry.value)) && (
+                              <div className="text-xs font-normal text-muted-foreground">{formatDurationHint(Number(entry.value))}</div>
+                            )}
                           </td>
                           <td className="px-3 py-2 text-right">
                             <Button type="button" variant="ghost" size="sm" className="gap-2" onClick={() => startEditEntry(entry)}>
@@ -766,7 +747,7 @@ export function Exercises() {
                   </table>
                 </div>
               ) : (
-                <div className="rounded-lg border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
+                <div className="rounded-2xl border border-dashed border-border p-8 text-center text-sm text-muted-foreground">
                   {t('exercises.empty.entries', { defaultValue: 'No entries match this filter.' })}
                 </div>
               )}
@@ -775,7 +756,7 @@ export function Exercises() {
         </div>
 
         <aside className="xl:sticky xl:top-24 xl:self-start">
-          <Card className="border-primary/20">
+          <Card className="rounded-[24px] border-white/5 bg-gradient-to-b from-card via-card to-primary/[0.03] shadow-sm">
             <CardHeader className="pb-4">
               <CardTitle className="text-lg">{t('exercises.sidebar.title', { defaultValue: 'Workspace' })}</CardTitle>
               <CardDescription>
@@ -845,11 +826,11 @@ export function Exercises() {
                   </div>
 
                   {selectedType && (
-                    <div className="rounded-lg border border-border/70 bg-secondary/20 px-3 py-2 text-sm">
+                    <div className="rounded-2xl border border-white/5 bg-white/[0.03] px-3 py-2 text-sm">
                       <div className="font-medium">{selectedType.name}</div>
                       <div className="text-muted-foreground">
                         {t(`exercises.categories.${selectedType.category}`, { defaultValue: selectedType.category })} ·{' '}
-                        {selectedType.default_unit === 'seconds' ? unitLabels.seconds : unitLabels.reps}
+                        {selectedType.default_unit === 'seconds' ? unitLongLabels.seconds : unitLongLabels.reps}
                       </div>
                     </div>
                   )}
@@ -874,7 +855,7 @@ export function Exercises() {
                           unit: type?.default_unit ?? current.unit,
                         }))
                       }}
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      className={cn(inputClassName, 'h-10 py-0')}
                     >
                       <option value="" disabled>
                         {t('exercises.entryForm.selectExercise', { defaultValue: 'Select exercise' })}
@@ -896,7 +877,7 @@ export function Exercises() {
                         step="0.1"
                         value={entryDraft.value}
                         onChange={(event) => setEntryDraft((current) => ({ ...current, value: event.target.value }))}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        className={cn(inputClassName, 'h-10 py-0')}
                       />
                     </label>
 
@@ -905,7 +886,7 @@ export function Exercises() {
                       <select
                         value={entryDraft.unit}
                         onChange={(event) => setEntryDraft((current) => ({ ...current, unit: event.target.value as ExerciseUnit }))}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        className={cn(inputClassName, 'h-10 py-0')}
                       >
                         <option value="reps">{t('exercises.units.reps', { defaultValue: 'Repetitions' })}</option>
                         <option value="seconds">{t('exercises.units.seconds', { defaultValue: 'Seconds' })}</option>
@@ -919,7 +900,7 @@ export function Exercises() {
                       type="datetime-local"
                       value={entryDraft.performedAt}
                       onChange={(event) => setEntryDraft((current) => ({ ...current, performedAt: event.target.value }))}
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      className={cn(inputClassName, 'h-10 py-0')}
                     />
                   </label>
 
@@ -929,7 +910,7 @@ export function Exercises() {
                       value={entryDraft.notes}
                       onChange={(event) => setEntryDraft((current) => ({ ...current, notes: event.target.value }))}
                       rows={3}
-                      className="w-full rounded-md border border-input bg-background px-3 py-2 text-sm"
+                      className={inputClassName}
                     />
                   </label>
 
@@ -988,7 +969,7 @@ export function Exercises() {
                       value={typeDraft.name}
                       onChange={(event) => setTypeDraft((current) => ({ ...current, name: event.target.value }))}
                       placeholder={t('exercises.typeForm.namePlaceholder', { defaultValue: 'Push-ups' })}
-                      className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                      className={cn(inputClassName, 'h-10 py-0')}
                     />
                   </label>
 
@@ -998,7 +979,7 @@ export function Exercises() {
                       <select
                         value={typeDraft.defaultUnit}
                         onChange={(event) => setTypeDraft((current) => ({ ...current, defaultUnit: event.target.value as ExerciseUnit }))}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        className={cn(inputClassName, 'h-10 py-0')}
                       >
                         <option value="reps">{t('exercises.units.reps', { defaultValue: 'Repetitions' })}</option>
                         <option value="seconds">{t('exercises.units.seconds', { defaultValue: 'Seconds' })}</option>
@@ -1010,7 +991,7 @@ export function Exercises() {
                       <select
                         value={typeDraft.category}
                         onChange={(event) => setTypeDraft((current) => ({ ...current, category: event.target.value }))}
-                        className="h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
+                        className={cn(inputClassName, 'h-10 py-0')}
                       >
                         {categoryOptions.map((category) => (
                           <option key={category} value={category}>
