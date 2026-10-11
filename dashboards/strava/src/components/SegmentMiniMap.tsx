@@ -1,7 +1,7 @@
-import { MapContainer, TileLayer, Polyline, CircleMarker } from 'react-leaflet'
+import { MapContainer, Polyline, CircleMarker } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useTheme } from './ThemeProvider'
+import { MapTileLayer } from './MapTileLayer'
 
 const isValidLatLng = (value: [number, number] | null | undefined): value is [number, number] => {
   return Array.isArray(value)
@@ -11,8 +11,6 @@ const isValidLatLng = (value: [number, number] | null | undefined): value is [nu
 }
 
 export function SegmentMiniMap({ start, end }: { start?: [number, number] | null; end?: [number, number] | null }) {
-  const { resolvedTheme } = useTheme()
-
   if (!isValidLatLng(start) || !isValidLatLng(end)) {
     return (
       <div className="flex items-center justify-center h-full text-[11px] text-muted-foreground">
@@ -23,10 +21,6 @@ export function SegmentMiniMap({ start, end }: { start?: [number, number] | null
 
   const bounds = L.latLngBounds([start, end])
   const center = bounds.getCenter()
-
-  const tileUrl = resolvedTheme === 'dark'
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
 
   return (
     <MapContainer
@@ -40,12 +34,11 @@ export function SegmentMiniMap({ start, end }: { start?: [number, number] | null
       doubleClickZoom={false}
       keyboard={false}
       touchZoom={false}
-      attributionControl={false}
       zoomAnimation={false}
       fadeAnimation={false}
       markerZoomAnimation={false}
     >
-      <TileLayer url={tileUrl} />
+      <MapTileLayer />
       <Polyline
         positions={[start, end]}
         pathOptions={{ color: '#f97316', weight: 3, opacity: 0.9 }}

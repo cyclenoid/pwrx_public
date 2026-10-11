@@ -23,6 +23,7 @@ Du musst kein Entwickler sein. Wenn Docker laeuft, kannst du PWRX nutzen.
 Hinweis:
 - Der Standardweg funktioniert direkt mit Datei-Import
 - Keine API-Einrichtung noetig, um zu starten
+- Karten verwenden OpenStreetMap ohne API-Key; zum Laden des Kartenhintergrunds ist Internetzugang erforderlich
 
 ## Typische Szenarien
 

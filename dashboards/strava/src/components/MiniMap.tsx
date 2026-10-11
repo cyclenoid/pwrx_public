@@ -1,7 +1,7 @@
 import { useMemo, useEffect, useRef } from 'react'
-import { MapContainer, TileLayer, Polyline, useMap } from 'react-leaflet'
+import { MapContainer, Polyline, useMap } from 'react-leaflet'
 import L from 'leaflet'
-import { useTheme } from './ThemeProvider'
+import { MapTileLayer } from './MapTileLayer'
 import 'leaflet/dist/leaflet.css'
 
 interface MiniMapProps {
@@ -24,8 +24,6 @@ function FitBounds({ bounds }: { bounds: L.LatLngBounds | null }) {
 }
 
 export function MiniMap({ coordinates, className = '' }: MiniMapProps) {
-  const { resolvedTheme } = useTheme()
-
   const bounds = useMemo(() => {
     if (!coordinates || coordinates.length === 0) return null
     return L.latLngBounds(coordinates)
@@ -36,11 +34,6 @@ export function MiniMap({ coordinates, className = '' }: MiniMapProps) {
     const c = bounds.getCenter()
     return [c.lat, c.lng] as [number, number]
   }, [bounds])
-
-  // Tile layers for different themes
-  const tileUrl = resolvedTheme === 'dark'
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png'
 
   if (!coordinates || coordinates.length === 0) {
     return (
@@ -65,9 +58,8 @@ export function MiniMap({ coordinates, className = '' }: MiniMapProps) {
         touchZoom={false}
         boxZoom={false}
         keyboard={false}
-        attributionControl={false}
       >
-        <TileLayer url={tileUrl} />
+        <MapTileLayer />
         <FitBounds bounds={bounds} />
         <Polyline
           positions={coordinates}

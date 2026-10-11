@@ -153,6 +153,11 @@ html {
   box-shadow: none !important;
 }
 
+.dark .pwrx-map-tiles {
+  /* Theme only the base tiles so routes and markers keep their original colors. */
+  filter: invert(1) hue-rotate(180deg) saturate(0.6) brightness(0.85) contrast(0.9);
+}
+
 /* Fix Leaflet map z-index to stay below sticky header */
 .leaflet-container {
   z-index: 0 !important;

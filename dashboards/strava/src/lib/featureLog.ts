@@ -29,6 +29,29 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-10-11-key-free-maps",
+    date: "2026-10-11",
+    tag: "maps",
+    title: {
+      de: "Karten wieder ohne API-Key nutzbar",
+      en: "Maps work without an API key again",
+    },
+    summary: {
+      de: "Alle Karten nutzen OpenStreetMap, da CARTO inzwischen einen API-Key verlangt.",
+      en: "All maps use OpenStreetMap because CARTO now requires an API key.",
+    },
+    bullets: {
+      de: [
+        "Aktivitaetsvorschauen, Detailkarten, Segmente und Heatmap zeigen keine API-Key-Wasserzeichen mehr.",
+        "Der Dunkelmodus passt nur den Kartenhintergrund an; Routenfarben bleiben erhalten.",
+      ],
+      en: [
+        "Activity previews, detail maps, segments, and the heatmap no longer show API key watermarks.",
+        "Dark mode adjusts only the map background and preserves route colors.",
+      ],
+    },
+  },
+  {
     id: "2026-06-07-training-load-gauges-flat-nav",
     date: "2026-06-07",
     tag: "training",

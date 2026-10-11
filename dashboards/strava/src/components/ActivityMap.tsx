@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef } from 'react'
-import { CircleMarker, MapContainer, TileLayer, Polyline, Marker, useMap } from 'react-leaflet'
+import { CircleMarker, MapContainer, Polyline, Marker, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useTheme } from './ThemeProvider'
+import { MapTileLayer } from './MapTileLayer'
 
 // Fix for default marker icons in Leaflet with Vite
 const iconDefaultProto = L.Icon.Default.prototype as unknown as { _getIconUrl?: unknown }
@@ -119,8 +119,6 @@ export function ActivityMap({
   showHighlightMarkers = true,
   focusHighlight = false,
 }: ActivityMapProps) {
-  const { resolvedTheme } = useTheme()
-
   const normalizedCoordinates = useMemo(() => {
     if (!coordinates || coordinates.length === 0) return []
     const isValidCoord = (coord: [number, number] | null | undefined): coord is [number, number] =>
@@ -208,15 +206,6 @@ export function ActivityMap({
     lineJoin: 'round' as const,
   }
 
-  // Tile layers for different themes
-  const tileUrl = resolvedTheme === 'dark'
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-
-  const attribution = resolvedTheme === 'dark'
-    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-
   return (
     <MapContainer
       center={[center.lat, center.lng]}
@@ -227,7 +216,7 @@ export function ActivityMap({
       fadeAnimation={false}
       markerZoomAnimation={false}
     >
-      <TileLayer url={tileUrl} attribution={attribution} />
+      <MapTileLayer />
       <FitBounds bounds={activeBounds} fitKey={fitKey} />
 
       {/* Route polyline with Strava Orange */}

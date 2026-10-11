@@ -1,9 +1,9 @@
 import { useState, useEffect, useMemo, useRef, useCallback } from 'react'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import { MapContainer, TileLayer, Polyline, useMap, useMapEvents } from 'react-leaflet'
+import { MapContainer, Polyline, useMap, useMapEvents } from 'react-leaflet'
 import L from 'leaflet'
 import { getHeatmapData, clearHeatmapCache, getHeatmapHotspots } from '../lib/api'
-import { useTheme } from '../components/ThemeProvider'
+import { MapTileLayer } from '../components/MapTileLayer'
 import { Link } from 'react-router-dom'
 import 'leaflet/dist/leaflet.css'
 import { useTranslation } from 'react-i18next'
@@ -235,7 +235,6 @@ function MapViewStateTracker({
 
 export function Heatmap() {
   const { t, i18n } = useTranslation()
-  const { resolvedTheme } = useTheme()
   const queryClient = useQueryClient()
   const [selectedTypes, setSelectedTypes] = useState<string[]>([])
   const [selectedYears, setSelectedYears] = useState<number[]>([])
@@ -367,15 +366,6 @@ export function Heatmap() {
     const maxScore = Math.max(1, percentile(allScores, 0.95))
     return { scoreByActivity, maxScore }
   }, [filteredActivities])
-
-  // Tile layers for different themes
-  const tileUrl = resolvedTheme === 'dark'
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-
-  const attribution = resolvedTheme === 'dark'
-    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
 
   // Calculate stats
   const totalDistance = useMemo(() => {
@@ -529,7 +519,7 @@ export function Heatmap() {
             className="h-full w-full"
             zoomControl={false}
           >
-            <TileLayer url={tileUrl} attribution={attribution} />
+            <MapTileLayer />
             <MapViewportManager
               allCoordinates={allCoordinates}
               hotspots={hotspots}

@@ -1,8 +1,8 @@
 import { useMemo } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Polyline, Tooltip } from 'react-leaflet'
+import { MapContainer, CircleMarker, Polyline, Tooltip } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import { useTheme } from './ThemeProvider'
+import { MapTileLayer } from './MapTileLayer'
 
 interface SegmentMapItem {
   segment_id: number
@@ -21,8 +21,6 @@ const isValidLatLng = (value: [number, number] | null | undefined): value is [nu
 }
 
 export function SegmentMap({ segments }: { segments: SegmentMapItem[] }) {
-  const { resolvedTheme } = useTheme()
-
   const segmentPoints = useMemo(() => {
     return segments
       .filter((segment) => isValidLatLng(segment.start_latlng) && isValidLatLng(segment.end_latlng))
@@ -46,14 +44,6 @@ export function SegmentMap({ segments }: { segments: SegmentMapItem[] }) {
   )
   const center = bounds.getCenter()
 
-  const tileUrl = resolvedTheme === 'dark'
-    ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
-    : 'https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png'
-
-  const attribution = resolvedTheme === 'dark'
-    ? '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/attributions">CARTO</a>'
-    : '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
-
   return (
     <MapContainer
       center={[center.lat, center.lng]}
@@ -64,7 +54,7 @@ export function SegmentMap({ segments }: { segments: SegmentMapItem[] }) {
       fadeAnimation={false}
       markerZoomAnimation={false}
     >
-      <TileLayer url={tileUrl} attribution={attribution} />
+      <MapTileLayer />
 
       {segmentPoints.map((segment) => (
         <Polyline
