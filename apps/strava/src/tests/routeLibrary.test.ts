@@ -2,11 +2,27 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import express from 'express';
 import request from 'supertest';
-import { createRouteLibraryRouter, validDocument, documentDistance, RouteDatabase } from '../api/routeLibrary';
+import { createRouteLibraryRouter, validDocument, documentDistance, routePreview, RouteDatabase } from '../api/routeLibrary';
 import { addRouteWays } from '../services/routeWays';
 
 const points = [{ lat: 50, lng: 10 }, { lat: 50.001, lng: 10, way: { surface: 'asphalt', highway: 'cycleway' } }];
 const doc = { draft: { name: 'Airport', anchors: points, legs: [{ source: 'routed', points }] }, profile: 'gravel', mode: 'routed' };
+
+test('previews are bounded, retain endpoints and bounds, never bridge missing legs or expose tags', () => {
+  const many = Array.from({ length: 150000 }, (_, i) => ({ lat: 50 + i / 1000000, lng: 10, ele: 123 }));
+  many[12345].lng = 11;
+  const document = { ...doc, draft: { ...doc.draft, legs: [{ source: 'imported', points: many }, null, { source: 'routed', points }] } };
+  const before = JSON.stringify(document);
+  const preview = routePreview(document);
+  assert.equal(preview.segments.length, 2);
+  assert.ok(preview.segments.reduce((n, segment) => n + segment.length, 0) <= 1000);
+  assert.deepEqual(preview.segments[0][0], [50, 10]);
+  assert.deepEqual(preview.segments[0].at(-1), [many.at(-1)!.lat, 10]);
+  assert.deepEqual(preview.segments[1], [[50, 10], [50.001, 10]]);
+  assert.deepEqual(preview.bounds, [[50, 10], [many.at(-1)!.lat, 11]]);
+  assert.equal(JSON.stringify(document), before);
+  assert.deepEqual(routePreview({ ...doc, draft: { ...doc.draft, legs: [null] } }), { segments: [], bounds: null });
+});
 
 test('saved route validation and distance reject invalid or unbounded geometry', () => {
   assert.ok(validDocument(doc));
@@ -57,6 +73,10 @@ test('library CRUD roundtrip, revision conflicts, validation, list summaries and
   assert.equal(saved.body.document, undefined);
   const id = saved.body.id;
   assert.deepEqual((await request(api).get(`/${id}`)).body.document, doc);
+  const preview = await request(api).get(`/${id}/preview`);
+  assert.equal(preview.status, 200);
+  assert.equal(preview.headers['cache-control'], 'private, no-cache');
+  assert.deepEqual(preview.body, { segments: [[[50, 10], [50.001, 10]]], bounds: [[50, 10], [50.001, 10]] });
   assert.equal((await request(api).get('/')).body.routes.length, 1);
   assert.equal((await request(api).get('/?offset=-1')).status, 400);
   const updated = await request(api).put(`/${id}`).send({ ...doc, revision: 1 });
@@ -65,6 +85,8 @@ test('library CRUD roundtrip, revision conflicts, validation, list summaries and
   assert.equal((await request(api).delete(`/${id}?revision=1`)).status, 409);
   assert.equal((await request(api).delete(`/${id}?revision=2`)).status, 204);
   assert.equal((await request(api).get(`/${id}`)).status, 404);
+  assert.equal((await request(api).get(`/${id}/preview`)).status, 404);
+  assert.equal((await request(api).get('/not-an-id/preview')).status, 400);
   assert.equal((await request(api).get('/not-an-id')).status, 400);
   assert.equal((await request(api).post('/').set('Content-Type', 'application/json').send('{bad')).status, 400);
   const broken = express().use(createRouteLibraryRouter({ query: async () => { throw new Error('secret database detail'); } }));

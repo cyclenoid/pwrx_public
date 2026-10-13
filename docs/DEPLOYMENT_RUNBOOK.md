@@ -181,7 +181,7 @@ remain visible on every map.
 ## Route planner preview
 
 The /routes page supports GPX track/route and FIT GPS-track import, draggable via points,
-section editing, undo/redo, browser-local drafts and GPX track export.
+section editing, undo/redo, server-saved routes and GPX track export.
 The planner does not import files into the activity database.
 
 FIT files are uploaded to `POST /api/route-planner/import-fit` as binary data
@@ -237,18 +237,22 @@ The upstream profiles and lookups come from the same pinned BRouter build.
 
 ### Preview limits and checks
 
-- One manually saved draft per browser/origin, not synchronized to the server.
-  Export GPX for durable backup. GPX exports geometry and elevation, not original
+- Use the top "Save route" action for server storage. The separate browser-local
+  draft save/load controls were removed; existing localStorage data is not deleted.
+  Export GPX for a portable backup. GPX exports geometry and elevation, not original
   timestamps, sensor streams, extensions or the editor history.
 - Up to 10 MB, 150,000 input points, 30 segments and 80 control points.
 - Elevation gain is an approximation from point elevations. Missing elevations
-  are shown as unknown. Surface breakdown and route alternatives are not yet included.
+  are shown as unknown. Route alternatives are not yet included.
 - Route library: `/routes/saved` lists searchable, paginated routes stored in
   PostgreSQL (`saved_routes`, migration 0012). Include this table in database
   backups. It follows the existing single-instance/private access model, not
   separate per-user access controls. Do not expose the unauthenticated app publicly.
   Save updates the opened route; Save as new route makes an independent copy.
   Revision checks prevent silently overwriting or deleting newer changes.
+  Cards load map previews near the viewport via GET /api/route-library/:id/preview.
+  Previews contain at most 1,000 sampled points with original bounds and separate
+  legs (no bridges across gaps). Stored geometry and GPX exports stay unchanged.
 - Activities with GPS have an "As route" link. This copies the GPS geometry into
   a new unsaved planner draft, leaving the source activity unchanged. Elevations
   are used only if the stream length matches GPS positions.
@@ -263,7 +267,8 @@ The upstream profiles and lookups come from the same pinned BRouter build.
   Profile reference: https://github.com/abrensch/brouter/blob/29898106b555e342ff3ade7ae3e9c1ae6644a43b/misc/profiles2/gravel.brf
 - Run npm run test:routes in apps/strava and dashboards/strava, then both builds.
 - Browser checks: import a multi-segment GPX, move a point, undo, export, compare
-  untouched coordinates and gaps; test failed routing, draft reload and mobile layout.
+  untouched coordinates and gaps; test failed routing, saved-route reload, preview
+  gaps, lazy loading, preview failure/retry and mobile layout.
 - FIT checks: import GPS activity/course files, export GPX, verify coordinates
   and heights; reject no-GPS, truncated, oversized and corrupt files without
   replacing the current draft. Cancelling an upload must preserve the draft.

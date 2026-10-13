@@ -47,6 +47,26 @@ export function documentDistance(document: Document): number {
   return sum;
 }
 
+export function routePreview(document: Document) {
+  const legs = document.draft.legs.filter(leg => leg !== null);
+  const total = legs.reduce((sum, leg) => sum + leg.points.length, 0);
+  const budget = Math.max(0, 1000 - legs.length * 2);
+  let south = 90, west = 180, north = -90, east = -180;
+  const segments = legs.map(leg => {
+    for (const p of leg.points) {
+      south = Math.min(south, p.lat); north = Math.max(north, p.lat);
+      west = Math.min(west, p.lng); east = Math.max(east, p.lng);
+    }
+    // Bound preview size, retain both endpoints and keep every leg separate.
+    const count = Math.min(leg.points.length, 2 + Math.floor(budget * leg.points.length / total));
+    return Array.from({ length: count }, (_, i) => {
+      const p = leg.points[Math.round(i * (leg.points.length - 1) / (count - 1))];
+      return [p.lat, p.lng];
+    });
+  });
+  return { segments, bounds: segments.length ? [[south, west], [north, east]] : null };
+}
+
 export function createRouteLibraryRouter(db: RouteDatabase) {
   const router = Router();
   router.use(json({ limit: '20mb' }));
@@ -58,6 +78,14 @@ export function createRouteLibraryRouter(db: RouteDatabase) {
       const search = String(req.query.search || '').slice(0, 200);
       const result = await db.query(`SELECT ${summary} FROM saved_routes WHERE strpos(lower(name), lower($1)) > 0 ORDER BY updated_at DESC, id LIMIT 51 OFFSET $2`, [search, offset]);
       res.json({ routes: result.rows.slice(0, 50), more: result.rows.length > 50 });
+    } catch (e) { next(e); }
+  });
+  router.get('/:id/preview', async (req, res, next) => {
+    try {
+      const result = await db.query(`SELECT ${summary}, document FROM saved_routes WHERE id=$1`, [req.params.id]);
+      const row = result.rows[0];
+      if (!row?.document) { res.status(404).json({ code: 'ROUTE_NOT_FOUND' }); return; }
+      res.set('Cache-Control', 'private, no-cache').json(routePreview(row.document));
     } catch (e) { next(e); }
   });
   router.get('/:id', async (req, res, next) => {

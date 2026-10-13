@@ -15,7 +15,6 @@ import { categories, waySummary } from '../features/routePlanner/ways'
 import type { ColorMode } from '../features/routePlanner/ways'
 
 const API = `${String(import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')}/route-planner`
-const STORAGE_KEY = 'pwrx-route-draft-v1'
 const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed'
 const primary = `${button} bg-orange-500/15 text-orange-600 dark:text-orange-400 border-orange-500/40 hover:bg-orange-500/25`
 
@@ -216,27 +215,6 @@ export function RoutePlanner() {
     window.setTimeout(() => URL.revokeObjectURL(url), 1000)
     setMessage(text.exported); setError('')
   }
-  const save = () => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify({ version: 1, draft, profile, mode }))
-      setMessage(text.saved); setError('')
-    } catch { report(new Error('STORAGE')) }
-  }
-  const load = () => {
-    if (!confirmReplace()) return
-    try {
-      const raw = localStorage.getItem(STORAGE_KEY)
-      if (!raw) { report(new Error('NO_DRAFT')); return }
-      const data = JSON.parse(raw)
-      if (data.version !== 1 || !isDraft(data.draft)) throw new Error()
-      commit(data.draft)
-      setSavedRoute(null); savedDocument.current = null; setSearchParams({}, { replace: true })
-      if (['road', 'gravel', 'touring'].includes(data.profile)) setProfile(data.profile)
-      setMode(data.mode === 'direct' ? 'direct' : 'routed')
-      setAdding(false); setFitToken(token => token + 1)
-    } catch { report(new Error('STORAGE')) }
-  }
-
   const saveRoute = async (copy = false) => {
     if (busy) return
     if (!draft.name.trim()) { setError(library.nameRequired); return }
@@ -339,7 +317,6 @@ export function RoutePlanner() {
               return { ...draft, legs }
             })
           }}>{text.recalc}</button>
-          <div className="border-t pt-4"><div className="grid grid-cols-2 gap-2"><button className={button} disabled={busy || !draft.anchors.length} onClick={save}><Save size={16} />{text.save}</button><button className={button} disabled={busy} onClick={load}>{text.load}</button></div><p className="mt-2 text-xs text-muted-foreground">{text.storageHint}</p></div>
           <button className={`${button} w-full`} disabled={busy} onClick={() => { if (confirmReplace()) { commit(emptyDraft()); setAdding(false); setSavedRoute(null); savedDocument.current = null; setSearchParams({}, { replace: true }) } }}>{text.new}</button>
           <p className="text-xs text-muted-foreground">{text.attribution}</p>
         </div>

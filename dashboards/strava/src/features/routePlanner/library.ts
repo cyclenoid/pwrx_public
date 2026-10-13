@@ -21,6 +21,7 @@ export function validSavedRoute(value: unknown): value is SavedRoute & { documen
 }
 export const libraryText = {
   de: {
+    preview: 'Kartenvorschau', previewLoading: 'Kartenvorschau wird geladen …', previewFailed: 'Kartenvorschau nicht verfügbar.', retry: 'Erneut versuchen',
     title: 'Gespeicherte Routen', new: 'Neue Route', save: 'Route speichern', copy: 'Als neue Route speichern', saved: 'Gespeichert',
     saveHint: 'Auf deinem PWRX-Server gespeichert und auf allen Geräten verfügbar.', nameRequired: 'Bitte einen Namen für die Route eingeben.',
     loading: 'Routen werden geladen …', search: 'Routen suchen', searchButton: 'Suchen', empty: 'Keine gespeicherten Routen gefunden.',
@@ -40,6 +41,7 @@ export const libraryText = {
     },
   },
   en: {
+    preview: 'Map preview', previewLoading: 'Loading map preview …', previewFailed: 'Map preview unavailable.', retry: 'Try again',
     title: 'Saved routes', new: 'New route', save: 'Save route', copy: 'Save as new route', saved: 'Saved',
     saveHint: 'Saved on your PWRX server and available on all devices.', nameRequired: 'Please enter a route name.',
     loading: 'Loading routes …', search: 'Search routes', searchButton: 'Search', empty: 'No saved routes found.',

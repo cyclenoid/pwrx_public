@@ -6,6 +6,7 @@ import { ThemeToggle } from '../components/ThemeToggle'
 import { libraryRequest, libraryText, validSavedRoute } from '../features/routePlanner/library'
 import type { SavedRoute } from '../features/routePlanner/library'
 import { exportGpx } from '../features/routePlanner/gpx'
+import { RoutePreview } from '../features/routePlanner/RoutePreview'
 
 const button = 'inline-flex items-center justify-center gap-2 rounded-lg border px-3 py-2 text-sm hover:bg-secondary disabled:opacity-40'
 export function RouteLibrary() {
@@ -62,11 +63,14 @@ export function RouteLibrary() {
       </form>
       {error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-red-500">{error}</p>}
       {loading ? <p role="status">{text.loading}</p> : !error && !rows.length ? <p className="rounded-xl border border-dashed p-10 text-center text-muted-foreground">{text.empty}</p> : <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-        {rows.map(row => <article key={row.id} className="rounded-xl border bg-card p-5">
+        {rows.map(row => <article key={row.id} className="overflow-hidden rounded-xl border bg-card">
+          <RoutePreview key={`${row.id}:${row.revision}`} id={row.id} language={i18n.language.startsWith('de') ? 'de' : 'en'} />
+          <div className="p-5">
           <h2 className="break-words text-lg font-semibold">{row.name}</h2>
           <p className="mt-2 text-2xl font-bold text-orange-500">{(row.distance_m / 1000).toLocaleString(i18n.language, { maximumFractionDigits: 1 })} km</p>
           <p className="mt-1 text-xs text-muted-foreground">{new Date(row.updated_at).toLocaleString(i18n.language)}</p>
           <div className="mt-5 flex flex-wrap gap-2"><Link className={`${button} flex-1`} to={`/routes?saved=${row.id}`}>{text.open}</Link><button className={button} disabled={busy} onClick={() => void download(row)}><Download size={16} />{text.download}</button><button className={button} disabled={busy} aria-label={`${text.remove}: ${row.name}`} onClick={() => void remove(row)}><Trash2 size={16} /></button></div>
+          </div>
         </article>)}
       </div>}
       <div className="flex justify-between"><button className={button} disabled={loading || offset === 0} onClick={() => setOffset(offset - 50)}>{text.previous}</button><button className={button} disabled={loading || !more} onClick={() => setOffset(offset + 50)}>{text.next}</button></div>
