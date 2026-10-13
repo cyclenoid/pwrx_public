@@ -155,7 +155,16 @@ html {
 
 .dark .pwrx-map-tiles {
   /* Theme only the base tiles so routes and markers keep their original colors. */
-  filter: invert(1) hue-rotate(180deg) saturate(0.6) brightness(0.85) contrast(0.9);
+  filter: grayscale(1) invert(1) brightness(0.6) contrast(0.9);
+}
+
+.dark .leaflet-control-attribution {
+  background: rgb(24 24 27 / 90%);
+  color: #a1a1aa;
+}
+
+.dark .leaflet-control-attribution a {
+  color: #d4d4d8;
 }
 
 /* Fix Leaflet map z-index to stay below sticky header */
