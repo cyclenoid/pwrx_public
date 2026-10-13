@@ -1,0 +1,22 @@
+# Optional, self-hosted routing. Download regional .rd5 files before starting.
+# Include your existing operator override files as well when deploying.
+services:
+  brouter:
+    build:
+      context: https://github.com/abrensch/brouter.git#29898106b555e342ff3ade7ae3e9c1ae6644a43b
+    restart: unless-stopped
+    environment:
+      JAVA_OPTS: -Xmx512M -Xms128M -DmaxRunningTime=25 -DmemoryClass=256
+      MAXTHREADS: "2"
+    volumes:
+      - ${DATA_HUB_DATA_DIR:-./data}/routing/segments4:/segments4:ro
+    networks:
+      - data-hub-network
+    # Internal only. The PWRX API validates and proxies requests.
+    expose:
+      - "17777"
+    mem_limit: 768m
+
+  strava-tracker:
+    environment:
+      BROUTER_URL: http://brouter:17777/brouter

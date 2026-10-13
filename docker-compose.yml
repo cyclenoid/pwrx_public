@@ -55,6 +55,7 @@ services:
       DB_NAME: ${POSTGRES_DB}
       DB_USER: ${POSTGRES_USER}
       DB_PASSWORD: ${POSTGRES_PASSWORD}
+      BROUTER_URL: ${BROUTER_URL:-}
       DB_SCHEMA: strava  # Schema für Strava-Daten
 
       # CSV Export aktivieren

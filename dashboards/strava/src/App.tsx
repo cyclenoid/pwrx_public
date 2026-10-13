@@ -10,6 +10,7 @@ import { SegmentDetail } from "./pages/SegmentDetail";
 import { SegmentsDashboard } from "./pages/SegmentsDashboard";
 import { Records } from "./pages/Records";
 import { Heatmap } from "./pages/Heatmap";
+import { RoutePlanner } from "./pages/RoutePlanner";
 import { Training } from "./pages/Training";
 import { Exercises } from "./pages/Exercises";
 import { PowerProfile } from "./pages/PowerProfile";
@@ -34,8 +35,9 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <BrowserRouter>
           <Routes>
-            {/* Heatmap is fullscreen - outside Layout */}
+            {/* Maps and route planning are fullscreen - outside Layout */}
             <Route path="heatmap" element={<Heatmap />} />
+            <Route path="routes" element={<RoutePlanner />} />
 
             {/* All other pages use Layout */}
             <Route path="/" element={<Layout />}>

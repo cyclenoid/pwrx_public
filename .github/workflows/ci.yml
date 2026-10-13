@@ -36,6 +36,9 @@ jobs:
       - name: Lint backend
         run: npm run lint
 
+      - name: Test backend route planner
+        run: npm run test:routes
+
       - name: Build backend
         run: npm run build
 
@@ -67,6 +70,9 @@ jobs:
 
       - name: Lint frontend
         run: npm run lint
+
+      - name: Test frontend route planner
+        run: npm run test:routes
 
       - name: Build frontend
         run: npm run build

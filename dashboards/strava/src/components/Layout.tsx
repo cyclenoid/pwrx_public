@@ -12,6 +12,7 @@ import {
   Flag,
   LayoutDashboard,
   Map,
+  Route as RouteIcon,
   Settings as SettingsIcon,
   Trophy,
   Zap,
@@ -77,6 +78,11 @@ export function Layout() {
       path: '/heatmap',
       label: t('nav.heatmap'),
       icon: <Map size={16} />,
+    },
+    {
+      path: '/routes',
+      label: i18n.language.startsWith('de') ? 'Routen' : 'Routes',
+      icon: <RouteIcon size={16} />,
     },
     {
       path: '/segments',

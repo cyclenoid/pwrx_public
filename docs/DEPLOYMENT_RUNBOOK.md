@@ -177,3 +177,63 @@ remain visible on every map.
   - verify `ADAPTER_STRAVA_ENABLED=true`
   - verify private adapter install access
   - recreate backend container
+
+## Route planner preview
+
+The /routes page supports GPX track/route import, draggable via points,
+section editing, undo/redo, browser-local drafts and GPX track export.
+The planner does not import files into the activity database.
+
+Imported coordinates, elevations and track gaps are preserved. Moving a via
+point recalculates only adjacent connected sections. Clicking a track adds a
+control point without changing its geometry. Removing the first/last point
+trims a section. Removing an interior point recalculates its joined section;
+gaps remain gaps. Snapped endpoints that do not meet are exported as separate
+track segments instead of adding invisible straight connections. Full recalculation is explicit and requires confirmation.
+Profiles apply to new/edited sections: road (fastbike), gravel (gravel), and
+cycle routes/touring (trekking with stick_to_cycleroutes=1).
+
+Without a configured router, GPX import, end trimming, export and explicit
+freehand connections work. Failed routing never falls back to a straight line.
+The status endpoint reports configuration, not data coverage or service health.
+
+### Optional self-hosted BRouter
+
+1. Choose the required regional .rd5 tiles from
+   https://brouter.de/brouter/segments4/. Each tile covers 5 by 5 degrees;
+   its name is the southwest corner. Download them into
+   DATA_HUB_DATA_DIR/routing/segments4 (readable by container UID 1000).
+   Example: E5_N50.rd5 covers longitude 5..10 and latitude 50..55.
+   Include adjacent tiles used by planned routes. Downloads can be large.
+2. Include docker-compose.routing.yml in addition to the normal Compose and
+   existing operator override files. The overlay builds BRouter from a pinned
+   upstream commit and sets BROUTER_URL for the API. No host port is exposed.
+3. Start brouter and recreate strava-tracker; rebuild strava-dashboard.
+   Preserve the private adapter configuration, CARTO key and host port bindings.
+4. Check /api/route-planner/status, then calculate a short route in an installed
+   region with each profile. Test a missing region too: the existing route must
+   remain intact. Verify API health and private Strava capability after deploy.
+
+For a standard installation without operator overrides:
+
+```sh
+docker compose -f docker-compose.yml -f docker-compose.routing.yml up -d --build brouter strava-tracker strava-dashboard
+```
+
+Alternatively point BROUTER_URL at an operator-managed BRouter /brouter endpoint.
+Keep routing data current by replacing regional files while BRouter is stopped;
+download to temporary files first, then rename complete downloads into place.
+The upstream profiles and lookups come from the same pinned BRouter build.
+
+### Preview limits and checks
+
+- One manually saved draft per browser/origin, not synchronized to the server.
+  Export GPX for durable backup. GPX exports geometry and elevation, not original
+  timestamps, sensor streams, extensions or the editor history.
+- Up to 10 MB, 150,000 input points, 30 segments and 80 control points.
+- Elevation gain is an approximation from point elevations. Missing elevations
+  are shown as unknown. Surface breakdown and route alternatives are not yet included.
+- Activity-to-route conversion and a server-side route library are future work.
+- Run npm run test:routes in apps/strava and dashboards/strava, then both builds.
+- Browser checks: import a multi-segment GPX, move a point, undo, export, compare
+  untouched coordinates and gaps; test failed routing, draft reload and mobile layout.
