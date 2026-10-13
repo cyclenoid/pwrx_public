@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Download, Upload, Undo2, Redo2, LocateFixed, Save, Trash2, Route, X } from 'lucide-react'
 import { ThemeToggle } from '../components/ThemeToggle'
 import { PlannerMap } from '../features/routePlanner/PlannerMap'
-import { emptyDraft, isDraft, isPoint, MAX_ANCHORS, routeStats, segmentsFromDraft, splitLeg, distance } from '../features/routePlanner/model'
+import { draftFromSegments, emptyDraft, isDraft, isPoint, MAX_ANCHORS, routeStats, segmentsFromDraft, splitLeg, distance } from '../features/routePlanner/model'
 import type { Leg, Point, Profile, RouteDraft } from '../features/routePlanner/model'
 import { exportGpx, parseGpx } from '../features/routePlanner/gpx'
 import { plannerText } from '../features/routePlanner/text'
@@ -167,8 +167,24 @@ export function RoutePlanner() {
   const importFile = async (file: File) => {
     if (busy || pending.current || !confirmReplace()) return
     if (file.size > 10 * 1024 * 1024) { report(new Error('GPX_SIZE')); return }
-    await execute(async () => {
-      const next = parseGpx(await file.text(), file.name.replace(/\.gpx$/i, ''))
+    await execute(async signal => {
+      const name = file.name.replace(/\.(gpx|fit)$/i, '')
+      let next: RouteDraft
+      if (/\.fit$/i.test(file.name)) {
+        const response = await fetch(`${API}/import-fit`, { method: 'POST',
+          headers: { 'Content-Type': 'application/octet-stream' }, body: file,
+          signal: AbortSignal.any([signal, AbortSignal.timeout(30000)]),
+        })
+        const data = await response.json().catch(() => { throw new Error('FIT_IMPORT_FAILED') })
+        if (!response.ok) throw new Error(data.code || 'FIT_IMPORT_FAILED')
+        if (!Array.isArray(data.segments) || !data.segments.every((segment: unknown) => Array.isArray(segment) && segment.every(isPoint))) {
+          throw new Error('INVALID_FIT')
+        }
+        next = draftFromSegments(name, data.segments)
+      } else if (/\.gpx$/i.test(file.name)) {
+        next = parseGpx(await file.text(), name)
+      } else throw new Error('UNSUPPORTED_FILE')
+      if (signal.aborted) return draft
       setAdding(false); setFitToken(token => token + 1)
       return next
     })
@@ -213,7 +229,7 @@ export function RoutePlanner() {
         <button className={`${button} max-sm:px-2 max-sm:text-xs`} disabled={busy} onClick={() => fileRef.current?.click()}><Upload size={16} />{text.import}</button>
         <button className={`${primary} max-sm:px-2 max-sm:text-xs`} disabled={busy || !hasGeometry} onClick={download}><Download size={16} />{text.export}</button>
         <ThemeToggle />
-        <input ref={fileRef} type="file" accept=".gpx,application/gpx+xml" className="hidden" aria-label={text.import}
+        <input ref={fileRef} type="file" accept=".gpx,.fit,application/gpx+xml" className="hidden" aria-label={text.import}
           onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void importFile(file) }} />
       </div>
     </header>

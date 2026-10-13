@@ -1,5 +1,6 @@
-import { Router } from 'express';
+import { Router, raw } from 'express';
 import axios from 'axios';
+import { MAX_FIT_BYTES, parseFitRoute } from '../services/fitRoute';
 
 const profiles = { road: 'fastbike', gravel: 'gravel', touring: 'trekking' } as const;
 type Point = { lat: number; lng: number; ele?: number };
@@ -51,6 +52,34 @@ export function parseRoutingResponse(data: unknown): Point[] | null {
 export function createRoutePlannerRouter(getEndpoint = () => process.env.BROUTER_URL || '') {
   const router = Router();
   let active = 0;
+  let imports = 0;
+  const readFit = raw({ type: 'application/octet-stream', limit: MAX_FIT_BYTES, inflate: false });
+  router.post('/import-fit', (req, res) => {
+    if (!req.is('application/octet-stream')) { res.status(415).json({ code: 'INVALID_FIT' }); return; }
+    if (imports >= 2) { res.status(429).json({ code: 'FIT_BUSY' }); return; }
+    imports++;
+    const abort = new AbortController();
+    let released = false;
+    const release = () => { if (!released) { released = true; imports--; } };
+    res.once('close', () => { abort.abort(); release(); });
+    readFit(req, res, async error => {
+      try {
+        if (error) {
+          res.status(error.type === 'entity.too.large' ? 413 : 400)
+            .json({ code: error.type === 'entity.too.large' ? 'FIT_SIZE' : 'INVALID_FIT' });
+          return;
+        }
+        if (!Buffer.isBuffer(req.body)) { res.status(400).json({ code: 'INVALID_FIT' }); return; }
+        const segments = await parseFitRoute(req.body, abort.signal);
+        res.json({ segments });
+      } catch (reason) {
+        if (abort.signal.aborted) return;
+        const code = reason instanceof Error ? reason.message : 'INVALID_FIT';
+        const allowed = ['FIT_SIZE', 'FIT_NO_GPS', 'FIT_SEGMENTS', 'INVALID_FIT'];
+        res.status(code === 'FIT_SIZE' ? 413 : 422).json({ code: allowed.includes(code) ? code : 'INVALID_FIT' });
+      } finally { release(); }
+    });
+  });
   router.get('/status', (_req, res) => {
     res.json({ configured: Boolean(getEndpoint()), profiles: Object.keys(profiles) });
   });

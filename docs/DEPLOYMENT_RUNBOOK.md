@@ -180,9 +180,19 @@ remain visible on every map.
 
 ## Route planner preview
 
-The /routes page supports GPX track/route import, draggable via points,
+The /routes page supports GPX track/route and FIT GPS-track import, draggable via points,
 section editing, undo/redo, browser-local drafts and GPX track export.
 The planner does not import files into the activity database.
+
+FIT files are uploaded to `POST /api/route-planner/import-fit` as binary data
+and decoded in memory on the PWRX server, never sent to a third-party service
+or persisted as uploads/activities. Activity and course FIT files with record
+coordinates are supported, including courses without timestamps. Coordinates
+and available per-record heights are retained; missing GPS records split the
+track rather than inventing a connection. Indoor/sensor-only files are rejected.
+Export remains GPX; FIT sensor streams, timing, laps and course instructions
+are not part of the route. FIT decoding uses bounded worker threads (two
+concurrent imports, 10-second parsing limit) and validates file length and CRC.
 
 Imported coordinates, elevations and track gaps are preserved. Moving a via
 point recalculates only adjacent connected sections. Clicking a track adds a
@@ -193,7 +203,7 @@ track segments instead of adding invisible straight connections. Full recalculat
 Profiles apply to new/edited sections: road (fastbike), gravel (gravel), and
 cycle routes/touring (trekking with stick_to_cycleroutes=1).
 
-Without a configured router, GPX import, end trimming, export and explicit
+Without a configured router, GPX/FIT import, end trimming, export and explicit
 freehand connections work. Failed routing never falls back to a straight line.
 The status endpoint reports configuration, not data coverage or service health.
 
@@ -237,3 +247,6 @@ The upstream profiles and lookups come from the same pinned BRouter build.
 - Run npm run test:routes in apps/strava and dashboards/strava, then both builds.
 - Browser checks: import a multi-segment GPX, move a point, undo, export, compare
   untouched coordinates and gaps; test failed routing, draft reload and mobile layout.
+- FIT checks: import GPS activity/course files, export GPX, verify coordinates
+  and heights; reject no-GPS, truncated, oversized and corrupt files without
+  replacing the current draft. Cancelling an upload must preserve the draft.
