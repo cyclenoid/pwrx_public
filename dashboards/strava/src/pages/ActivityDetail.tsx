@@ -26,6 +26,7 @@ import { useTheme } from '../components/ThemeProvider'
 import { getChartColors, getHeartRateZoneColors, getPowerZoneColors } from '../lib/chartTheme'
 import { useUserProfile } from '../hooks/useUserProfile'
 import { getTrainingInsights } from '../lib/trainingInsights'
+import { ActivityRouteLink } from '../features/routePlanner/ActivityRouteLink'
 
 // Helper to safely parse numeric values from API
 const safeNumber = (val: string | number | null | undefined): number => {
@@ -1302,6 +1303,7 @@ export function ActivityDetail() {
             </Button>
           </Link>
           <h1 className="text-2xl font-bold tracking-tight">{activity.name}</h1>
+          {hasMap && <ActivityRouteLink activityId={activity.strava_activity_id} />}
           <div className="flex items-center gap-4 text-sm text-muted-foreground">
             <span>{formatActivityDateTime(activity.start_date)} • {activityTypeLabel}</span>
             {/* Engagement metrics */}

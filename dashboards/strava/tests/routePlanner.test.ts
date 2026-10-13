@@ -2,6 +2,34 @@ import test from 'node:test'
 import assert from 'node:assert/strict'
 import { draftFromSegments, segmentsFromDraft, splitLeg, routeStats, isDraft, MAX_ANCHORS } from '../src/features/routePlanner/model'
 import { exportGpx } from '../src/features/routePlanner/gpx'
+import { draftFromActivity } from '../src/features/routePlanner/activity'
+import { category, coloredSections, waySummary } from '../src/features/routePlanner/ways'
+
+test('activity-to-route preserves geometry and gaps, never shifts unaligned elevations', () => {
+  const draft = draftFromActivity({ name: 'Ride', streams: { latlng: [[50, 10], [50.01, 10], null, [51, 11], [51.01, 11]], altitude: [100, 200] } })
+  const segments = segmentsFromDraft(draft)
+  assert.equal(segments.length, 2)
+  assert.equal(segments[0][0].ele, undefined)
+  const aligned = draftFromActivity({ streams: { latlng: [[50, 10], [50.01, 10]], altitude: [100, 200] } })
+  assert.deepEqual(segmentsFromDraft(aligned)[0].map(p => p.ele), [100, 200])
+  assert.throws(() => draftFromActivity({}), /ACTIVITY_NO_GPS/)
+})
+
+test('surface and highway are independent, unknown is not inferred from a gravel profile', () => {
+  assert.equal(category({ highway: 'cycleway', surface: 'asphalt' }, 'surface'), 'asphalt')
+  assert.equal(category({ highway: 'cycleway', surface: 'asphalt' }, 'highway'), 'cycleway')
+  assert.equal(category({ highway: 'track' }, 'surface'), 'unknown')
+  const points = [{ lat: 50, lng: 10 }, { lat: 50.001, lng: 10, way: { surface: 'asphalt' } }, { lat: 50.002, lng: 10, way: { surface: 'gravel' } }]
+  const draft = draftFromSegments('Test', [points])
+  assert.deepEqual(waySummary(draft, 'surface').map(([key]) => key), ['unknown'])
+  const leg = { points, source: 'routed' as const }
+  draft.legs = [leg]; draft.anchors = [points[0], points[2]]
+  assert.deepEqual(coloredSections(leg, 'surface').map(s => s.category), ['asphalt', 'gravel'])
+  const split = splitLeg(draft, 0, 1)
+  assert.deepEqual(waySummary(split, 'surface'), waySummary(draft, 'surface'))
+  assert.ok(isDraft(JSON.parse(JSON.stringify(split))))
+  assert.equal(exportGpx(split).includes('way'), false)
+})
 
 test('import preserves every point and segment break, including repeated points', () => {
   const points = Array.from({ length: 400 }, (_, i) => ({ lat: 50 + i / 10000, lng: 10, ele: 300 + i }))

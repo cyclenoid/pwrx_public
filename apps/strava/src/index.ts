@@ -1,5 +1,6 @@
 import express from 'express';
 import { createRoutePlannerRouter } from './api/routePlanner';
+import { createRouteLibraryRouter } from './api/routeLibrary';
 import cors from 'cors';
 import compression from 'compression';
 import * as dotenv from 'dotenv';
@@ -128,6 +129,8 @@ async function ensureRateLimitBudget(
 // Middleware
 app.use(compression()); // Enable gzip compression for all responses
 app.use(cors());
+// Route documents can exceed the small default JSON limit; scope it to this API.
+app.use('/api/route-library', createRouteLibraryRouter(new DatabaseService()));
 app.use(express.json());
 
 // API Routes

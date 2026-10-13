@@ -11,6 +11,7 @@ import { SegmentsDashboard } from "./pages/SegmentsDashboard";
 import { Records } from "./pages/Records";
 import { Heatmap } from "./pages/Heatmap";
 import { RoutePlanner } from "./pages/RoutePlanner";
+import { RouteLibrary } from "./pages/RouteLibrary";
 import { Training } from "./pages/Training";
 import { Exercises } from "./pages/Exercises";
 import { PowerProfile } from "./pages/PowerProfile";
@@ -38,6 +39,7 @@ function App() {
             {/* Maps and route planning are fullscreen - outside Layout */}
             <Route path="heatmap" element={<Heatmap />} />
             <Route path="routes" element={<RoutePlanner />} />
+            <Route path="routes/saved" element={<RouteLibrary />} />
 
             {/* All other pages use Layout */}
             <Route path="/" element={<Layout />}>

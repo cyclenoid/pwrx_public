@@ -1,9 +1,10 @@
 import { Router, raw } from 'express';
 import axios from 'axios';
 import { MAX_FIT_BYTES, parseFitRoute } from '../services/fitRoute';
+import { addRouteWays, Way } from '../services/routeWays';
 
 const profiles = { road: 'fastbike', gravel: 'gravel', touring: 'trekking' } as const;
-type Point = { lat: number; lng: number; ele?: number };
+type Point = { lat: number; lng: number; ele?: number; way?: Way };
 
 export function validPoint(value: unknown): value is Point {
   if (!value || typeof value !== 'object') return false;
@@ -22,6 +23,7 @@ export function routingParams(body: unknown): URLSearchParams | null {
     lonlats: points.map(p => `${p.lng},${p.lat}`).join('|'),
     profile: profiles[profile as keyof typeof profiles],
     alternativeidx: '0', format: 'geojson',
+    'profile:processUnusedTags': '1',
   });
   if (profile === 'touring') {
     params.set('profile:stick_to_cycleroutes', '1');
@@ -45,6 +47,8 @@ export function parseRoutingResponse(data: unknown): Point[] | null {
     if (Number.isFinite(coord[2])) point.ele = coord[2];
     result.push(point);
   }
+  const feature = (features.find(f => f?.geometry?.type === 'LineString') as { properties?: { messages?: unknown } });
+  addRouteWays(result, feature?.properties?.messages);
   return result;
 }
 

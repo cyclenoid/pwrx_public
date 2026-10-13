@@ -1,4 +1,6 @@
-export type Point = { lat: number; lng: number; ele?: number }
+export type Way = { surface?: string; highway?: string; tracktype?: string; smoothness?: string }
+// way describes the edge arriving at this point, as returned by BRouter.
+export type Point = { lat: number; lng: number; ele?: number; way?: Way }
 export type Profile = 'road' | 'gravel' | 'touring'
 export type Leg = { points: Point[]; source: 'imported' | 'routed' | 'direct' }
 export type RouteDraft = { name: string; anchors: Point[]; legs: (Leg | null)[] }
@@ -11,6 +13,8 @@ export function isPoint(value: unknown): value is Point {
   return Number.isFinite(p.lat) && Math.abs(p.lat) <= 90
     && Number.isFinite(p.lng) && Math.abs(p.lng) <= 180
     && (p.ele === undefined || Number.isFinite(p.ele))
+    && (p.way === undefined || (!!p.way && typeof p.way === 'object' && !Array.isArray(p.way)
+      && Object.entries(p.way).every(([k, v]) => ['surface', 'highway', 'tracktype', 'smoothness'].includes(k) && typeof v === 'string' && v.length <= 80)))
 }
 
 export function distance(a: Point, b: Point): number {

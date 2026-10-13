@@ -243,7 +243,24 @@ The upstream profiles and lookups come from the same pinned BRouter build.
 - Up to 10 MB, 150,000 input points, 30 segments and 80 control points.
 - Elevation gain is an approximation from point elevations. Missing elevations
   are shown as unknown. Surface breakdown and route alternatives are not yet included.
-- Activity-to-route conversion and a server-side route library are future work.
+- Route library: `/routes/saved` lists searchable, paginated routes stored in
+  PostgreSQL (`saved_routes`, migration 0012). Include this table in database
+  backups. It follows the existing single-instance/private access model, not
+  separate per-user access controls. Do not expose the unauthenticated app publicly.
+  Save updates the opened route; Save as new route makes an independent copy.
+  Revision checks prevent silently overwriting or deleting newer changes.
+- Activities with GPS have an "As route" link. This copies the GPS geometry into
+  a new unsaved planner draft, leaving the source activity unchanged. Elevations
+  are used only if the stream length matches GPS positions.
+- Map colors can show surface or way type independently. BRouter message tags
+  belong to the incoming section ending at the message coordinates. Unmatched
+  geometry, imports, freehand lines and missing tags remain unknown; no surface
+  is inferred just because the selected routing profile is gravel.
+  Imported geometry only receives tags after explicit recalculation, which can
+  change its path. A cycleway may be asphalt or unpaved; highway=track means a
+  field/forest track, not proof that it is in a forest. OSM tags and gravel costs
+  are not guarantees of current condition, permission or rideability.
+  Profile reference: https://github.com/abrensch/brouter/blob/29898106b555e342ff3ade7ae3e9c1ae6644a43b/misc/profiles2/gravel.brf
 - Run npm run test:routes in apps/strava and dashboards/strava, then both builds.
 - Browser checks: import a multi-segment GPX, move a point, undo, export, compare
   untouched coordinates and gaps; test failed routing, draft reload and mobile layout.

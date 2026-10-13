@@ -17,7 +17,7 @@
     "db:init": "tsx src/scripts/initDb.ts",
     "db:migrate": "tsx src/scripts/migrateDb.ts",
     "db:check": "tsx src/scripts/checkDb.ts",
-    "test:routes": "tsx --test src/tests/routePlanner.test.ts"
+    "test:routes": "tsx --test src/tests/routePlanner.test.ts src/tests/routeLibrary.test.ts"
   },
   "keywords": [
     "strava",

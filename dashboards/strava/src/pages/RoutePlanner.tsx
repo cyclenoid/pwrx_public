@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useSearchParams } from 'react-router-dom'
 import { useTranslation } from 'react-i18next'
 import { ArrowLeft, Download, Upload, Undo2, Redo2, LocateFixed, Save, Trash2, Route, X } from 'lucide-react'
 import { ThemeToggle } from '../components/ThemeToggle'
@@ -8,6 +8,11 @@ import { draftFromSegments, emptyDraft, isDraft, isPoint, MAX_ANCHORS, routeStat
 import type { Leg, Point, Profile, RouteDraft } from '../features/routePlanner/model'
 import { exportGpx, parseGpx } from '../features/routePlanner/gpx'
 import { plannerText } from '../features/routePlanner/text'
+import { API_ROOT, libraryRequest, libraryText, validSavedRoute } from '../features/routePlanner/library'
+import type { SavedRoute, RouteDocument } from '../features/routePlanner/library'
+import { draftFromActivity } from '../features/routePlanner/activity'
+import { categories, waySummary } from '../features/routePlanner/ways'
+import type { ColorMode } from '../features/routePlanner/ways'
 
 const API = `${String(import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')}/route-planner`
 const STORAGE_KEY = 'pwrx-route-draft-v1'
@@ -42,12 +47,21 @@ function Elevation({ draft, label }: { draft: RouteDraft; label: string }) {
 export function RoutePlanner() {
   const { i18n } = useTranslation()
   const text = plannerText[i18n.language.startsWith('de') ? 'de' : 'en']
+  const language = i18n.language.startsWith('de') ? 'de' : 'en'
+  const library = libraryText[language]
+  const [searchParams, setSearchParams] = useSearchParams()
+  const routeId = searchParams.get('saved'), activityId = searchParams.get('activity')
+  const [savedRoute, setSavedRoute] = useState<SavedRoute | null>(null)
+  const savedDocument = useRef<RouteDocument | null>(null)
+  const [libraryBusy, setLibraryBusy] = useState(false)
+  const [colorMode, setColorMode] = useState<ColorMode>('origin')
   const [history, setHistory] = useState<{ past: RouteDraft[]; current: RouteDraft; future: RouteDraft[] }>({ past: [], current: emptyDraft(), future: [] })
   const draft = history.current
   const [profile, setProfile] = useState<Profile>('touring')
   const [mode, setMode] = useState<'routed' | 'direct'>('routed')
   const [adding, setAdding] = useState(false)
-  const [busy, setBusy] = useState(false)
+  const [working, setBusy] = useState(false)
+  const busy = working || libraryBusy
   const [configured, setConfigured] = useState<boolean | null>(null)
   const [fitToken, setFitToken] = useState(0)
   const [message, setMessage] = useState('')
@@ -55,6 +69,8 @@ export function RoutePlanner() {
   const fileRef = useRef<HTMLInputElement>(null)
   const pending = useRef<AbortController | null>(null)
   const stats = useMemo(() => routeStats(draft), [draft])
+  const ways = useMemo(() => waySummary(draft, colorMode), [draft, colorMode])
+  const clean = savedDocument.current?.draft === draft && savedDocument.current?.profile === profile && savedDocument.current?.mode === mode
   const canRoute = configured === true
   const canEdit = mode === 'direct' || canRoute
   const hasGeometry = draft.legs.some(leg => leg !== null)
@@ -62,11 +78,11 @@ export function RoutePlanner() {
   useEffect(() => () => pending.current?.abort(), [])
   useEffect(() => {
     const warn = (event: BeforeUnloadEvent) => {
-      if (draft.anchors.length) { event.preventDefault(); event.returnValue = '' }
+      if (draft.anchors.length && !clean) { event.preventDefault(); event.returnValue = '' }
     }
     window.addEventListener('beforeunload', warn)
     return () => window.removeEventListener('beforeunload', warn)
-  }, [draft.anchors.length])
+  }, [draft.anchors.length, clean])
   useEffect(() => {
     const abort = new AbortController()
     fetch(`${API}/status`, { signal: abort.signal }).then(r => r.ok ? r.json() : Promise.reject())
@@ -88,7 +104,7 @@ export function RoutePlanner() {
   }
   const report = (reason: unknown) => {
     const code = reason instanceof Error ? reason.message : 'FAILED'
-    setError(text.errors[code as keyof typeof text.errors] || text.errors.FAILED)
+    setError(library.errors[code as keyof typeof library.errors] || text.errors[code as keyof typeof text.errors] || text.errors.FAILED)
   }
   const execute = async (work: (signal: AbortSignal) => Promise<RouteDraft>) => {
     if (pending.current) return
@@ -163,7 +179,7 @@ export function RoutePlanner() {
     setHistory({ past: [...history.past, draft], current: history.future[0], future: history.future.slice(1) })
     setError(''); setMessage('')
   }
-  const confirmReplace = () => !draft.anchors.length || window.confirm(text.replaceConfirm)
+  const confirmReplace = () => !draft.anchors.length || clean || window.confirm(text.replaceConfirm)
   const importFile = async (file: File) => {
     if (busy || pending.current || !confirmReplace()) return
     if (file.size > 10 * 1024 * 1024) { report(new Error('GPX_SIZE')); return }
@@ -185,6 +201,7 @@ export function RoutePlanner() {
         next = parseGpx(await file.text(), name)
       } else throw new Error('UNSUPPORTED_FILE')
       if (signal.aborted) return draft
+      setSavedRoute(null); savedDocument.current = null; setSearchParams({}, { replace: true })
       setAdding(false); setFitToken(token => token + 1)
       return next
     })
@@ -213,19 +230,68 @@ export function RoutePlanner() {
       const data = JSON.parse(raw)
       if (data.version !== 1 || !isDraft(data.draft)) throw new Error()
       commit(data.draft)
+      setSavedRoute(null); savedDocument.current = null; setSearchParams({}, { replace: true })
       if (['road', 'gravel', 'touring'].includes(data.profile)) setProfile(data.profile)
       setMode(data.mode === 'direct' ? 'direct' : 'routed')
       setAdding(false); setFitToken(token => token + 1)
     } catch { report(new Error('STORAGE')) }
   }
 
+  const saveRoute = async (copy = false) => {
+    if (busy) return
+    if (!draft.name.trim()) { setError(library.nameRequired); return }
+    setLibraryBusy(true); setError(''); setMessage('')
+    const document = { draft, profile, mode }
+    try {
+      const update = savedRoute && !copy
+      const row = await libraryRequest<SavedRoute>(update ? `/${savedRoute.id}` : '', {
+        method: update ? 'PUT' : 'POST', body: JSON.stringify({ ...document, revision: update ? savedRoute.revision : undefined }),
+      })
+      savedDocument.current = document
+      setSavedRoute(row); setMessage(library.saveHint); setSearchParams({ saved: row.id }, { replace: true })
+    } catch (reason) { report(reason) } finally { setLibraryBusy(false) }
+  }
+
+  useEffect(() => {
+    if (!routeId && !activityId) return
+    if (routeId && savedRoute?.id === routeId) return
+    const abort = new AbortController()
+    setLibraryBusy(true); setError('')
+    const open = async () => {
+      try {
+        if (routeId) {
+          const row = await libraryRequest(`/${encodeURIComponent(routeId)}`, { signal: abort.signal })
+          if (!validSavedRoute(row)) throw new Error('ROUTE_STORAGE_ERROR')
+          if (abort.signal.aborted) return
+          commit(row.document.draft); setProfile(row.document.profile); setMode(row.document.mode)
+          savedDocument.current = row.document; setSavedRoute(row)
+        } else {
+          if (!/^-?\d+$/.test(activityId!)) throw new Error('ACTIVITY_NO_GPS')
+          const response = await fetch(`${API_ROOT}/activities/${activityId}`, { signal: AbortSignal.any([abort.signal, AbortSignal.timeout(30000)]) })
+          if (!response.ok) throw new Error('ACTIVITY_NO_GPS')
+          const next = draftFromActivity(await response.json())
+          if (abort.signal.aborted) return
+          commit(next); setSavedRoute(null); savedDocument.current = null
+        }
+        setAdding(false); setFitToken(v => v + 1)
+      } catch (reason) { if (!abort.signal.aborted) report(reason) }
+      finally { if (!abort.signal.aborted) setLibraryBusy(false) }
+    }
+    void open()
+    return () => abort.abort()
+    // Load only when the selected route/activity changes, never overwrite edits on rerender.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [routeId, activityId])
+
   return <div className="flex h-dvh flex-col bg-background text-foreground">
     <header className="flex shrink-0 flex-wrap items-center justify-between gap-3 border-b px-4 py-3">
       <div className="flex items-center gap-3">
-        <Link to="/" className={button} aria-label={text.back} onClick={event => { if (!confirmReplace()) event.preventDefault() }}><ArrowLeft size={18} /></Link>
+        <Link to="/" className={button} aria-label={text.back} onClick={event => { if (busy || !confirmReplace()) event.preventDefault() }}><ArrowLeft size={18} /></Link>
         <div><h1 className="flex items-center gap-2 text-xl font-bold"><Route size={21} />{text.title}<span className="rounded border border-orange-500/30 px-2 py-0.5 text-xs font-normal text-orange-500">{text.beta}</span></h1><p className="hidden text-xs text-muted-foreground sm:block">{text.subtitle}</p></div>
       </div>
       <div className="flex flex-wrap items-center gap-2">
+        <Link to="/routes/saved" className={`${button} max-sm:px-2 max-sm:text-xs`} onClick={event => { if (busy || !confirmReplace()) event.preventDefault() }}>{library.title}</Link>
+        <button className={`${button} max-sm:px-2 max-sm:text-xs ${clean ? 'border-green-500/40 bg-green-500/15 text-green-600 dark:text-green-400 disabled:opacity-100' : ''}`} disabled={busy || !hasGeometry || clean} onClick={() => void saveRoute()}><Save size={16} />{clean ? library.saved : library.save}</button>
         <button className={`${button} max-sm:px-2 max-sm:text-xs`} disabled={busy} onClick={() => fileRef.current?.click()}><Upload size={16} />{text.import}</button>
         <button className={`${primary} max-sm:px-2 max-sm:text-xs`} disabled={busy || !hasGeometry} onClick={download}><Download size={16} />{text.export}</button>
         <ThemeToggle />
@@ -238,9 +304,11 @@ export function RoutePlanner() {
         <div className="space-y-5">
           <label className="block text-sm font-medium">{text.name}<input className="mt-2 w-full rounded-lg border bg-background px-3 py-2" maxLength={200} placeholder={text.untitled} value={draft.name} disabled={busy}
             onChange={event => { const name = event.target.value; setHistory(current => ({ ...current, current: { ...current.current, name } })); setMessage('') }} /></label>
+          {savedRoute && <button className={`${button} w-full`} disabled={busy || !hasGeometry} onClick={() => void saveRoute(true)}>{library.copy}</button>}
           <fieldset disabled={busy} className="space-y-2"><legend className="mb-2 text-sm font-medium">{text.profile}</legend>
             <div className="grid grid-cols-1 gap-2">{(['road', 'gravel', 'touring'] as const).map(value => <button key={value} type="button" aria-pressed={profile === value} className={`${button} justify-start ${profile === value ? 'border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400' : ''}`} onClick={() => setProfile(value)}>{text[value]}</button>)}</div>
             <p className="text-xs text-muted-foreground">{text[`${profile}Hint`]}</p><p className="text-xs text-muted-foreground">{text.profileHint}</p>
+            {profile === 'gravel' && <p className="text-xs text-muted-foreground">{library.gravelHint}</p>}
           </fieldset>
           <label className="block text-sm font-medium">{text.mode}<select className="mt-2 w-full rounded-lg border bg-background px-3 py-2" value={mode} disabled={busy} onChange={event => setMode(event.target.value as typeof mode)}><option value="routed">{text.routed}</option><option value="direct">{text.direct}</option></select></label>
           {mode === 'direct' && <p className="text-xs text-amber-600 dark:text-amber-400">{text.directHint}</p>}
@@ -251,9 +319,13 @@ export function RoutePlanner() {
             <button className={button} title={text.fit} aria-label={text.fit} disabled={!draft.anchors.length} onClick={() => setFitToken(token => token + 1)}><LocateFixed size={18} /></button></div>
           <p className="text-xs leading-relaxed text-muted-foreground">{adding ? text.hint : text.idleHint}</p>
           <div className="grid grid-cols-2 gap-2"><button className={button} disabled={busy || !history.past.length} onClick={undo}><Undo2 size={16} />{text.undo}</button><button className={button} disabled={busy || !history.future.length} onClick={redo}><Redo2 size={16} />{text.redo}</button></div>
-          {busy && <div role="status" className="flex items-center justify-between rounded-lg bg-secondary p-3 text-sm">{text.working}<button className={button} onClick={() => pending.current?.abort()}><X size={14} />{text.cancel}</button></div>}
+          {busy && <div role="status" className="flex items-center justify-between rounded-lg bg-secondary p-3 text-sm">{text.working}{working && <button className={button} onClick={() => pending.current?.abort()}><X size={14} />{text.cancel}</button>}</div>}
           {error && <p role="alert" className="rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-600 dark:text-red-400">{error}</p>}
           {message && <p role="status" className="rounded-lg border border-green-500/30 bg-green-500/10 p-3 text-sm text-green-700 dark:text-green-400">{message}</p>}
+          <section className="space-y-3 rounded-xl border p-3">
+            <label className="block text-sm font-medium">{library.color}<select aria-label={library.color} className="mt-2 w-full rounded-lg border bg-background px-3 py-2" value={colorMode} onChange={event => setColorMode(event.target.value as ColorMode)}>{(['origin', 'surface', 'highway'] as const).map(value => <option key={value} value={value}>{library[value]}</option>)}</select></label>
+            {colorMode !== 'origin' && <><ul className="space-y-2 text-xs">{ways.map(([key, meters]) => <li key={key} className="flex items-center gap-2"><span className="h-2 w-3 rounded" style={{ backgroundColor: categories[key].color }} /><span className="flex-1">{categories[key][language]}</span><span>{(meters / 1000).toLocaleString(i18n.language, { maximumFractionDigits: 1 })} km · {stats.meters ? Math.round(meters / stats.meters * 100) : 0}%</span></li>)}</ul><p className="text-xs text-muted-foreground">{library.dataHint}</p>{ways.some(([key]) => key === 'unknown') && <p className="text-xs text-muted-foreground">{library.importHint}</p>}</>}
+          </section>
           <div className="grid grid-cols-2 gap-2 rounded-xl border bg-card p-3"><div><p className="text-xs text-muted-foreground">{text.distance}</p><p className="text-xl font-semibold">{(stats.meters / 1000).toLocaleString(i18n.language, { maximumFractionDigits: 1 })} km</p></div><div><p className="text-xs text-muted-foreground">{text.ascent}</p><p className="text-xl font-semibold">{stats.ascent === null ? '–' : `${Math.round(stats.ascent)} m`}</p></div></div>
           {stats.ascent === null ? <p className="text-xs text-muted-foreground">{text.noElevation}</p> : <Elevation draft={draft} label={text.elevation} />}
           {draft.legs.some(leg => leg?.source === 'imported') && <p className="border-l-2 border-sky-400 pl-3 text-xs text-muted-foreground">{text.importedHint}</p>}
@@ -268,12 +340,12 @@ export function RoutePlanner() {
             })
           }}>{text.recalc}</button>
           <div className="border-t pt-4"><div className="grid grid-cols-2 gap-2"><button className={button} disabled={busy || !draft.anchors.length} onClick={save}><Save size={16} />{text.save}</button><button className={button} disabled={busy} onClick={load}>{text.load}</button></div><p className="mt-2 text-xs text-muted-foreground">{text.storageHint}</p></div>
-          <button className={`${button} w-full`} disabled={busy} onClick={() => { if (confirmReplace()) { commit(emptyDraft()); setAdding(false) } }}>{text.new}</button>
+          <button className={`${button} w-full`} disabled={busy} onClick={() => { if (confirmReplace()) { commit(emptyDraft()); setAdding(false); setSavedRoute(null); savedDocument.current = null; setSearchParams({}, { replace: true }) } }}>{text.new}</button>
           <p className="text-xs text-muted-foreground">{text.attribution}</p>
         </div>
       </aside>
       <main className="relative order-1 min-h-0 min-w-0 md:order-2" aria-label={text.title}>
-        <PlannerMap draft={draft} adding={adding} disabled={busy || !canEdit} fitToken={fitToken} onAdd={addPoint} onMove={movePoint} onSplit={(index, point) => {
+        <PlannerMap draft={draft} colorMode={colorMode} adding={adding} disabled={busy || !canEdit} fitToken={fitToken} onAdd={addPoint} onMove={movePoint} onSplit={(index, point) => {
           if (draft.anchors.length >= MAX_ANCHORS) { report(new Error('MAX_ANCHORS')); return }
           const next = splitLeg(draft, index, point)
           if (next !== draft) commit(next)

@@ -1,13 +1,16 @@
 import { useEffect } from 'react'
-import { MapContainer, Marker, Polyline, useMapEvents } from 'react-leaflet'
+import { MapContainer, Marker, Polyline, Tooltip, useMapEvents } from 'react-leaflet'
+import { useTranslation } from 'react-i18next'
 import L from 'leaflet'
 import type { Point, RouteDraft } from './model'
 import { distance } from './model'
+import { categories, coloredSections } from './ways'
+import type { ColorMode } from './ways'
 import { MapTileLayer } from '../../components/MapTileLayer'
 import 'leaflet/dist/leaflet.css'
 
 type Props = {
-  draft: RouteDraft; adding: boolean; disabled: boolean; fitToken: number
+  draft: RouteDraft; adding: boolean; disabled: boolean; fitToken: number; colorMode?: ColorMode
   onAdd: (p: Point) => void; onMove: (index: number, p: Point) => void
   onSplit: (leg: number, point: number) => void
 }
@@ -31,13 +34,17 @@ function Viewport({ draft, fitToken, adding, disabled, onAdd }: Props) {
 
 export function PlannerMap(props: Props) {
   const { draft, adding, disabled, onMove, onSplit } = props
+  const { i18n } = useTranslation()
+  const language = i18n.language.startsWith('de') ? 'de' : 'en'
+  const colorMode = props.colorMode || 'origin'
   return (
     <MapContainer center={[50.2, 10]} zoom={7} className={`h-full w-full ${adding ? 'cursor-crosshair' : ''}`}>
       <MapTileLayer />
       <Viewport {...props} />
-      {draft.legs.map((leg, index) => leg && <Polyline key={index}
-        positions={leg.points.map(p => [p.lat, p.lng])}
-        pathOptions={{ color: leg.source === 'imported' ? '#38bdf8' : '#f97316', weight: 5, dashArray: leg.source === 'direct' ? '8 8' : undefined }}
+      {draft.legs.flatMap((leg, index) => leg ? (colorMode === 'origin'
+        ? [{ category: 'unknown' as const, points: leg.points }] : coloredSections(leg, colorMode)).map((section, sectionIndex) => <Polyline key={`${index}-${sectionIndex}`}
+        positions={section.points.map(p => [p.lat, p.lng])}
+        pathOptions={{ color: colorMode === 'origin' ? (leg.source === 'imported' ? '#38bdf8' : '#f97316') : categories[section.category].color, weight: 5, dashArray: leg.source === 'direct' ? '8 8' : undefined }}
         bubblingMouseEvents={false}
         eventHandlers={{ click: e => {
           if (disabled) return
@@ -47,7 +54,7 @@ export function PlannerMap(props: Props) {
             if (d < closest) { closest = d; best = i }
           })
           onSplit(index, best)
-        } }} />)}
+        } }} >{colorMode !== 'origin' && <Tooltip sticky>{categories[section.category][language]}</Tooltip>}</Polyline>) : [])}
       {draft.anchors.map((point, index) => <Marker key={`${index}-${point.lat}-${point.lng}`}
         position={[point.lat, point.lng]} draggable={!disabled}
         icon={L.divIcon({ className: 'pwrx-route-anchor', iconSize: [28, 28], iconAnchor: [14, 14],
