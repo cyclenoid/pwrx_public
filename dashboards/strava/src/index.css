@@ -158,12 +158,12 @@ html {
   filter: grayscale(1) invert(1) brightness(0.6) contrast(0.9);
 }
 
-.dark .leaflet-control-attribution {
+.dark .leaflet-container .leaflet-control-attribution {
   background: rgb(24 24 27 / 90%);
   color: #a1a1aa;
 }
 
-.dark .leaflet-control-attribution a {
+.dark .leaflet-container .leaflet-control-attribution a {
   color: #d4d4d8;
 }
 
