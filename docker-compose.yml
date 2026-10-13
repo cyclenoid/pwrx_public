@@ -199,6 +199,8 @@ services:
     build:
       context: ./dashboards/strava
       dockerfile: Dockerfile
+      args:
+        VITE_CARTO_BASEMAP_API_KEY: ${CARTO_BASEMAP_API_KEY:-}
     container_name: strava-dashboard
     restart: unless-stopped
     depends_on:

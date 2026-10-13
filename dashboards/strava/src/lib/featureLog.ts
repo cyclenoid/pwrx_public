@@ -29,6 +29,29 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-10-13-carto-map-styles",
+    date: "2026-10-13",
+    tag: "maps",
+    title: {
+      de: "Originale CARTO-Karten optional wieder verfuegbar",
+      en: "Original CARTO maps are available again as an option",
+    },
+    summary: {
+      de: "Mit lokal konfiguriertem CARTO-Key nutzen alle Karten wieder echtes Dark Matter und Positron.",
+      en: "With a locally configured CARTO key, all maps use native Dark Matter and Positron styles again.",
+    },
+    bullets: {
+      de: [
+        "Der Kartenstil folgt dem hellen oder dunklen App-Design, ohne kuenstliche Farbfilter.",
+        "Der Schluessel bleibt in der lokalen Deployment-Konfiguration; ohne Key bleibt OpenStreetMap verfuegbar.",
+      ],
+      en: [
+        "Map styling follows the light or dark app theme without artificial color filters.",
+        "The key stays in local deployment configuration; OpenStreetMap remains available without a key.",
+      ],
+    },
+  },
+  {
     id: "2026-10-11-key-free-maps",
     date: "2026-10-11",
     tag: "maps",

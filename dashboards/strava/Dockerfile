@@ -12,6 +12,10 @@ RUN npm ci
 # Copy source files
 COPY . .
 
+# Optional browser-visible CARTO basemap key, supplied by the operator.
+ARG VITE_CARTO_BASEMAP_API_KEY=
+ENV VITE_CARTO_BASEMAP_API_KEY=$VITE_CARTO_BASEMAP_API_KEY
+
 # Build the application
 RUN npm run build
 

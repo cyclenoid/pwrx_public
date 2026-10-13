@@ -147,6 +147,24 @@ Detailed connectivity options and adapter recipes:
 - `docs/STRAVA_CONNECTIVITY.md`
 - `docs/STRAVA_CONNECTIVITY.de.md`
 
+## Optional CARTO basemaps
+
+Set `CARTO_BASEMAP_API_KEY` in the deployment's local `.env` to use
+CARTO Dark Matter in dark mode and Positron in light mode. Leave it empty to
+use OpenStreetMap. The key is passed to the frontend at build time:
+
+```bash
+docker compose up -d --no-deps --build strava-dashboard
+```
+
+Keep the real key out of Git. It is a browser API key and is visible in the
+compiled frontend and tile requests, so use CARTO's key restrictions when
+appropriate. Do not use a private server credential here. Existing operator
+Compose overrides must still be included when rebuilding the personal stack.
+After updates, verify that CARTO tiles load without watermarks and that the
+local key configuration is retained. CARTO and OpenStreetMap attribution
+remain visible on every map.
+
 ## Troubleshooting
 
 - UI looks old:

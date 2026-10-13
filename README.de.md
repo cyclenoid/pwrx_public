@@ -23,7 +23,8 @@ Du musst kein Entwickler sein. Wenn Docker laeuft, kannst du PWRX nutzen.
 Hinweis:
 - Der Standardweg funktioniert direkt mit Datei-Import
 - Keine API-Einrichtung noetig, um zu starten
-- Karten verwenden OpenStreetMap ohne API-Key; zum Laden des Kartenhintergrunds ist Internetzugang erforderlich
+- Karten verwenden standardmaessig OpenStreetMap; optional `CARTO_BASEMAP_API_KEY` in der lokalen `.env` setzen und das Dashboard fuer CARTO Dark Matter/Positron neu bauen
+- Zum Laden des Kartenhintergrunds ist Internetzugang erforderlich
 
 ## Typische Szenarien
 
