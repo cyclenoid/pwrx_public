@@ -2,6 +2,7 @@ import { Router, raw } from 'express';
 import axios from 'axios';
 import { MAX_FIT_BYTES, parseFitRoute } from '../services/fitRoute';
 import { addRouteWays, Way } from '../services/routeWays';
+import { routingCoverage, routingTile } from '../services/routingCoverage';
 
 const profiles = { road: 'fastbike', gravel: 'gravel', touring: 'trekking' } as const;
 type Point = { lat: number; lng: number; ele?: number; way?: Way };
@@ -87,6 +88,9 @@ export function createRoutePlannerRouter(getEndpoint = () => process.env.BROUTER
   router.get('/status', (_req, res) => {
     res.json({ configured: Boolean(getEndpoint()), profiles: Object.keys(profiles) });
   });
+  router.get('/coverage', async (_req, res) => {
+    res.set('Cache-Control', 'private, no-cache').json(await routingCoverage());
+  });
   router.post('/calculate', async (req, res) => {
     const params = routingParams(req.body);
     if (!params) { res.status(400).json({ code: 'INVALID_REQUEST' }); return; }
@@ -104,6 +108,12 @@ export function createRoutePlannerRouter(getEndpoint = () => process.env.BROUTER
       res.json({ points });
     } catch (error) {
       const status = axios.isAxiosError(error) ? error.response?.status : undefined;
+      const body = axios.isAxiosError(error) ? error.response?.data : undefined;
+      const missing = typeof body === 'string' && body.match(/\b[EW]\d{1,3}_[NS]\d{1,2}\.rd5\b/)?.[0];
+      if (status === 400 && missing && routingTile(missing) && /not found|does not exist|missing/i.test(body)) {
+        res.status(422).json({ code: 'ROUTING_REGION_MISSING', tile: missing });
+        return;
+      }
       // BRouter uses 400 for missing regional data, disconnected points and no route.
       res.status(status === 400 ? 422 : 502).json({
         code: status === 400 ? 'NO_ROUTE' : 'ROUTING_UNAVAILABLE',

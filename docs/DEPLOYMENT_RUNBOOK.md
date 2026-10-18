@@ -205,7 +205,12 @@ cycle routes/touring (trekking with stick_to_cycleroutes=1).
 
 Without a configured router, GPX/FIT import, end trimming, export and explicit
 freehand connections work. Failed routing never falls back to a straight line.
-The status endpoint reports configuration, not data coverage or service health.
+The status endpoint reports configuration. The "Routing regions" button shows
+the local file inventory through GET /api/route-planner/coverage, including tile
+bounds and sizes, and a map that distinguishes loaded and missing regions.
+Background CARTO/OSM tiles remain available independently of routing coverage.
+Inventory describes installed files, not a routeability or service-health guarantee.
+Missing BRouter region errors name the required .rd5 file without exposing paths.
 
 ### Optional self-hosted BRouter
 
@@ -220,6 +225,9 @@ The status endpoint reports configuration, not data coverage or service health.
    upstream commit and sets BROUTER_URL for the API. No host port is exposed.
 3. Start brouter and recreate strava-tracker; rebuild strava-dashboard.
    Preserve the private adapter configuration, CARTO key and host port bindings.
+   The routing overlay mounts segments4 read-only into the backend and sets
+   BROUTER_SEGMENTS_DIR. For an externally managed BRouter, the local inventory
+   is unknown unless the matching directory is also available to the backend.
 4. Check /api/route-planner/status, then calculate a short route in an installed
    region with each profile. Test a missing region too: the existing route must
    remain intact. Verify API health and private Strava capability after deploy.

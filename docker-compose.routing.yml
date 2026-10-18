@@ -20,3 +20,6 @@ services:
   strava-tracker:
     environment:
       BROUTER_URL: http://brouter:17777/brouter
+      BROUTER_SEGMENTS_DIR: /routing/segments4
+    volumes:
+      - ${DATA_HUB_DATA_DIR:-./data}/routing/segments4:/routing/segments4:ro

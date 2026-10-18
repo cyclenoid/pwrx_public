@@ -13,6 +13,7 @@ import type { SavedRoute, RouteDocument } from '../features/routePlanner/library
 import { draftFromActivity } from '../features/routePlanner/activity'
 import { categories, waySummary } from '../features/routePlanner/ways'
 import type { ColorMode } from '../features/routePlanner/ways'
+import { RoutingCoverage } from '../features/routePlanner/RoutingCoverage'
 
 const API = `${String(import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')}/route-planner`
 const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed'
@@ -103,6 +104,11 @@ export function RoutePlanner() {
   }
   const report = (reason: unknown) => {
     const code = reason instanceof Error ? reason.message : 'FAILED'
+    const missing = /^ROUTING_REGION_MISSING:([EW]\d{1,3}_[NS]\d{1,2}\.rd5)$/.exec(code)
+    if (missing) {
+      setError(language === 'de' ? `Routingdaten für ${missing[1]} fehlen. Öffne „Routinggebiete“, um die Abdeckung zu prüfen.` : `Routing data for ${missing[1]} is missing. Open “Routing regions” to check coverage.`)
+      return
+    }
     setError(library.errors[code as keyof typeof library.errors] || text.errors[code as keyof typeof text.errors] || text.errors.FAILED)
   }
   const execute = async (work: (signal: AbortSignal) => Promise<RouteDraft>) => {
@@ -128,7 +134,7 @@ export function RoutePlanner() {
       body: JSON.stringify({ points: [a, b], profile }), signal: AbortSignal.any([signal, AbortSignal.timeout(35000)]),
     })
     const data = await response.json().catch(() => { throw new Error('ROUTING_UNAVAILABLE') })
-    if (!response.ok) throw new Error(data.code || 'ROUTING_UNAVAILABLE')
+    if (!response.ok) throw new Error(data.code === 'ROUTING_REGION_MISSING' ? `${data.code}:${data.tile}` : data.code || 'ROUTING_UNAVAILABLE')
     if (!Array.isArray(data.points) || data.points.length < 2 || data.points.length > 150000 || !data.points.every(isPoint)) {
       throw new Error('INVALID_ROUTE_RESPONSE')
     }
@@ -283,6 +289,7 @@ export function RoutePlanner() {
           <label className="block text-sm font-medium">{text.name}<input className="mt-2 w-full rounded-lg border bg-background px-3 py-2" maxLength={200} placeholder={text.untitled} value={draft.name} disabled={busy}
             onChange={event => { const name = event.target.value; setHistory(current => ({ ...current, current: { ...current.current, name } })); setMessage('') }} /></label>
           {savedRoute && <button className={`${button} w-full`} disabled={busy || !hasGeometry} onClick={() => void saveRoute(true)}>{library.copy}</button>}
+          <RoutingCoverage language={language} />
           <fieldset disabled={busy} className="space-y-2"><legend className="mb-2 text-sm font-medium">{text.profile}</legend>
             <div className="grid grid-cols-1 gap-2">{(['road', 'gravel', 'touring'] as const).map(value => <button key={value} type="button" aria-pressed={profile === value} className={`${button} justify-start ${profile === value ? 'border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400' : ''}`} onClick={() => setProfile(value)}>{text[value]}</button>)}</div>
             <p className="text-xs text-muted-foreground">{text[`${profile}Hint`]}</p><p className="text-xs text-muted-foreground">{text.profileHint}</p>

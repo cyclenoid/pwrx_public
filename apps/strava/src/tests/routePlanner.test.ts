@@ -7,6 +7,29 @@ import { AddressInfo } from 'node:net';
 import { createRoutePlannerRouter, routingParams, parseRoutingResponse } from '../api/routePlanner';
 import { fitSegments, parseFitRoute, MAX_FIT_BYTES } from '../services/fitRoute';
 import { fitFixture } from './fitFixture';
+import { routingCoverage, routingTile } from '../services/routingCoverage';
+import { mkdtemp, writeFile, mkdir, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+test('coverage handles cardinal signs, missing inventory, empty files and temporary downloads', async () => {
+  assert.deepEqual(routingTile('W5_S10.rd5')?.bounds, [[-10, -5], [-5, 0]]);
+  for (const invalid of ['E180_N50.rd5', 'E5_N90.rd5', 'E7_N50.rd5', '../E5_N50.rd5']) assert.equal(routingTile(invalid), null);
+  assert.equal((await routingCoverage('')).status, 'unknown');
+  const directory = await mkdtemp(path.join(tmpdir(), 'pwrx-coverage-'));
+  try {
+    await writeFile(path.join(directory, 'E5_N50.rd5'), 'fixture');
+    await writeFile(path.join(directory, 'E10_N50.rd5'), '');
+    await writeFile(path.join(directory, 'E5_N45.rd5.part'), 'unfinished');
+    await mkdir(path.join(directory, 'W5_S10.rd5'));
+    const inventory = await routingCoverage(directory);
+    assert.equal(inventory.status, 'known');
+    assert.equal(inventory.tiles.length, 1);
+    assert.equal(inventory.tiles[0].name, 'E5_N50.rd5');
+    assert.equal(inventory.tiles[0].bytes, 7);
+  } finally { await rm(directory, { recursive: true, force: true }); }
+  assert.equal((await routingCoverage(directory)).status, 'unavailable');
+});
 
 test('real FIT binary activity and course imports preserve GPS and per-record elevation without timestamps', async () => {
   for (const course of [false, true]) {
@@ -89,12 +112,12 @@ test('unconfigured routing and invalid requests have explicit errors', async () 
 });
 
 test('proxy calculates via configured service and maps BRouter errors without exposing internals', async () => {
-  let fail = false;
+  let fail = '';
   const server = createServer((req, res) => {
     const url = new URL(req.url!, 'http://localhost');
     assert.equal(url.searchParams.get('profile'), 'gravel');
     assert.equal(url.searchParams.get('format'), 'geojson');
-    if (fail) { res.writeHead(400).end('internal-path /private/missing.rd5'); return; }
+    if (fail) { res.writeHead(400).end(fail); return; }
     res.setHeader('Content-Type', 'application/json');
     res.end(JSON.stringify({ features: [{ geometry: { type: 'LineString', coordinates: [[10, 50, 110], [10.01, 50.01, 130]] } }] }));
   });
@@ -104,9 +127,11 @@ test('proxy calculates via configured service and maps BRouter errors without ex
     const success = await request(api).post('/calculate').send(body);
     assert.equal(success.status, 200);
     assert.equal(success.body.points[0].ele, 110);
-    fail = true;
+    fail = 'internal-path /private/missing.rd5';
     const failure = await request(api).post('/calculate').send(body);
     assert.equal(failure.status, 422);
     assert.deepEqual(failure.body, { code: 'NO_ROUTE' });
+    fail = '/private/segments4/E10_N45.rd5 not found';
+    assert.deepEqual((await request(api).post('/calculate').send(body)).body, { code: 'ROUTING_REGION_MISSING', tile: 'E10_N45.rd5' });
   } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
 });
