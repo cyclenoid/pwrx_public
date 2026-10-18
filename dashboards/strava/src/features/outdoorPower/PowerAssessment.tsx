@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useTranslation } from 'react-i18next'
-import { Calculator, Check, RotateCcw } from 'lucide-react'
-import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card'
+import { Calculator, Check, ChevronDown, RotateCcw } from 'lucide-react'
+import { Card, CardContent } from '../../components/ui/card'
 import { powerText } from './text'
 import { canAssess } from './types'
 import type { Activity, Assessment, Context, Parameters, Stored } from './types'
@@ -82,10 +82,17 @@ function AssessmentCard({ id }: { id: string | number }) {
   const format = (value: number, digits = 0) => value.toLocaleString(i18n.language, { maximumFractionDigits: digits })
   const minutes = (seconds: number) => `${Math.floor(seconds / 3600)}:${String(Math.floor(seconds % 3600 / 60)).padStart(2, '0')} h`
   return <Card aria-label={run ? text.runTitle : text.title}>
-    <CardHeader className="pb-3"><CardTitle className="flex flex-wrap items-center justify-between gap-2 text-base"><span className="flex items-center gap-2"><Calculator size={18} className="text-orange-500" />{run ? text.runTitle : text.title}</span>
-      {accepted && <span role="status" className="inline-flex items-center gap-1 rounded-full bg-green-500/15 px-3 py-1 text-xs text-green-600 dark:text-green-400"><Check size={14} />{text.accepted}</span>}
-    </CardTitle><p className="mt-1 text-sm text-muted-foreground">{text.intro}</p></CardHeader>
-    <CardContent className="space-y-4">
+    <details className="group">
+    <summary className="flex min-h-12 cursor-pointer list-none flex-wrap items-center gap-x-3 gap-y-2 rounded-lg px-4 py-3 text-sm transition-colors hover:bg-secondary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring [&::-webkit-details-marker]:hidden">
+      <span className="flex flex-1 items-center gap-2 font-medium"><Calculator size={16} className="shrink-0 text-orange-500" />{run ? text.runTitle : text.title}</span>
+      {saved && <span className={`inline-flex items-center gap-1 text-xs ${saved.stale ? 'text-amber-600 dark:text-amber-400' : 'text-green-600 dark:text-green-400'}`} title={saved.stale ? text.stale : text.accepted}>
+        {!saved.stale && <Check size={14} aria-hidden="true" />}{format(saved.payload.watts)} W
+      </span>}
+      <ChevronDown size={16} aria-hidden="true" className="shrink-0 text-muted-foreground transition-transform group-open:rotate-180 motion-reduce:transition-none" />
+    </summary>
+    <CardContent className="space-y-4 border-t pt-4">
+      <p className="text-sm text-muted-foreground">{text.intro}</p>
+      {accepted && <p role="status" className="flex items-center gap-1 text-xs text-green-600 dark:text-green-400"><Check size={14} />{text.accepted}</p>}
       {loading && <p role="status" className="text-sm text-muted-foreground">{text.working}</p>}
       {preview && <>
         <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
@@ -143,5 +150,6 @@ function AssessmentCard({ id }: { id: string | number }) {
       </div>
       <p className="text-xs text-muted-foreground">{text.preserved}</p>
     </CardContent>
+    </details>
   </Card>
 }
