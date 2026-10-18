@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 import { surfaceMatcher, SurfaceRoute, Way } from './powerSurface';
+import { outdoorCalories } from './outdoorCalories';
 
 export const POWER_MODEL_VERSION = 'pwrx-outdoor-1';
 export type PowerParameters = {
@@ -10,7 +11,7 @@ export type PowerParameters = {
 };
 export type PowerActivity = {
   strava_activity_id: string | number; type: string; sport_type?: string; trainer?: boolean; indoor?: boolean;
-  device_name?: string | null; average_watts?: string | number | null; updated_at?: string;
+  device_name?: string | null; average_watts?: string | number | null; calories?: string | number | null; updated_at?: string;
 };
 export type PowerStreams = { time?: number[]; distance?: number[]; altitude?: number[]; latlng?: [number, number][]; velocity_smooth?: number[] };
 
@@ -147,7 +148,7 @@ export function assessOutdoorPower(activity: PowerActivity, streams: PowerStream
   const routeHash = route ? createHash('sha256').update(JSON.stringify(route)).digest('hex') : null;
   const fingerprint = createHash('sha256').update(JSON.stringify({ sourceHash, routeHash, p, version: POWER_MODEL_VERSION })).digest('hex');
   const original = Number(activity.average_watts);
-  return {
+  const assessment = {
     modelVersion: POWER_MODEL_VERSION, fingerprint, kind, parameters: p,
     watts: Math.round(work[1] / seconds), lowWatts: Math.round(work[0] / seconds), highWatts: Math.round(work[2] / seconds),
     originalWatts: Number.isFinite(original) && original > 0 ? original : null,
@@ -159,6 +160,7 @@ export function assessOutdoorPower(activity: PowerActivity, streams: PowerStream
     source: { activityUpdatedAt: activity.updated_at, sourceHash, routeHash, streamSignature: null as string | null },
     warnings: [excludedSeconds > 0 ? 'GAPS' : '', knownMeters / meters < .8 ? 'SURFACE_ASSUMED' : '', clippedSlopes ? 'STEEP_SLOPES' : '', kind === 'run' ? 'RUNNING_EQUIVALENT' : ''].filter(Boolean),
   };
+  return { ...assessment, calories: outdoorCalories(assessment, activity.calories) };
 }
 
 export type PowerAssessment = ReturnType<typeof assessOutdoorPower>;

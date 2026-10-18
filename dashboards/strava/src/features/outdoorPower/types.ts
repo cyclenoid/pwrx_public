@@ -6,6 +6,7 @@ export type Parameters = {
 export type Assessment = {
   modelVersion: string; fingerprint: string; kind: 'ride' | 'run'; parameters: Parameters;
   watts: number; lowWatts: number; highWatts: number; originalWatts: number | null; metabolicWatts: number | null;
+  calories: { modelVersion: string; method: string; kcal: number; lowKcal: number; highKcal: number; originalKcal: number | null; efficiency: number | null };
   seconds: number; movingSeconds: number; excludedSeconds: number; distanceM: number;
   surfaceCoverage: number; matchedPercent: number; surfaces: { surface: string; distanceM: number; percent: number }[];
   route: { id: string; name: string; revision: number } | null; warnings: string[];

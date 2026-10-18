@@ -178,10 +178,10 @@ remain visible on every map.
   - verify private adapter install access
   - recreate backend container
 
-## Outdoor power comparison
+## Outdoor power and calorie comparison
 
 Outdoor ride/run activity details with GPS movement show a separate power
-assessment. Virtual/indoor/trainer activities and assisted e-bike rides are
+assessment in a compact, initially collapsed disclosure. Virtual/indoor/trainer activities and assisted e-bike rides are
 excluded on the frontend and backend. Missing or mismatched time, distance,
 GPS or altitude streams produce an explicit unavailable state.
 
@@ -201,6 +201,22 @@ GPS or altitude streams produce an explicit unavailable state.
   not a statistical confidence interval; it does not capture all real uncertainty.
 - Current profile weight and gear-name-based equipment defaults are editable
   assumptions, not historical measurements. Wind defaults to zero.
+- Calories are a separately versioned derived comparison (`pwrx-energy-1`).
+  Cycling converts estimated crank work to metabolic energy with an assumed
+  22% efficiency; scenarios combine low/high power with 25%/18% efficiency.
+  These are sensitivity presets, not individually measured efficiencies.
+  Reference: https://pubmed.ncbi.nlm.nih.gov/15241718/ (gross and delta efficiency
+  are distinct; the preset is not an individual calibration).
+  Running integrates the existing metabolic cost estimate directly, never the
+  arbitrary running-watt equivalent, with -15%/+20% sensitivity presets.
+  Joules / 4184 gives kcal. Calculations use the displayed rounded watts and
+  evaluated seconds. No resting energy, pauses or recording gaps are separately
+  added; this is neither daily expenditure nor a guaranteed total-activity value.
+  Provider active/total calorie definitions may differ. Missing originals stay
+  unknown, and mechanical kilojoules are not mistaken for metabolic calories.
+  Existing accepted assessments gain the derived calorie comparison on read
+  without a database rewrite, revision change or change to accepted watts.
+  New acceptances store both comparisons together in the existing JSON payload.
 - Accepting a suggestion stores only the additional assessment in
   activity_power_assessments (migration 0013). Original activity/stream power,
   power records, FTP, NP and training-load analytics are unchanged. Include the

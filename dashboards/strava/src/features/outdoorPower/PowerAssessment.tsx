@@ -103,6 +103,18 @@ function AssessmentCard({ id }: { id: string | number }) {
           <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">{text.range}</p><p className="mt-1 text-2xl font-semibold">{format(preview.lowWatts)}–{format(preview.highWatts)} W</p></div>
         </div>
         <p className="text-xs text-muted-foreground">{text.rangeHint}</p>
+        {preview.calories && <section aria-label={text.calories} className="space-y-3 border-t pt-4">
+          <h3 className="text-sm font-medium">{text.calories}</h3>
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+            <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">{text.original}</p><p className="mt-1 text-xl font-semibold">{preview.calories.originalKcal === null ? text.noOriginal : `${format(preview.calories.originalKcal)} kcal`}</p></div>
+            <div className="rounded-lg border border-orange-500/40 bg-orange-500/10 p-3"><p className="text-xs text-muted-foreground">{text.caloriesModel}</p><p className="mt-1 text-xl font-semibold text-orange-500">≈ {format(preview.calories.kcal)} kcal</p></div>
+            <div className="rounded-lg border p-3"><p className="text-xs text-muted-foreground">{text.range}</p><p className="mt-1 text-xl font-semibold">{format(preview.calories.lowKcal)}–{format(preview.calories.highKcal)} kcal</p></div>
+          </div>
+          <p className="text-xs text-muted-foreground">{text.caloriesHint}</p>
+          <p className="text-xs text-muted-foreground">{run ? text.runningCalories : text.cyclingCalories}</p>
+          <p className="text-xs text-muted-foreground">{text.caloriesSaved}</p>
+          <a className="text-xs text-orange-500 underline" href={run ? 'https://doi.org/10.1152/japplphysiol.01177.2001' : 'https://pubmed.ncbi.nlm.nih.gov/15241718/'} target="_blank" rel="noreferrer">{run ? text.source : text.energySource}</a>
+        </section>}
         <p className="text-sm text-muted-foreground">{preview.parameters.surface === 'auto' ? `${text.coverage}: ${preview.surfaceCoverage} %` : text.manual}</p>
         {run && <p className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm">{text.runHint}</p>}
       </>}

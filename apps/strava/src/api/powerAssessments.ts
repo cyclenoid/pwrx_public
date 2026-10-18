@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { createHash } from 'node:crypto';
 import { assessOutdoorPower, outdoorKind, powerParameters, preparePowerStreams, PowerActivity, PowerAssessment, PowerParameters, PowerStreams } from '../services/outdoorPower';
 import { surfaceMatcher, SurfaceRoute } from '../services/powerSurface';
+import { outdoorCalories } from '../services/outdoorCalories';
 
 type DB = { query: (sql: string, params?: unknown[]) => Promise<{ rows: Record<string, unknown>[] }> };
 type Meta = { id: string; name: string; revision: number; start_lat: number; start_lng: number };
@@ -99,7 +100,8 @@ export function createPowerAssessmentsRouter(db: DB) {
         || saved.payload.source.streamSignature !== streamSignature(inventory)
         || (route && currentRoute?.revision !== route.revision));
       res.set('Cache-Control', 'private, no-store').json({ eligible: true, kind, sufficient, defaults, gearName: gear_name || null,
-        routes: available.map(({ id, name, revision }) => ({ id, name, revision })), stored: saved ? { ...saved, stale } : null });
+        routes: available.map(({ id, name, revision }) => ({ id, name, revision })), stored: saved ? { ...saved, stale,
+          payload: { ...saved.payload, calories: saved.payload.calories || outdoorCalories(saved.payload, activity.calories) } } : null });
     } catch (error) { fail(res, error); }
   });
   router.post('/:id/preview', async (req, res) => {

@@ -6,8 +6,9 @@ import { createHash } from 'node:crypto';
 import { assessOutdoorPower, outdoorKind, powerParameters, runningCost, PowerActivity, PowerParameters, PowerStreams } from '../services/outdoorPower';
 import { surfaceMatcher, SurfaceRoute } from '../services/powerSurface';
 import { createPowerAssessmentsRouter } from '../api/powerAssessments';
+import { outdoorCalories } from '../services/outdoorCalories';
 
-const activity: PowerActivity = { strava_activity_id: -106, type: 'Ride', sport_type: 'Ride', average_watts: 74, updated_at: '2026-10-18T00:00:00.000Z' };
+const activity: PowerActivity = { strava_activity_id: -106, type: 'Ride', sport_type: 'Ride', average_watts: 74, calories: 456, updated_at: '2026-10-18T00:00:00.000Z' };
 const params: PowerParameters = { riderKg: 85, equipmentKg: 15, tyres: 'gravel', posture: 'hoods', surface: 'asphalt',
   condition: 'dry', routeId: 'none', windKmh: 0, windFrom: 0 };
 function fixture(grade = 0, speed = 5): Required<PowerStreams> {
@@ -108,6 +109,38 @@ test('source snapshots, route revisions and assumptions affect the fingerprint w
   assert.equal(JSON.stringify({ activity, streams, params, r }), before);
 });
 
+test('cycling calories convert mechanical work using explicit efficiency, never just kJ to kcal', () => {
+  const basis = { kind: 'ride' as const, watts: 100, lowWatts: 80, highWatts: 120, seconds: 3600, metabolicWatts: null };
+  const result = outdoorCalories(basis, '600');
+  assert.equal(result.kcal, Math.round(360000 / .22 / 4184));
+  assert.equal(result.lowKcal, Math.round(288000 / .25 / 4184));
+  assert.equal(result.highKcal, Math.round(432000 / .18 / 4184));
+  assert.equal(result.originalKcal, 600);
+  assert.equal(result.efficiency, .22);
+  assert.equal(outdoorCalories({ ...basis, seconds: 7200 }, null).kcal, Math.round(720000 / .22 / 4184));
+  for (const missing of [null, undefined, '', ' ', 'bad', -10]) assert.equal(outdoorCalories(basis, missing).originalKcal, null);
+  assert.equal(outdoorCalories(basis, 0).originalKcal, 0);
+  assert.equal(outdoorCalories({ ...basis, watts: 0, lowWatts: 0, highWatts: 0 }, null).kcal, 0);
+});
+
+test('running calories use metabolic cost independently of the arbitrary watt equivalent', () => {
+  const basis = { kind: 'run' as const, watts: 270, lowWatts: 230, highWatts: 325, seconds: 3600, metabolicWatts: 1080 };
+  const result = outdoorCalories(basis, null);
+  assert.equal(result.kcal, Math.round(1080 * 3600 / 4184));
+  assert.equal(result.lowKcal, Math.round(1080 * 3600 * .85 / 4184));
+  assert.equal(result.highKcal, Math.round(1080 * 3600 * 1.2 / 4184));
+  assert.equal(result.efficiency, null);
+  assert.deepEqual(outdoorCalories({ ...basis, watts: 900 }, null), result);
+  const run = { ...activity, type: 'Run', sport_type: 'TrailRun' };
+  const flat = assessOutdoorPower(run, fixture(0, 3), params);
+  assert.ok(assessOutdoorPower(run, fixture(.1, 3), params).calories.kcal > flat.calories.kcal);
+  assert.ok(assessOutdoorPower(run, fixture(0, 3), { ...params, surface: 'gravel' }).calories.kcal > flat.calories.kcal);
+  const gaps = fixture(); gaps.time = gaps.time.map((t, i) => t + (i >= 60 ? 600 : 0));
+  const ride = assessOutdoorPower(activity, gaps, params);
+  assert.equal(ride.calories.kcal, Math.round(ride.watts * ride.seconds / .22 / 4184));
+  assert.equal(ride.seconds, 119);
+});
+
 test('API computes on the server, preserves activity watts and supports reversible revision-guarded acceptance', async () => {
   let saved: Record<string, unknown> | undefined;
   let current = { ...activity }, streams = fixture();
@@ -138,12 +171,24 @@ test('API computes on the server, preserves activity watts and supports reversib
   assert.equal((await request(api).post('/-106/preview').send({ parameters: { ...params, riderKg: -1 } })).status, 400);
   const preview = await request(api).post('/-106/preview').send({ parameters: { ...params, surface: 'auto', routeId: 'auto' } });
   assert.equal(preview.status, 200);
+  assert.equal(preview.body.calories.originalKcal, 456);
+  assert.ok(preview.body.calories.kcal > 0);
   assert.equal(preview.body.route.id, routeId);
   const body = { parameters: preview.body.parameters, fingerprint: preview.body.fingerprint, revision: null };
   assert.equal((await request(api).put('/-106').send({ ...body, fingerprint: 'client-invented-watts' })).status, 409);
   assert.equal((await request(api).put('/-106').send(body)).body.revision, 1);
   assert.equal((await request(api).put('/-106').send(body)).status, 409);
   assert.equal((await request(api).get('/-106')).body.stored.stale, false);
+  // Old assessments acquire a derived comparison on read, with no database rewrite.
+  const legacyPayload = saved!.payload as Record<string, unknown>;
+  delete legacyPayload.calories;
+  const beforeLegacyRead = JSON.stringify(saved), writesBefore = mutations.length;
+  const legacy = (await request(api).get('/-106')).body.stored;
+  assert.equal(legacy.revision, 1);
+  assert.equal(legacy.stale, false);
+  assert.equal(legacy.payload.calories.kcal, preview.body.calories.kcal);
+  assert.equal(JSON.stringify(saved), beforeLegacyRead);
+  assert.equal(mutations.length, writesBefore);
   streams.velocity_smooth[10] = 6;
   assert.equal((await request(api).get('/-106')).body.stored.stale, true);
   streams.velocity_smooth[10] = 5;
@@ -158,5 +203,6 @@ test('API computes on the server, preserves activity watts and supports reversib
   current = { ...activity }; streams = { ...fixture(), altitude: [0] };
   assert.equal((await request(api).post('/-106/preview').send({ parameters: params })).status, 422);
   assert.equal(activity.average_watts, 74);
+  assert.equal(activity.calories, 456);
   assert.equal(mutations.length, 4);
 });
