@@ -178,6 +178,41 @@ remain visible on every map.
   - verify private adapter install access
   - recreate backend container
 
+## Outdoor power comparison
+
+Outdoor ride/run activity details with GPS movement show a separate power
+assessment. Virtual/indoor/trainer activities and assisted e-bike rides are
+excluded on the frontend and backend. Missing or mismatched time, distance,
+GPS or altitude streams produce an explicit unavailable state.
+
+- Cycling uses force balance: rolling resistance, directional wind/aerodynamics,
+  grade, acceleration and drivetrain losses. Surface coefficients, tyre effects,
+  road conditions and aerodynamic areas are explicit uncalibrated presets.
+- Surface data comes from up to three nearby-start saved-route candidates
+  (among the latest 100) or one selected route. Match within 30 m; conflicting
+  nearby surface tags and gaps remain unknown. No GPS is sent to external services.
+  This matches already stored geometry; it never reroutes the recorded activity.
+- Running uses the Minetti 2002 grade-dependent metabolic cost polynomial
+  (DOI 10.1152/japplphysiol.01177.2001), heuristic surface factors and an explicitly
+  defined 25% power equivalent. This is not a Stryd/Garmin calibration and must not
+  be interpreted as a direct correction of device running watts.
+- Gaps over 10 seconds and implausible intervals are excluded. Stops within
+  evaluated intervals contribute zero. The displayed range is scenario sensitivity,
+  not a statistical confidence interval; it does not capture all real uncertainty.
+- Current profile weight and gear-name-based equipment defaults are editable
+  assumptions, not historical measurements. Wind defaults to zero.
+- Accepting a suggestion stores only the additional assessment in
+  activity_power_assessments (migration 0013). Original activity/stream power,
+  power records, FTP, NP and training-load analytics are unchanged. Include the
+  assessment table in backups. Removal is revision-guarded and reversible by
+  recalculating/accepting again.
+- Server recomputation and source fingerprints prevent accepting a stale preview.
+  Later activity edits, stream backfills and route revisions mark accepted results
+  stale. Acceptance/removal conflicts require reopening the activity.
+- API: GET /api/power-assessments/:id (context), POST /:id/preview,
+  PUT /:id (accept) and DELETE /:id?revision=n (remove). The existing private
+  single-instance access model applies. Run npm run test:power in both apps.
+
 ## Route planner preview
 
 The /routes page supports GPX track/route and FIT GPS-track import, draggable via points,

@@ -39,6 +39,9 @@ jobs:
       - name: Test backend route planner
         run: npm run test:routes
 
+      - name: Test outdoor power models and assessments
+        run: npm run test:power
+
       - name: Build backend
         run: npm run build
 
@@ -73,6 +76,9 @@ jobs:
 
       - name: Test frontend route planner
         run: npm run test:routes
+
+      - name: Test outdoor power visibility
+        run: npm run test:power
 
       - name: Build frontend
         run: npm run build

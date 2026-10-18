@@ -8,7 +8,8 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
-    "test:routes": "tsx --test tests/routePlanner.test.ts"
+    "test:routes": "tsx --test tests/routePlanner.test.ts",
+    "test:power": "tsx --test tests/outdoorPower.test.ts"
   },
   "dependencies": {
     "@tanstack/react-query": "^5.90.12",

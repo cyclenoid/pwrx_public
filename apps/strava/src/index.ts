@@ -1,6 +1,7 @@
 import express from 'express';
 import { createRoutePlannerRouter } from './api/routePlanner';
 import { createRouteLibraryRouter } from './api/routeLibrary';
+import { createPowerAssessmentsRouter } from './api/powerAssessments';
 import cors from 'cors';
 import compression from 'compression';
 import * as dotenv from 'dotenv';
@@ -135,6 +136,7 @@ app.use(express.json());
 
 // API Routes
 app.use('/api/route-planner', createRoutePlannerRouter());
+app.use('/api/power-assessments', createPowerAssessmentsRouter(new DatabaseService()));
 app.use('/api', apiRoutes);
 const stravaAdapterEnabled = Boolean(adapterRegistry.getAdapter('strava')?.enabled);
 if (stravaAdapterEnabled) {

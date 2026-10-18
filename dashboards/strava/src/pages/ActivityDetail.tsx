@@ -27,6 +27,7 @@ import { getChartColors, getHeartRateZoneColors, getPowerZoneColors } from '../l
 import { useUserProfile } from '../hooks/useUserProfile'
 import { getTrainingInsights } from '../lib/trainingInsights'
 import { ActivityRouteLink } from '../features/routePlanner/ActivityRouteLink'
+import { OutdoorPowerAssessment } from '../features/outdoorPower/PowerAssessment'
 
 // Helper to safely parse numeric values from API
 const safeNumber = (val: string | number | null | undefined): number => {
@@ -1435,6 +1436,8 @@ export function ActivityDetail() {
               </div>
             </CardContent>
           </Card>
+
+          <OutdoorPowerAssessment activity={activity} />
 
           {/* Photos */}
           {activity.photos && activity.photos.length > 0 && (
