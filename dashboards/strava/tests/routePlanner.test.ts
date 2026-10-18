@@ -81,3 +81,19 @@ test('snapped routing endpoints do not introduce invisible straight-line bridges
   assert.deepEqual(segments[0], [{ lat: 50, lng: 10 }, { lat: 50.001, lng: 10 }])
   assert.deepEqual(segments[1], draft.legs[1].points)
 })
+import { parseStart, suggestionDraft, validSuggestions } from '../src/features/routePlanner/roundTrips'
+
+test('suggested routes become editable routed drafts without changing geometry, tags or closed endpoints', () => {
+  const points = Array.from({ length: 101 }, (_, i) => ({ lat: 50 + .01 * Math.sin(i / 100 * Math.PI * 2), lng: 10 + .01 * Math.cos(i / 100 * Math.PI * 2), ele: 100 + i % 20, way: { surface: 'gravel' } }))
+  points[100] = { ...points[0] }
+  const route = { id: '1', points, meters: 6000, ascent: 50, durationMinutes: 30, surfaces: { gravel: 100 }, warnings: [] }
+  const before = JSON.stringify(route), draft = suggestionDraft(route, 'Gravel loop')
+  assert.ok(isDraft(draft)); assert.ok(draft.legs.every(leg => leg?.source === 'routed'))
+  assert.deepEqual(segmentsFromDraft(draft), [points]); assert.equal(JSON.stringify(route), before)
+  assert.ok(validSuggestions({ routes: [route], missingTiles: [], partial: false }))
+  assert.equal(validSuggestions({ routes: [{ ...route, points: [{ lat: NaN, lng: 10 }] }], missingTiles: [], partial: false }), false)
+  assert.equal(validSuggestions({ routes: [route], missingTiles: ['../private'], partial: false }), false)
+  assert.deepEqual(parseStart('49.8728, 8.6512'), { lat: 49.8728, lng: 8.6512 })
+  assert.deepEqual(parseStart('49,8728; 8,6512'), { lat: 49.8728, lng: 8.6512 })
+  for (const invalid of ['','91, 0','1,','NaN, 1','1,2,3','1<script>, 2']) assert.equal(parseStart(invalid), null)
+})

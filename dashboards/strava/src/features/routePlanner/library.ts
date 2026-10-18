@@ -16,7 +16,7 @@ export async function libraryRequest<T>(path = '', init?: RequestInit): Promise<
 export function validSavedRoute(value: unknown): value is SavedRoute & { document: RouteDocument } {
   const r = value as SavedRoute & { document: RouteDocument }
   return !!r && typeof r.id === 'string' && Number.isSafeInteger(r.revision) && r.revision > 0 && !!r.document
-    && isDraft(r.document.draft) && ['road', 'gravel', 'touring'].includes(r.document.profile)
+    && isDraft(r.document.draft) && ['road', 'gravel', 'touring', 'mtb'].includes(r.document.profile)
     && ['routed', 'direct'].includes(r.document.mode)
 }
 export const libraryText = {

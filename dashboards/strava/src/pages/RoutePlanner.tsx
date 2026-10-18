@@ -14,6 +14,8 @@ import { draftFromActivity } from '../features/routePlanner/activity'
 import { categories, waySummary } from '../features/routePlanner/ways'
 import type { ColorMode } from '../features/routePlanner/ways'
 import { RoutingCoverage } from '../features/routePlanner/RoutingCoverage'
+import { RoundTripPanel } from '../features/routePlanner/RoundTripPanel'
+import { suggestionDraft, tripText } from '../features/routePlanner/roundTrips'
 
 const API = `${String(import.meta.env.VITE_API_URL || '/api').replace(/\/$/, '')}/route-planner`
 const button = 'inline-flex items-center justify-center gap-2 rounded-lg border border-border px-3 py-2 text-sm transition-colors hover:bg-secondary disabled:opacity-40 disabled:cursor-not-allowed'
@@ -61,7 +63,9 @@ export function RoutePlanner() {
   const [mode, setMode] = useState<'routed' | 'direct'>('routed')
   const [adding, setAdding] = useState(false)
   const [working, setBusy] = useState(false)
-  const busy = working || libraryBusy
+  const [roundBusy, setRoundBusy] = useState(false), [roundStart, setRoundStart] = useState<Point | null>(null)
+  const [pickingStart, setPickingStart] = useState(false), [roundPreview, setRoundPreview] = useState<RouteDraft | null>(null)
+  const busy = working || libraryBusy || roundBusy
   const [configured, setConfigured] = useState<boolean | null>(null)
   const [fitToken, setFitToken] = useState(0)
   const [message, setMessage] = useState('')
@@ -99,6 +103,7 @@ export function RoutePlanner() {
     } catch { setConfigured(false) }
   }
   const commit = (next: RouteDraft) => {
+    setRoundPreview(null)
     setHistory(current => ({ past: [...current.past.slice(-19), current.current], current: next, future: [] }))
     setError(''); setMessage('')
   }
@@ -178,11 +183,13 @@ export function RoutePlanner() {
     if (!history.past.length || busy) return
     setHistory({ past: history.past.slice(0, -1), current: history.past[history.past.length - 1], future: [draft, ...history.future] })
     setError(''); setMessage('')
+    setRoundPreview(null); setFitToken(v => v + 1)
   }
   const redo = () => {
     if (!history.future.length || busy) return
     setHistory({ past: [...history.past, draft], current: history.future[0], future: history.future.slice(1) })
     setError(''); setMessage('')
+    setRoundPreview(null); setFitToken(v => v + 1)
   }
   const confirmReplace = () => !draft.anchors.length || clean || window.confirm(text.replaceConfirm)
   const importFile = async (file: File) => {
@@ -275,9 +282,9 @@ export function RoutePlanner() {
       </div>
       <div className="flex flex-wrap items-center gap-2">
         <Link to="/routes/saved" className={`${button} max-sm:px-2 max-sm:text-xs`} onClick={event => { if (busy || !confirmReplace()) event.preventDefault() }}>{library.title}</Link>
-        <button className={`${button} max-sm:px-2 max-sm:text-xs ${clean ? 'border-green-500/40 bg-green-500/15 text-green-600 dark:text-green-400 disabled:opacity-100' : ''}`} disabled={busy || !hasGeometry || clean} onClick={() => void saveRoute()}><Save size={16} />{clean ? library.saved : library.save}</button>
+        <button className={`${button} max-sm:px-2 max-sm:text-xs ${clean ? 'border-green-500/40 bg-green-500/15 text-green-600 dark:text-green-400 disabled:opacity-100' : ''}`} disabled={busy || !!roundPreview || !hasGeometry || clean} onClick={() => void saveRoute()}><Save size={16} />{clean ? library.saved : library.save}</button>
         <button className={`${button} max-sm:px-2 max-sm:text-xs`} disabled={busy} onClick={() => fileRef.current?.click()}><Upload size={16} />{text.import}</button>
-        <button className={`${primary} max-sm:px-2 max-sm:text-xs`} disabled={busy || !hasGeometry} onClick={download}><Download size={16} />{text.export}</button>
+        <button className={`${primary} max-sm:px-2 max-sm:text-xs`} disabled={busy || !!roundPreview || !hasGeometry} onClick={download}><Download size={16} />{text.export}</button>
         <ThemeToggle />
         <input ref={fileRef} type="file" accept=".gpx,.fit,application/gpx+xml" className="hidden" aria-label={text.import}
           onChange={event => { const file = event.target.files?.[0]; event.target.value = ''; if (file) void importFile(file) }} />
@@ -289,9 +296,20 @@ export function RoutePlanner() {
           <label className="block text-sm font-medium">{text.name}<input className="mt-2 w-full rounded-lg border bg-background px-3 py-2" maxLength={200} placeholder={text.untitled} value={draft.name} disabled={busy}
             onChange={event => { const name = event.target.value; setHistory(current => ({ ...current, current: { ...current.current, name } })); setMessage('') }} /></label>
           {savedRoute && <button className={`${button} w-full`} disabled={busy || !hasGeometry} onClick={() => void saveRoute(true)}>{library.copy}</button>}
+          <RoundTripPanel language={language} start={roundStart} routeStart={draft.anchors[0]} picking={pickingStart}
+            disabled={working || libraryBusy} configured={canRoute} onBusy={setRoundBusy} onClearPreview={() => setRoundPreview(null)}
+            onStart={point => { setRoundStart(point); setPickingStart(false); setRoundPreview(null) }}
+            onPick={() => { setPickingStart(value => !value); setAdding(false); setRoundPreview(null) }}
+            onPreview={({ route }) => { setRoundPreview(suggestionDraft(route, `${tripText[language].proposal} ${route.id}`)); setAdding(false); setPickingStart(false); setFitToken(v => v + 1) }}
+            onAdopt={({ route, profile: nextProfile }) => {
+              if (busy || !confirmReplace()) return
+              commit(suggestionDraft(route, `${tripText[language].proposal} ${route.id} · ${Math.round(route.meters / 1000)} km`))
+              setProfile(nextProfile); setMode('routed'); setAdding(false); setPickingStart(false); setRoundPreview(null)
+              setSavedRoute(null); savedDocument.current = null; setSearchParams({}, { replace: true }); setFitToken(v => v + 1)
+            }} />
           <RoutingCoverage language={language} />
           <fieldset disabled={busy} className="space-y-2"><legend className="mb-2 text-sm font-medium">{text.profile}</legend>
-            <div className="grid grid-cols-1 gap-2">{(['road', 'gravel', 'touring'] as const).map(value => <button key={value} type="button" aria-pressed={profile === value} className={`${button} justify-start ${profile === value ? 'border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400' : ''}`} onClick={() => setProfile(value)}>{text[value]}</button>)}</div>
+            <div className="grid grid-cols-1 gap-2">{(['road', 'gravel', 'touring', 'mtb'] as const).map(value => <button key={value} type="button" aria-pressed={profile === value} className={`${button} justify-start ${profile === value ? 'border-orange-500/50 bg-orange-500/15 text-orange-600 dark:text-orange-400' : ''}`} onClick={() => setProfile(value)}>{text[value]}</button>)}</div>
             <p className="text-xs text-muted-foreground">{text[`${profile}Hint`]}</p><p className="text-xs text-muted-foreground">{text.profileHint}</p>
             {profile === 'gravel' && <p className="text-xs text-muted-foreground">{library.gravelHint}</p>}
           </fieldset>
@@ -300,7 +318,7 @@ export function RoutePlanner() {
           {!canRoute && <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-sm" role="status">{configured === null ? text.checking : text.offline}
             {configured === false && <button className={`${button} mt-2`} disabled={busy} onClick={() => void retryStatus()}>{text.retry}</button>}
           </div>}
-          <div className="flex gap-2"><button className={`${primary} flex-1 ${adding ? 'bg-orange-500/25' : ''}`} disabled={busy || !canEdit} aria-pressed={adding} onClick={() => setAdding(!adding)}>{adding ? text.stop : text.add}</button>
+          <div className="flex gap-2"><button className={`${primary} flex-1 ${adding ? 'bg-orange-500/25' : ''}`} disabled={busy || !canEdit} aria-pressed={adding} onClick={() => { setAdding(!adding); setPickingStart(false); setRoundPreview(null) }}>{adding ? text.stop : text.add}</button>
             <button className={button} title={text.fit} aria-label={text.fit} disabled={!draft.anchors.length} onClick={() => setFitToken(token => token + 1)}><LocateFixed size={18} /></button></div>
           <p className="text-xs leading-relaxed text-muted-foreground">{adding ? text.hint : text.idleHint}</p>
           <div className="grid grid-cols-2 gap-2"><button className={button} disabled={busy || !history.past.length} onClick={undo}><Undo2 size={16} />{text.undo}</button><button className={button} disabled={busy || !history.future.length} onClick={redo}><Redo2 size={16} />{text.redo}</button></div>
@@ -329,7 +347,9 @@ export function RoutePlanner() {
         </div>
       </aside>
       <main className="relative order-1 min-h-0 min-w-0 md:order-2" aria-label={text.title}>
-        <PlannerMap draft={draft} colorMode={colorMode} adding={adding} disabled={busy || !canEdit} fitToken={fitToken} onAdd={addPoint} onMove={movePoint} onSplit={(index, point) => {
+        {roundPreview && <div className="absolute left-14 right-3 top-3 z-[1000] flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-background/95 p-3 text-sm shadow-lg"><span>{tripText[language].previewHint}</span><button className={button} onClick={() => { setRoundPreview(null); setFitToken(v => v + 1) }}>{tripText[language].closePreview}</button></div>}
+        <PlannerMap draft={roundPreview || draft} colorMode={colorMode} adding={adding} disabled={busy || !!roundPreview || (!canEdit && !pickingStart)} fitToken={fitToken}
+          selecting={pickingStart} selection={roundStart} onSelect={point => { setRoundStart(point); setPickingStart(false) }} onAdd={addPoint} onMove={movePoint} onSplit={(index, point) => {
           if (draft.anchors.length >= MAX_ANCHORS) { report(new Error('MAX_ANCHORS')); return }
           const next = splitLeg(draft, index, point)
           if (next !== draft) commit(next)

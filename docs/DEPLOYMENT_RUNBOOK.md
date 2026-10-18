@@ -231,6 +231,42 @@ GPS or altitude streams produce an explicit unavailable state.
 
 ## Route planner preview
 
+### Automatic round trips
+
+- Open "Suggest a round trip" in the planner sidebar. Select a start by map click,
+  coordinates (latitude, longitude) or device geolocation; the current draft's
+  first point can also be reused. No external address search is included.
+  Device location needs browser permission and a secure context (LAN HTTP may
+  not support it). Map/coordinate entry works without geolocation permission.
+- Choose 10-200 km, road/gravel/touring/MTB and flat/hilly/mountainous preference.
+  POST /api/route-planner/round-trips uses the configured BRouter only, with
+  native engineMode=4, five helper points and an initial radius of distance / 6.
+  It tries four bearings and at most two length refinements, sequentially, with
+  a 65-second search budget and 15-second individual request timeouts.
+  Round-trip batches share the existing two-slot API routing concurrency limit;
+  disconnecting the client cancels further requests. Results are not persisted.
+- Up to three distinct routes are ranked by length deviation, ascent per km and
+  repeated edges. This is candidate selection, not exact elevation-constrained
+  optimization. Elevation and time are approximations; time uses fixed profile
+  speeds plus an ascent allowance, not individual fitness or current conditions.
+  Similar spatial coverage is deduplicated, including reverse-direction routes.
+  Invalid/nonclosed geometry is rejected, never closed with artificial lines.
+  Missing elevations and OSM surface data stay unknown. Missing regional tiles
+  are reported by filename only; existing routing-region installation is reused.
+- Cards include map/elevation previews and surface shares. Previewing is separate
+  from the current editor draft; saving/exporting requires adopting the preview.
+  Explicit adoption asks before replacing unsaved edits, creates a new unsaved
+  routed draft, and never updates the previously opened saved route implicitly.
+  Generated geometry and incoming-edge surface tags are preserved in the editor,
+  server save and GPX geometry export. Undo and cancellation retain the old draft.
+- MTB uses the upstream mtb profile, disables steps and enables
+  StrictNOBicycleaccess. This is not a technical difficulty limit, current access
+  guarantee or verified trail safety assessment. Check routes before riding.
+- Reference for the pinned native mode:
+  https://github.com/abrensch/brouter/blob/29898106b555e342ff3ade7ae3e9c1ae6644a43b/brouter-core/src/main/java/btools/router/RoutingEngine.java
+
+### Manual planning and import
+
 The /routes page supports GPX track/route and FIT GPS-track import, draggable via points,
 section editing, undo/redo, server-saved routes and GPX track export.
 The planner does not import files into the activity database.

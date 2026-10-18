@@ -11,6 +11,7 @@ import { routingCoverage, routingTile } from '../services/routingCoverage';
 import { mkdtemp, writeFile, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { generateRoundTrips, roundTripInput, tripOverlap, tripScore, tripStats } from '../services/roundTrips';
 
 test('coverage handles cardinal signs, missing inventory, empty files and temporary downloads', async () => {
   assert.deepEqual(routingTile('W5_S10.rd5')?.bounds, [[-10, -5], [-5, 0]]);
@@ -87,6 +88,8 @@ const body = { points: [{ lat: 50, lng: 10 }, { lat: 50.01, lng: 10.01 }], profi
 const app = (url = '') => express().use(express.json()).use(createRoutePlannerRouter(() => url));
 
 test('profiles and coordinates are allowlisted, in BRouter longitude/latitude order', () => {
+  assert.equal(routingParams({ ...body, profile: 'mtb' })?.get('profile'), 'mtb');
+  assert.equal(routingParams({ ...body, profile: 'mtb' })?.get('profile:StrictNOBicycleaccess'), '1');
   assert.equal(routingParams(body)?.get('lonlats'), '10,50|10.01,50.01');
   assert.equal(routingParams({ ...body, profile: 'touring' })?.get('profile:stick_to_cycleroutes'), '1');
   assert.equal(routingParams({ ...body, profile: 'road' })?.get('profile:allow_steps'), '0');
@@ -95,6 +98,112 @@ test('profiles and coordinates are allowlisted, in BRouter longitude/latitude or
   assert.equal(routingParams({ ...body, points: [{ lat: 91, lng: 0 }, body.points[1]] }), null);
   assert.equal(routingParams({ ...body, points: [{ lat: '50', lng: 10 }, body.points[1]] }), null);
   assert.equal(routingParams({ ...body, points: Array(81).fill(body.points[0]) }), null);
+});
+
+const tripRequest = { start: { lat: 50, lng: 10 }, lengthKm: 20, profile: 'gravel', terrain: 'flat', variation: 0 };
+function loop(scale = 1, elevation = true) {
+  const points = [{ lat: 50, lng: 10 }, { lat: 50 + .03 * scale, lng: 10 },
+    { lat: 50 + .03 * scale, lng: 10 + .04 * scale }, { lat: 50, lng: 10 + .04 * scale }, { lat: 50, lng: 10 }];
+  return points.map(p => ({ ...p, ...(elevation ? { ele: 100 } : {}), way: { surface: 'asphalt' } }));
+}
+
+test('round-trip validation bounds work and does not accept arbitrary profiles or client routing parameters', () => {
+  assert.ok(roundTripInput(tripRequest));
+  for (const change of [{ lengthKm: 1 }, { lengthKm: 201 }, { lengthKm: '60' }, { profile: '__proto__' }, { terrain: 'cliffs' },
+    { variation: -1 }, { variation: .1 }, { start: { lat: 85, lng: 10 } }, { start: { lat: '50', lng: 10 } }]) assert.equal(roundTripInput({ ...tripRequest, ...change }), null);
+  assert.deepEqual(roundTripInput({ ...tripRequest, endpoint: 'https://attacker', engineMode: 42 }), roundTripInput(tripRequest));
+});
+
+test('round-trip metrics preserve unknown elevation/surface and compare spatial coverage including reverse routes', () => {
+  const points = loop(), stats = tripStats(points);
+  assert.equal(stats.ascent, 0);
+  assert.ok(stats.meters > 10000);
+  assert.equal(Math.round(stats.surfaces.asphalt), Math.round(stats.meters));
+  assert.equal(tripStats(loop(1, false)).ascent, null);
+  assert.equal(tripOverlap(stats.cells, tripStats([...points].reverse()).cells) > .8, true);
+  assert.equal(tripOverlap(stats.cells, new Set(['different'])), 0);
+  assert.ok(tripScore(stats, roundTripInput({ ...tripRequest, terrain: 'flat' })!) < tripScore(stats, roundTripInput({ ...tripRequest, terrain: 'mountain' })!));
+  assert.throws(() => tripStats([{ lat: 50, lng: 10 }, { lat: -50, lng: -10 }]), /INVALID_ROUTE_RESPONSE/);
+});
+
+test('round-trip search is bounded, deduplicates routes and never fabricates geometry or elevation', async () => {
+  const input = roundTripInput(tripRequest)!;
+  let calls = 0;
+  const points = loop();
+  const before = JSON.stringify(points);
+  const result = await generateRoundTrips(input, async () => { calls++; return points; }, new AbortController().signal);
+  assert.ok(calls <= 6); assert.equal(result.routes.length, 1); assert.equal(result.partial, true);
+  assert.deepEqual(result.routes[0].points, points); assert.equal(JSON.stringify(points), before);
+  assert.ok(result.routes[0].warnings.includes('LENGTH'));
+  const missing = await generateRoundTrips(input, async (_radius, bearing) => {
+    if (bearing === 0) return loop(1, false);
+    throw new Error('ROUTING_REGION_MISSING:E10_N45.rd5');
+  }, new AbortController().signal);
+  assert.equal(missing.routes[0].ascent, null);
+  assert.deepEqual(missing.missingTiles, ['E10_N45.rd5']);
+  await assert.rejects(generateRoundTrips(input, async () => points.slice(0, -1), new AbortController().signal), /NO_ROUND_TRIP/);
+  const abort = new AbortController(); calls = 0;
+  await assert.rejects(generateRoundTrips(input, async () => { calls++; abort.abort(); throw new Error('cancel'); }, abort.signal), /NO_ROUND_TRIP/);
+  assert.equal(calls, 1);
+});
+
+test('round-trip API uses only the configured router and reports missing tiles without private paths', async () => {
+  assert.equal((await request(app()).post('/round-trips').send(tripRequest)).body.code, 'ROUTING_NOT_CONFIGURED');
+  assert.equal((await request(app()).post('/round-trips').send({ ...tripRequest, lengthKm: 500 })).status, 400);
+  let fail = false;
+  const server = createServer((req, res) => {
+    const params = new URL(req.url!, 'http://localhost').searchParams;
+    assert.equal(params.get('engineMode'), '4'); assert.equal(params.get('profile'), 'mtb');
+    assert.equal(params.get('lonlats'), '10,50'); assert.equal(params.get('roundTripPoints'), '5');
+    assert.equal(params.get('profile:StrictNOBicycleaccess'), '1');
+    assert.ok(Number(params.get('roundTripDistance')) <= 45000);
+    if (fail) { res.writeHead(400).end('/private/path/E10_N45.rd5 not found'); return; }
+    res.setHeader('Content-Type', 'application/json');
+    res.end(JSON.stringify({ features: [{ geometry: { type: 'LineString', coordinates: loop().map(p => [p.lng, p.lat, p.ele]) } }] }));
+  });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  try {
+    const api = app(`http://127.0.0.1:${(server.address() as AddressInfo).port}/brouter`);
+    const result = await request(api).post('/round-trips').send({ ...tripRequest, profile: 'mtb' });
+    assert.equal(result.status, 200); assert.equal(result.body.routes.length, 1);
+    assert.equal(result.body.routes[0].surfaces.unknown, 100);
+    fail = true;
+    const missing = await request(api).post('/round-trips').send({ ...tripRequest, profile: 'mtb' });
+    assert.equal(missing.status, 422); assert.deepEqual(missing.body, { code: 'ROUTING_REGION_MISSING', tile: 'E10_N45.rd5' });
+  } finally { await new Promise<void>(resolve => server.close(() => resolve())); }
+});
+
+test('round-trip batches share the routing budget and cancellation releases slots without spawning more upstream work', async () => {
+  let requests = 0, closed = 0;
+  const server = createServer((_req, res) => { requests++; res.once('close', () => closed++); });
+  await new Promise<void>(resolve => server.listen(0, '127.0.0.1', resolve));
+  const waitFor = async (condition: () => boolean) => {
+    for (let i = 0; i < 100; i++) { if (condition()) return; await new Promise(resolve => setTimeout(resolve, 10)); }
+    assert.fail('Timed out waiting for upstream cancellation');
+  };
+  const api = app(`http://127.0.0.1:${(server.address() as AddressInfo).port}/brouter`);
+  const apiServer = createServer(api);
+  await new Promise<void>(resolve => apiServer.listen(0, '127.0.0.1', resolve));
+  const url = `http://127.0.0.1:${(apiServer.address() as AddressInfo).port}/round-trips`;
+  const controllers = [new AbortController(), new AbortController(), new AbortController()];
+  const send = (signal: AbortSignal) => fetch(url, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(tripRequest), signal });
+  const done = controllers.slice(0, 2).map(controller => send(controller.signal).then(() => {}, () => {}));
+  try {
+    await waitFor(() => requests === 2);
+    assert.equal((await request(api).post('/round-trips').send(tripRequest)).status, 429);
+    assert.equal((await request(api).post('/calculate').send(body)).status, 429);
+    controllers[0].abort(); controllers[1].abort(); await Promise.all(done);
+    await waitFor(() => closed === 2);
+    await new Promise(resolve => setTimeout(resolve, 30));
+    assert.equal(requests, 2);
+    const third = send(controllers[2].signal).then(() => {}, () => {});
+    await waitFor(() => requests === 3);
+    controllers[2].abort(); await third; await waitFor(() => closed === 3);
+  } finally {
+    controllers.forEach(controller => controller.abort()); server.closeAllConnections(); apiServer.closeAllConnections();
+    await new Promise<void>(resolve => apiServer.close(() => resolve()));
+    await new Promise<void>(resolve => server.close(() => resolve()));
+  }
 });
 
 test('invalid upstream geometry never becomes an exportable route', () => {

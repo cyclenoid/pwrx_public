@@ -3,8 +3,9 @@ import axios from 'axios';
 import { MAX_FIT_BYTES, parseFitRoute } from '../services/fitRoute';
 import { addRouteWays, Way } from '../services/routeWays';
 import { routingCoverage, routingTile } from '../services/routingCoverage';
+import { generateRoundTrips, roundTripInput } from '../services/roundTrips';
 
-const profiles = { road: 'fastbike', gravel: 'gravel', touring: 'trekking' } as const;
+const profiles = { road: 'fastbike', gravel: 'gravel', touring: 'trekking', mtb: 'mtb' } as const;
 type Point = { lat: number; lng: number; ele?: number; way?: Way };
 
 export function validPoint(value: unknown): value is Point {
@@ -31,6 +32,10 @@ export function routingParams(body: unknown): URLSearchParams | null {
     params.set('profile:allow_steps', '0');
   }
   if (profile === 'road') params.set('profile:allow_steps', '0');
+  if (profile === 'mtb') {
+    params.set('profile:allow_steps', '0');
+    params.set('profile:StrictNOBicycleaccess', '1');
+  }
   return params;
 }
 
@@ -90,6 +95,39 @@ export function createRoutePlannerRouter(getEndpoint = () => process.env.BROUTER
   });
   router.get('/coverage', async (_req, res) => {
     res.set('Cache-Control', 'private, no-cache').json(await routingCoverage());
+  });
+  router.post('/round-trips', async (req, res) => {
+    const input = roundTripInput(req.body), endpoint = getEndpoint();
+    if (!input) { res.status(400).json({ code: 'INVALID_REQUEST' }); return; }
+    if (!endpoint) { res.status(503).json({ code: 'ROUTING_NOT_CONFIGURED' }); return; }
+    if (active >= 2) { res.status(429).json({ code: 'ROUTING_BUSY' }); return; }
+    active++;
+    const abort = new AbortController(), close = () => abort.abort();
+    res.once('close', close);
+    try {
+      const result = await generateRoundTrips(input, async (radius, bearing, signal) => {
+        const params = routingParams({ points: [input.start, input.start], profile: input.profile })!;
+        params.set('lonlats', `${input.start.lng},${input.start.lat}`);
+        params.set('engineMode', '4'); params.set('roundTripDistance', String(radius));
+        params.set('roundTripStartDirection', String(bearing)); params.set('roundTripPoints', '5');
+        try {
+          const response = await axios.get(endpoint, { params, signal, timeout: 15000, maxContentLength: 20 * 1024 * 1024, maxRedirects: 0, responseType: 'json' });
+          const points = parseRoutingResponse(response.data);
+          if (!points) throw new Error('INVALID_ROUTE_RESPONSE');
+          return points;
+        } catch (error) {
+          const body = axios.isAxiosError(error) ? error.response?.data : undefined;
+          const missing = typeof body === 'string' && body.match(/\b[EW]\d{1,3}_[NS]\d{1,2}\.rd5\b/)?.[0];
+          if (missing && routingTile(missing) && /not found|does not exist|missing/i.test(body)) throw new Error(`ROUTING_REGION_MISSING:${missing}`);
+          throw new Error('NO_ROUND_TRIP');
+        }
+      }, abort.signal);
+      if (!abort.signal.aborted) res.set('Cache-Control', 'private, no-store').json(result);
+    } catch (error) {
+      if (abort.signal.aborted) return;
+      const tile = /^ROUTING_REGION_MISSING:([EW]\d{1,3}_[NS]\d{1,2}\.rd5)$/.exec(error instanceof Error ? error.message : '')?.[1];
+      res.status(422).json(tile ? { code: 'ROUTING_REGION_MISSING', tile } : { code: 'NO_ROUND_TRIP' });
+    } finally { res.off('close', close); active--; }
   });
   router.post('/calculate', async (req, res) => {
     const params = routingParams(req.body);

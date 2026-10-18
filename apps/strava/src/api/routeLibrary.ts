@@ -19,7 +19,7 @@ function point(p: Point): boolean {
 export function validDocument(value: unknown): value is Document {
   if (!value || typeof value !== 'object') return false;
   const { draft: d, profile, mode } = value as Document;
-  if (!['road', 'gravel', 'touring'].includes(profile) || !['direct', 'routed'].includes(mode)
+  if (!['road', 'gravel', 'touring', 'mtb'].includes(profile) || !['direct', 'routed'].includes(mode)
     || !d || typeof d.name !== 'string' || !d.name.trim() || d.name.length > 200
     || !Array.isArray(d.anchors) || d.anchors.length < 2 || d.anchors.length > 80 || !d.anchors.every(point)
     || !Array.isArray(d.legs) || d.legs.length !== d.anchors.length - 1 || !d.legs.some(Boolean)) return false;

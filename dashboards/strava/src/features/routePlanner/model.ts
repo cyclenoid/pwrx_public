@@ -1,7 +1,7 @@
 export type Way = { surface?: string; highway?: string; tracktype?: string; smoothness?: string }
 // way describes the edge arriving at this point, as returned by BRouter.
 export type Point = { lat: number; lng: number; ele?: number; way?: Way }
-export type Profile = 'road' | 'gravel' | 'touring'
+export type Profile = 'road' | 'gravel' | 'touring' | 'mtb'
 export type Leg = { points: Point[]; source: 'imported' | 'routed' | 'direct' }
 export type RouteDraft = { name: string; anchors: Point[]; legs: (Leg | null)[] }
 export const emptyDraft = (): RouteDraft => ({ name: '', anchors: [], legs: [] })
