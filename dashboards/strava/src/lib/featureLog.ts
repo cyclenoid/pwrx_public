@@ -29,6 +29,29 @@ export interface FeatureLogEntry {
 
 export const FEATURE_LOG_ENTRIES: FeatureLogEntry[] = [
   {
+    id: "2026-10-24-power-record-layout",
+    date: "2026-10-24",
+    tag: "power",
+    title: {
+      de: "Power-Rekorde klarer vergleichen",
+      en: "Compare power records more clearly",
+    },
+    summary: {
+      de: "All-Time-Rekord und Jahresbestwert sind klar getrennt, mit dem Rekorddatum direkt beim zugehoerigen Wert.",
+      en: "All-time and current-year records are clearly separated, with the record date next to its corresponding value.",
+    },
+    bullets: {
+      de: [
+        "Leistung, W/kg und Datum des All-Time-Rekords stehen zusammen.",
+        "Der Jahresbestwert ist darunter in einem eigenen Bereich leichter vergleichbar.",
+      ],
+      en: [
+        "All-time power, W/kg and the record date appear together.",
+        "The current-year best is easier to compare in its own section below.",
+      ],
+    },
+  },
+  {
     id: "2026-10-13-carto-map-styles",
     date: "2026-10-13",
     tag: "maps",

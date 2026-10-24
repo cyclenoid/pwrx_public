@@ -335,25 +335,28 @@ export function Records() {
                       to={point.activity_id ? `/activity/${point.activity_id}` : '#'}
                       className={`block ${point.activity_id ? 'cursor-pointer hover:scale-105 transition-transform' : ''}`}
                     >
-                      <div className="bg-gradient-to-br from-yellow-500/20 to-orange-500/20 rounded-lg p-3 text-center border border-yellow-500/30 h-full">
-                        <p className="text-xs text-muted-foreground mb-1">{point.label}</p>
-                        <div className="space-y-2">
+                      <div className="flex h-full flex-col gap-3 rounded-lg border border-yellow-500/30 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 p-3 text-center tabular-nums">
+                        <p className="text-sm font-semibold">{point.label}</p>
+                        <div className="flex flex-1 flex-col gap-3">
                           <div>
-                            <p className="text-[10px] uppercase text-muted-foreground/70">{t('records.bestEfforts.scopes.allTime')}</p>
-                            <p className="text-xl font-bold text-yellow-500">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">{t('records.bestEfforts.scopes.allTime')}</p>
+                            <p className="text-xl font-bold text-yellow-600 dark:text-yellow-500">
                               {point.watts > 0 ? point.watts : t('common.notAvailable')}W
                             </p>
                             <p className="text-xs text-muted-foreground mt-1">
                               {point.watts_per_kg ? `${point.watts_per_kg.toFixed(1)} W/kg` : t('common.notAvailable')}
                             </p>
+                            <p className="mt-1 min-h-4 text-[10px] text-muted-foreground">
+                              {point.activity_date && formatActivityDate(point.activity_date)}
+                            </p>
                           </div>
-                          <div className="rounded-md border border-yellow-500/20 bg-background/35 px-2 py-1.5">
-                            <p className="text-[10px] uppercase text-muted-foreground/70">
+                          <div className="mt-auto rounded-md border border-yellow-500/15 bg-background/50 px-2 py-2">
+                            <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
                               {t('records.bestEfforts.scopes.currentYear', { year: currentYear })}
                             </p>
                             {currentYearPoint?.watts ? (
                               <>
-                                <p className="text-sm font-semibold text-yellow-500">{currentYearPoint.watts}W</p>
+                                <p className="text-sm font-semibold text-foreground">{currentYearPoint.watts}W</p>
                                 <p className="text-[10px] text-muted-foreground">
                                   {currentYearPoint.watts_per_kg ? `${currentYearPoint.watts_per_kg.toFixed(1)} W/kg` : t('common.notAvailable')}
                                 </p>
@@ -363,11 +366,6 @@ export function Records() {
                             )}
                           </div>
                         </div>
-                        {point.activity_date && (
-                          <p className="text-[9px] text-muted-foreground/70 mt-0.5">
-                            {formatActivityDate(point.activity_date)}
-                          </p>
-                        )}
                       </div>
                     </Link>
                     )
